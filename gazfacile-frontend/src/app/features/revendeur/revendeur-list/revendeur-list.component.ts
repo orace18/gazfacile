@@ -1,0 +1,324 @@
+import {
+  Component,
+  Output,
+  EventEmitter,
+  inject,
+  signal,
+  computed
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { RevendeurService } from '../../../core/services/revendeur.service';
+import { GeolocationService } from '../../../core/services/geolocation.service';
+import { Revendeur, StockStatus } from '../../../core/models/revendeur.model';
+import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.component';
+
+/**
+ * Liste filtrée des revendeurs avec barre de recherche et filtres.
+ * Émet des événements vers le parent pour centrer la carte ou ouvrir une commande.
+ */
+@Component({
+  selector: 'app-revendeur-list',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatIconModule,
+    MatButtonModule,
+    MatProgressSpinnerModule,
+    MatButtonToggleModule,
+    MatSnackBarModule,
+    RevendeurCardComponent
+  ],
+  template: `
+    <div class="liste-container">
+      <!-- Barre de recherche -->
+      <div class="barre-recherche">
+        <mat-form-field appearance="outline" class="champ-recherche">
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            placeholder="Rechercher par nom, quartier..."
+            [ngModel]="texteRecherche()"
+            (ngModelChange)="texteRecherche.set($event)"
+          >
+          @if (texteRecherche()) {
+            <button matSuffix mat-icon-button (click)="texteRecherche.set('')">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        <button
+          mat-raised-button
+          class="btn-pres-de-moi"
+          (click)="rechercherPresDeChezMoi()"
+          [disabled]="chargementGeo()"
+        >
+          @if (chargementGeo()) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            <mat-icon>near_me</mat-icon>
+          }
+          Près de moi
+        </button>
+      </div>
+
+      <!-- Filtres stock -->
+      <div class="filtres">
+        <mat-button-toggle-group
+          [value]="filtreStock()"
+          (change)="filtreStock.set($event.value)"
+          class="toggle-stock"
+        >
+          <mat-button-toggle [value]="null">Tous</mat-button-toggle>
+          <mat-button-toggle [value]="StockStatus.EN_STOCK">En stock</mat-button-toggle>
+          <mat-button-toggle [value]="StockStatus.STOCK_FAIBLE">Stock faible</mat-button-toggle>
+          <mat-button-toggle [value]="StockStatus.EPUISE">Épuisé</mat-button-toggle>
+        </mat-button-toggle-group>
+      </div>
+
+      <!-- Indicateur de chargement -->
+      @if (revendeurService.chargement()) {
+        <div class="chargement">
+          <mat-spinner diameter="36"></mat-spinner>
+          <p>Chargement des revendeurs...</p>
+        </div>
+      }
+
+      <!-- Message d'erreur -->
+      @if (revendeurService.erreur()) {
+        <div class="erreur-message">
+          <mat-icon>error_outline</mat-icon>
+          {{ revendeurService.erreur() }}
+        </div>
+      }
+
+      <!-- Compteur de résultats -->
+      @if (!revendeurService.chargement() && revendeursFiltrés().length > 0) {
+        <p class="compteur">
+          {{ revendeursFiltrés().length }} revendeur{{ revendeursFiltrés().length > 1 ? 's' : '' }} trouvé{{ revendeursFiltrés().length > 1 ? 's' : '' }}
+        </p>
+      }
+
+      <!-- Liste des cartes -->
+      <div class="liste-cartes">
+        @for (revendeur of revendeursFiltrés(); track revendeur.id) {
+          <app-revendeur-card
+            [revendeur]="revendeur"
+            (selectionne)="revendeurSelectionne.emit($event)"
+            (commander)="commanderRevendeur.emit($event)"
+          ></app-revendeur-card>
+        } @empty {
+          @if (!revendeurService.chargement()) {
+            <div class="aucun-resultat">
+              <mat-icon>search_off</mat-icon>
+              <p>Aucun revendeur trouvé avec ces critères.</p>
+              <button mat-stroked-button (click)="reinitialiserFiltres()">
+                Réinitialiser les filtres
+              </button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  `,
+  styles: [`
+    .liste-container {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .barre-recherche {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 12px 12px 4px;
+    }
+
+    .champ-recherche {
+      flex: 1;
+
+      ::ng-deep .mat-mdc-form-field-infix {
+        min-height: 48px;
+      }
+
+      ::ng-deep .mdc-notched-outline__leading,
+      ::ng-deep .mdc-notched-outline__notch,
+      ::ng-deep .mdc-notched-outline__trailing {
+        border-color: var(--color-border);
+      }
+
+      ::ng-deep input {
+        color: var(--color-text);
+      }
+
+      ::ng-deep .mat-mdc-form-field-label {
+        color: var(--color-text-muted);
+      }
+    }
+
+    .btn-pres-de-moi {
+      background-color: var(--color-surface-2) !important;
+      color: var(--color-primary) !important;
+      border: 1px solid var(--color-primary) !important;
+      white-space: nowrap;
+      height: 48px;
+      gap: 4px;
+
+      &:hover {
+        background-color: var(--color-primary-light) !important;
+      }
+
+      mat-spinner {
+        margin-right: 4px;
+      }
+    }
+
+    .filtres {
+      padding: 4px 12px 8px;
+      overflow-x: auto;
+    }
+
+    .toggle-stock {
+      ::ng-deep .mat-button-toggle {
+        background-color: var(--color-surface) !important;
+        color: var(--color-text-muted) !important;
+        border-color: var(--color-border) !important;
+        font-size: 0.8rem;
+      }
+
+      ::ng-deep .mat-button-toggle-checked {
+        background-color: var(--color-primary-light) !important;
+        color: var(--color-primary) !important;
+      }
+    }
+
+    .chargement {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 40px 0;
+      color: var(--color-text-muted);
+    }
+
+    .erreur-message {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background-color: var(--color-danger-bg);
+      color: var(--color-danger);
+      border-radius: var(--radius-sm);
+      margin: 8px 12px;
+      font-size: 0.85rem;
+    }
+
+    .compteur {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      padding: 0 16px 8px;
+    }
+
+    .liste-cartes {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 12px 12px;
+    }
+
+    .aucun-resultat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 48px 16px;
+      color: var(--color-text-muted);
+      text-align: center;
+
+      mat-icon {
+        font-size: 3rem;
+        height: 3rem;
+        width: 3rem;
+        color: var(--color-surface-3);
+      }
+
+      button {
+        border-color: var(--color-primary) !important;
+        color: var(--color-primary) !important;
+      }
+    }
+  `]
+})
+export class RevendeurListComponent {
+  @Output() revendeurSelectionne = new EventEmitter<string>();
+  @Output() commanderRevendeur = new EventEmitter<Revendeur>();
+
+  readonly revendeurService = inject(RevendeurService);
+  private readonly geoService = inject(GeolocationService);
+  private readonly snackBar = inject(MatSnackBar);
+
+  readonly texteRecherche = signal<string>('');
+  readonly filtreStock = signal<StockStatus | null>(null);
+  readonly chargementGeo = signal<boolean>(false);
+
+  readonly StockStatus = StockStatus;
+
+  /** Liste filtrée basée sur la recherche et le filtre de stock. */
+  readonly revendeursFiltrés = computed<Revendeur[]>(() => {
+    const revendeurs = this.revendeurService.revendeurs();
+    const recherche = this.texteRecherche().toLowerCase().trim();
+    const filtre = this.filtreStock();
+
+    return revendeurs.filter(r => {
+      const correspondRecherche = !recherche || (
+        r.nom.toLowerCase().includes(recherche) ||
+        r.quartier.toLowerCase().includes(recherche) ||
+        (r.adresse?.toLowerCase().includes(recherche) ?? false) ||
+        r.marques.some(m => m.toLowerCase().includes(recherche))
+      );
+
+      const correspondStock = !filtre || r.stockStatus === filtre;
+
+      return correspondRecherche && correspondStock;
+    });
+  });
+
+  /** Lance une recherche géolocalisée. */
+  rechercherPresDeChezMoi(): void {
+    this.chargementGeo.set(true);
+
+    this.geoService.getCurrentPosition().subscribe({
+      next: position => {
+        const { latitude, longitude } = position.coords;
+        this.revendeurService.getNearby(latitude, longitude, 5000);
+        this.chargementGeo.set(false);
+        this.snackBar.open('Revendeurs proches trouvés', 'OK', { duration: 3000 });
+      },
+      error: message => {
+        this.chargementGeo.set(false);
+        this.snackBar.open(message, 'Fermer', {
+          duration: 5000,
+          panelClass: ['snack-error']
+        });
+      }
+    });
+  }
+
+  /** Réinitialise tous les filtres. */
+  reinitialiserFiltres(): void {
+    this.texteRecherche.set('');
+    this.filtreStock.set(null);
+  }
+}

@@ -1,0 +1,104 @@
+version: '3.9'
+
+services:
+
+  # ── MongoDB ────────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7.0
+    container_name: gazfacile-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-gazfacile}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-gazfacile2024}
+      MONGO_INITDB_DATABASE: gazfacile
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+    ports:
+      - "27017:27017"
+    networks:
+      - gazfacile-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── Backend Spring Boot ────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./gazfacile-backend
+      dockerfile: Dockerfile
+    container_name: gazfacile-backend
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      MONGO_URI: mongodb://${MONGO_USER:-gazfacile}:${MONGO_PASSWORD:-gazfacile2024}@mongodb:27017/gazfacile?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-gazfacile-secret-key-production-256-bits-minimum-length}
+      MTN_MOMO_BASE_URL: ${MTN_MOMO_BASE_URL:-https://sandbox.momodeveloper.mtn.com}
+      MTN_MOMO_SUBSCRIPTION_KEY: ${MTN_MOMO_SUBSCRIPTION_KEY:-}
+      MTN_MOMO_API_USER: ${MTN_MOMO_API_USER:-}
+      MTN_MOMO_API_KEY: ${MTN_MOMO_API_KEY:-}
+      MTN_MOMO_ENV: ${MTN_MOMO_ENV:-sandbox}
+      MOOV_API_KEY: ${MOOV_API_KEY:-}
+      MOOV_API_SECRET: ${MOOV_API_SECRET:-}
+      MOOV_MERCHANT_ID: ${MOOV_MERCHANT_ID:-}
+      CELTIIS_API_KEY: ${CELTIIS_API_KEY:-}
+      CELTIIS_API_SECRET: ${CELTIIS_API_SECRET:-}
+      CELTIIS_MERCHANT_CODE: ${CELTIIS_MERCHANT_CODE:-}
+    ports:
+      - "8080:8080"
+    networks:
+      - gazfacile-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ── Frontend Angular (Nginx) ───────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./gazfacile-frontend
+      dockerfile: Dockerfile
+    container_name: gazfacile-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "4200:80"
+    networks:
+      - gazfacile-network
+
+  # ── Mongo Express (interface d'admin MongoDB) ──────────────────────────────
+  mongo-express:
+    image: mongo-express:1.0
+    container_name: gazfacile-mongo-express
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER:-gazfacile}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-gazfacile2024}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USER:-gazfacile}:${MONGO_PASSWORD:-gazfacile2024}@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USER:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-admin2024}
+    ports:
+      - "8081:8081"
+    networks:
+      - gazfacile-network
+    profiles:
+      - tools
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  gazfacile-network:
+    driver: bridge
