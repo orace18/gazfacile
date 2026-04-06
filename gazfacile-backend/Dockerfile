@@ -18,6 +18,9 @@ RUN ./mvnw package -DskipTests -B
 FROM eclipse-temurin:21-jre-alpine AS runtime
 WORKDIR /app
 
+# Ajouter les certificats SSL (nécessaire pour MongoDB Atlas)
+RUN apk add --no-cache ca-certificates && update-ca-certificates
+
 # Créer un utilisateur non-root pour la sécurité
 RUN addgroup -S gazfacile && adduser -S gazfacile -G gazfacile
 USER gazfacile
