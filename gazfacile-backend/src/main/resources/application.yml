@@ -14,9 +14,7 @@ jwt:
   refresh-expiration: 604800000
 
 cors:
-  allowed-origins:
-    - http://localhost:4200
-    - https://gazfacile.netlify.app
+  allowed-origins: http://localhost:4200,https://gazfacile.netlify.app
 
 paiement:
   # MTN Mobile Money

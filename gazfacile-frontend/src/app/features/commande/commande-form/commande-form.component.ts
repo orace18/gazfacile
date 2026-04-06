@@ -119,9 +119,17 @@ export interface DialogCommandeData {
               <span>Quantité</span>
               <span>× {{ formulaire.get('quantite')?.value || 1 }}</span>
             </div>
+            <div class="ligne-prix">
+              <span>Sous-total gaz</span>
+              <span>{{ total | number:'1.0-0' }} FCFA</span>
+            </div>
+            <div class="ligne-prix frais">
+              <span>Frais de service plateforme</span>
+              <span>200 FCFA</span>
+            </div>
             <div class="ligne-prix total">
-              <span>Total</span>
-              <span class="montant-total">{{ total | number:'1.0-0' }} FCFA</span>
+              <span>Total à payer</span>
+              <span class="montant-total">{{ total + 200 | number:'1.0-0' }} FCFA</span>
             </div>
           </div>
 
@@ -335,6 +343,11 @@ export interface DialogCommandeData {
       font-size: 0.85rem;
       color: var(--color-text-muted);
       margin-bottom: 6px;
+
+      &.frais {
+        color: var(--color-warning);
+        font-size: 0.78rem;
+      }
 
       &.total {
         border-top: 1px solid var(--color-border);

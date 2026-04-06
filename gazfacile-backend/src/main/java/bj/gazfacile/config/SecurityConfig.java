@@ -41,10 +41,14 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Swagger / OpenAPI
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // Routes publiques WebSocket
                 .requestMatchers("/ws/**").permitAll()
                 // Routes d'authentification publiques
                 .requestMatchers("/api/v1/auth/**").permitAll()
+                // Paiements plateforme
+                .requestMatchers("/api/v1/paiement/**").authenticated()
                 // Lecture des revendeurs et des avis : publique
                 .requestMatchers(HttpMethod.GET, "/api/v1/revendeurs/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/avis/revendeur/**").permitAll()

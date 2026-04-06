@@ -6,165 +6,197 @@ import {
   Output,
   EventEmitter,
   effect,
-  inject,
-  Signal
+  Signal,
+  NgZone,
+  ViewChild
 } from '@angular/core';
-import * as L from 'leaflet';
+import { GoogleMap, MapMarker, MapInfoWindow } from '@angular/google-maps';
+import { CommonModule } from '@angular/common';
 import { Revendeur, StockStatus } from '../../core/models/revendeur.model';
 
 /**
- * Composant Leaflet affichant la carte interactive des revendeurs.
+ * Composant Google Maps affichant la carte interactive des revendeurs.
  * Les marqueurs sont colorés selon le niveau de stock et se mettent
  * à jour en temps réel grâce aux signaux Angular.
  */
 @Component({
   selector: 'app-map',
   standalone: true,
-  template: `<div id="carte-gazfacile" class="carte"></div>`,
+  imports: [CommonModule, GoogleMap, MapMarker, MapInfoWindow],
+  template: `
+    <google-map
+      class="carte"
+      width="100%"
+      height="100%"
+      [center]="centre"
+      [zoom]="zoom"
+      [options]="optionsCarte"
+    >
+      @for (marqueur of marqueurs; track marqueur.revendeurId) {
+        <map-marker
+          [position]="marqueur.position"
+          [options]="marqueur.options"
+          (mapClick)="ouvrirInfo(marqueur)"
+        ></map-marker>
+      }
+
+      @if (positionUtilisateur) {
+        <map-marker
+          [position]="positionUtilisateur"
+          [options]="optionsMarqueurUtilisateur"
+        ></map-marker>
+      }
+
+      <map-info-window [options]="infoWindowOptions">
+        <div [innerHTML]="contenuInfo"></div>
+      </map-info-window>
+    </google-map>
+  `,
   styles: [`
-    .carte {
+    :host {
+      display: block;
       height: 100%;
       width: 100%;
       min-height: 400px;
       border-radius: var(--radius-md);
       overflow: hidden;
     }
+    google-map {
+      display: block;
+      height: 100%;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
   `]
 })
 export class MapComponent implements AfterViewInit, OnDestroy {
-  /** Signal réactif de la liste des revendeurs depuis le service. */
   @Input({ required: true }) revendeursSignal!: Signal<Revendeur[]>;
-
-  /** Émis quand l'utilisateur clique sur "Commander" dans le popup. */
   @Output() commanderClique = new EventEmitter<Revendeur>();
 
-  private carte!: L.Map;
-  private readonly marqueurs = new Map<string, L.Marker>();
-  private marqueurUtilisateur: L.Marker | null = null;
+  readonly centre: google.maps.LatLngLiteral = { lat: 6.3703, lng: 2.3912 };
+  readonly zoom = 13;
+
+  readonly optionsCarte: google.maps.MapOptions = {
+    mapId: 'gazfacile-map',
+    disableDefaultUI: false,
+    zoomControl: true,
+    streetViewControl: false,
+    mapTypeControl: false,
+    fullscreenControl: false,
+    styles: [
+      { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+      { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+      { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+      { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#38414e' }] },
+      { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212a37' }] },
+      { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
+      { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#746855' }] },
+      { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#f3d19c' }] },
+      { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
+      { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#515c6d' }] },
+      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+      { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+    ]
+  };
+
+  get optionsMarqueurUtilisateur(): google.maps.MarkerOptions {
+    return {
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 9,
+        fillColor: '#3B82F6',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 3,
+      },
+      title: 'Votre position',
+      zIndex: 999
+    };
+  }
+
+  @ViewChild(MapInfoWindow) infoWindow!: MapInfoWindow;
+
+  marqueurs: { revendeurId: string; position: google.maps.LatLngLiteral; options: google.maps.MarkerOptions; revendeur: Revendeur }[] = [];
+  positionUtilisateur: google.maps.LatLngLiteral | null = null;
+  contenuInfo = '';
+  infoWindowOptions: google.maps.InfoWindowOptions = {};
+
+  private mapInstance: google.maps.Map | null = null;
   private revendeursSnapshot: Revendeur[] = [];
 
-  constructor() {
-    // Réagir aux changements de la liste des revendeurs via effect()
+  constructor(private ngZone: NgZone) {
     effect(() => {
       const revendeurs = this.revendeursSignal();
       this.revendeursSnapshot = revendeurs;
-      if (this.carte) {
-        this.mettreAJourMarqueurs(revendeurs);
-      }
+      this.mettreAJourMarqueurs(revendeurs);
     });
   }
 
-  ngAfterViewInit(): void {
-    this.initialiserCarte();
-    // Charger les marqueurs initiaux
-    if (this.revendeursSnapshot.length > 0) {
-      this.mettreAJourMarqueurs(this.revendeursSnapshot);
-    }
-  }
+  ngAfterViewInit(): void {}
 
-  /** Initialise la carte Leaflet centrée sur Cotonou. */
-  private initialiserCarte(): void {
-    this.carte = L.map('carte-gazfacile', {
-      center: [6.3703, 2.3912], // Cotonou, Bénin
-      zoom: 13,
-      zoomControl: true
-    });
-
-    // Tuiles OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19
-    }).addTo(this.carte);
-  }
-
-  /**
-   * Met à jour les marqueurs sans recréer la carte.
-   * Ajoute les nouveaux revendeurs, met à jour les existants,
-   * supprime ceux qui ne sont plus dans la liste.
-   */
   private mettreAJourMarqueurs(revendeurs: Revendeur[]): void {
-    const idsActuels = new Set(revendeurs.map(r => r.id));
-
-    // Supprimer les marqueurs des revendeurs supprimés
-    this.marqueurs.forEach((marqueur, id) => {
-      if (!idsActuels.has(id)) {
-        marqueur.remove();
-        this.marqueurs.delete(id);
-      }
-    });
-
-    // Créer ou mettre à jour les marqueurs
-    revendeurs.forEach(revendeur => {
-      if (!revendeur.location || revendeur.location.length < 2) return;
-
-      const [lng, lat] = revendeur.location;
-
-      if (this.marqueurs.has(revendeur.id)) {
-        // Mettre à jour l'icône si le stock a changé
-        const marqueur = this.marqueurs.get(revendeur.id)!;
-        marqueur.setIcon(this.creerIcone(revendeur.stockStatus));
-        marqueur.setPopupContent(this.creerContenuPopup(revendeur));
-      } else {
-        // Créer un nouveau marqueur
-        const marqueur = L.marker([lat, lng], {
-          icon: this.creerIcone(revendeur.stockStatus)
-        });
-
-        const popupContent = this.creerContenuPopup(revendeur);
-        marqueur.bindPopup(popupContent, { maxWidth: 260 });
-
-        // Gérer le clic sur "Commander" dans le popup
-        marqueur.on('popupopen', () => {
-          const btn = document.getElementById(`btn-commander-${revendeur.id}`);
-          if (btn) {
-            btn.addEventListener('click', () => {
-              this.commanderClique.emit(revendeur);
-            });
-          }
-        });
-
-        marqueur.addTo(this.carte);
-        this.marqueurs.set(revendeur.id, marqueur);
-      }
-    });
+    this.marqueurs = revendeurs
+      .filter(r => r.location && r.location.length >= 2)
+      .map(r => {
+        const [lng, lat] = r.location!;
+        return {
+          revendeurId: r.id,
+          position: { lat, lng },
+          options: this.creerOptionsMarqueur(r.stockStatus),
+          revendeur: r
+        };
+      });
   }
 
-  /**
-   * Crée une icône DivIcon colorée selon le statut de stock.
-   * Vert = EN_STOCK | Orange = STOCK_FAIBLE | Rouge = EPUISE
-   */
-  private creerIcone(stockStatus: StockStatus): L.DivIcon {
+  private creerOptionsMarqueur(stockStatus: StockStatus): google.maps.MarkerOptions {
     const couleurs: Record<StockStatus, string> = {
       [StockStatus.EN_STOCK]: '#22C55E',
       [StockStatus.STOCK_FAIBLE]: '#EAB308',
       [StockStatus.EPUISE]: '#EF4444'
     };
-
     const couleur = couleurs[stockStatus] ?? '#A8A29E';
+    const svg = this.creerSvgBouteille(couleur);
 
-    return L.divIcon({
-      html: `
-        <div style="
-          width: 22px;
-          height: 22px;
-          border-radius: 50%;
-          background: ${couleur};
-          border: 3px solid white;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-          cursor: pointer;
-          transition: transform 0.2s;
-        "></div>
-      `,
-      className: '',
-      iconSize: [22, 22],
-      iconAnchor: [11, 11],
-      popupAnchor: [0, -14]
-    });
+    return {
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+        scaledSize: new google.maps.Size(32, 44),
+        anchor: new google.maps.Point(16, 44),
+      }
+    };
   }
 
-  /** Génère le contenu HTML d'un popup de revendeur. */
+  private creerSvgBouteille(couleur: string): string {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 44" width="32" height="44">
+      <rect x="12" y="0" width="8" height="3" rx="1.5" fill="${couleur}" stroke="white" stroke-width="0.8"/>
+      <rect x="13" y="3" width="6" height="5" rx="1" fill="${couleur}"/>
+      <rect x="4" y="8" width="24" height="28" rx="10" fill="${couleur}"/>
+      <rect x="7" y="12" width="5" height="14" rx="2.5" fill="rgba(255,255,255,0.22)"/>
+      <text x="16" y="27" text-anchor="middle" font-family="Arial,sans-serif" font-size="7" font-weight="800" fill="white" letter-spacing="0.5">GAZ</text>
+      <rect x="7" y="35" width="18" height="5" rx="2.5" fill="${couleur}" opacity="0.75"/>
+      <polygon points="16,44 11,38 21,38" fill="${couleur}"/>
+      <circle cx="16" cy="44" r="1.5" fill="rgba(0,0,0,0.3)"/>
+    </svg>`;
+  }
+
+  ouvrirInfo(marqueurData: typeof this.marqueurs[0]): void {
+    this.contenuInfo = this.creerContenuPopup(marqueurData.revendeur);
+    this.infoWindowOptions = { position: marqueurData.position };
+    this.infoWindow.open();
+
+    // Écouter le clic "Commander" après ouverture de l'info window
+    setTimeout(() => {
+      const btn = document.getElementById(`btn-commander-${marqueurData.revendeur.id}`);
+      if (btn) {
+        btn.addEventListener('click', () => {
+          this.ngZone.run(() => this.commanderClique.emit(marqueurData.revendeur));
+        });
+      }
+    }, 100);
+  }
+
   private creerContenuPopup(revendeur: Revendeur): string {
-    const libelleSock: Record<StockStatus, string> = {
+    const libelleStock: Record<StockStatus, string> = {
       [StockStatus.EN_STOCK]: '<span style="color:#22C55E">● En stock</span>',
       [StockStatus.STOCK_FAIBLE]: '<span style="color:#EAB308">● Stock faible</span>',
       [StockStatus.EPUISE]: '<span style="color:#EF4444">● Épuisé</span>'
@@ -181,106 +213,52 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     const btnDisabled = revendeur.stockStatus === StockStatus.EPUISE ? 'disabled' : '';
 
     return `
-      <div style="font-family: 'DM Sans', sans-serif; min-width: 200px;">
-        <h4 style="
-          font-family: 'Syne', sans-serif;
-          font-size: 0.95rem;
-          font-weight: 700;
-          margin-bottom: 4px;
-          color: #F5F5F4;
-        ">${revendeur.nom}</h4>
-        <p style="font-size: 0.8rem; color: #A8A29E; margin: 2px 0;">
+      <div style="font-family:'DM Sans',sans-serif;min-width:210px;padding:14px 16px;color:#F5F5F4;background:#292524;border-radius:10px;">
+        <h4 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin:0 0 8px;color:#F5F5F4;">
+          ${revendeur.nom}
+        </h4>
+        <p style="font-size:0.8rem;color:#A8A29E;margin:3px 0;">
           📍 ${revendeur.quartier}${revendeur.adresse ? ' — ' + revendeur.adresse : ''}
         </p>
-        <p style="font-size: 0.8rem; color: #A8A29E; margin: 2px 0;">
+        <p style="font-size:0.8rem;color:#A8A29E;margin:3px 0;">
           📞 ${revendeur.telephone}
         </p>
-        <p style="font-size: 0.8rem; margin: 4px 0;">
-          🛢️ ${marquesList}
-        </p>
-        <p style="font-size: 0.8rem; margin: 2px 0;">
-          ${libelleSock[revendeur.stockStatus]}
-        </p>
-        <p style="font-size: 0.8rem; margin: 2px 0;">
-          ${livraisonTexte}
-        </p>
+        <p style="font-size:0.8rem;color:#D4CFC9;margin:5px 0;">🛢️ ${marquesList}</p>
+        <p style="font-size:0.8rem;margin:3px 0;">${libelleStock[revendeur.stockStatus]}</p>
+        <p style="font-size:0.8rem;margin:3px 0;">${livraisonTexte}</p>
         <button
           id="btn-commander-${revendeur.id}"
           ${btnDisabled}
           style="
-            margin-top: 10px;
-            width: 100%;
-            padding: 8px;
-            background: ${revendeur.stockStatus === StockStatus.EPUISE ? '#3C3835' : '#F97316'};
-            color: ${revendeur.stockStatus === StockStatus.EPUISE ? '#A8A29E' : 'white'};
-            border: none;
-            border-radius: 6px;
-            font-family: 'DM Sans', sans-serif;
-            font-weight: 600;
-            font-size: 0.85rem;
-            cursor: ${revendeur.stockStatus === StockStatus.EPUISE ? 'not-allowed' : 'pointer'};
-          "
-        >
+            margin-top:12px;width:100%;padding:9px;
+            background:${revendeur.stockStatus === StockStatus.EPUISE ? '#3C3835' : '#F97316'};
+            color:${revendeur.stockStatus === StockStatus.EPUISE ? '#57534E' : 'white'};
+            border:none;border-radius:6px;
+            font-family:'DM Sans',sans-serif;font-weight:600;font-size:0.85rem;
+            cursor:${revendeur.stockStatus === StockStatus.EPUISE ? 'not-allowed' : 'pointer'};
+            transition:background 0.2s;
+          ">
           🛒 Commander
         </button>
       </div>
     `;
   }
 
-  /**
-   * Centre la carte sur un revendeur spécifique et ouvre son popup.
-   * Appelé depuis le composant parent quand on clique sur une carte.
-   */
   focusRevendeur(id: string): void {
-    const revendeur = this.revendeursSnapshot.find(r => r.id === id);
-    if (!revendeur || !revendeur.location) return;
-
-    const [lng, lat] = revendeur.location;
-    this.carte.flyTo([lat, lng], 16, { duration: 0.8 });
-
-    const marqueur = this.marqueurs.get(id);
-    if (marqueur) {
-      setTimeout(() => marqueur.openPopup(), 900);
+    const marqueur = this.marqueurs.find(m => m.revendeurId === id);
+    if (marqueur && this.mapInstance) {
+      this.mapInstance.panTo(marqueur.position);
+      this.mapInstance.setZoom(16);
     }
   }
 
-  /**
-   * Place un marqueur bleu sur la position de l'utilisateur.
-   *
-   * @param lat latitude
-   * @param lng longitude
-   */
   setUserLocation(lat: number, lng: number): void {
-    if (this.marqueurUtilisateur) {
-      this.marqueurUtilisateur.setLatLng([lat, lng]);
-    } else {
-      const iconeUtilisateur = L.divIcon({
-        html: `
-          <div style="
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #3B82F6;
-            border: 3px solid white;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(0,0,0,0.4);
-          "></div>
-        `,
-        className: '',
-        iconSize: [18, 18],
-        iconAnchor: [9, 9]
-      });
-
-      this.marqueurUtilisateur = L.marker([lat, lng], { icon: iconeUtilisateur })
-        .bindPopup('Votre position')
-        .addTo(this.carte);
-    }
-
-    this.carte.flyTo([lat, lng], 14, { duration: 1 });
-  }
-
-  ngOnDestroy(): void {
-    if (this.carte) {
-      this.carte.remove();
+    this.positionUtilisateur = { lat, lng };
+    if (this.mapInstance) {
+      this.mapInstance.panTo({ lat, lng });
+      this.mapInstance.setZoom(14);
     }
   }
+
+  ngOnDestroy(): void {}
 }

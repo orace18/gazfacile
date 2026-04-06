@@ -1,3 +1,22 @@
+// === Angular Material — Thème sombre GazFacile ===
+@use '@angular/material' as mat;
+
+@include mat.core();
+
+$gazfacile-theme: mat.define-theme((
+  color: (
+    theme-type: dark,
+    primary: mat.$orange-palette,
+  ),
+  typography: (
+    brand-family: 'DM Sans, sans-serif',
+  ),
+));
+
+html {
+  @include mat.all-component-themes($gazfacile-theme);
+}
+
 // === Variables globales GazFacile ===
 :root {
   --color-primary: #F97316;
@@ -100,9 +119,26 @@ a {
 .bg-surface { background-color: var(--color-surface); }
 .bg-surface-2 { background-color: var(--color-surface-2); }
 
-// === Carte Leaflet ===
-#map, .leaflet-container {
-  background-color: #2d2b28 !important;
+// === Google Maps InfoWindow — thème sombre ===
+.gm-style .gm-style-iw-c {
+  background-color: #292524 !important;
+  border: 1px solid #44403C !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7) !important;
+  padding: 0 !important;
+  border-radius: 10px !important;
+}
+.gm-style .gm-style-iw-d {
+  overflow: hidden !important;
+  color: #F5F5F4 !important;
+}
+.gm-style .gm-style-iw-tc::after {
+  background: #292524 !important;
+}
+.gm-style .gm-style-iw-chr {
+  background: transparent !important;
+}
+.gm-style .gm-style-iw-chr button {
+  filter: invert(1) opacity(0.6) !important;
 }
 
 .leaflet-popup-content-wrapper {

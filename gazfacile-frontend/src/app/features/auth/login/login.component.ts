@@ -240,8 +240,12 @@ export class LoginComponent {
     this.envoi = true;
     this.erreur = null;
 
+    // Normaliser le numéro : retirer +229, 00229 ou espaces
+    const telephone = this.formulaire.value.telephone!
+      .replace(/^\+229/, '').replace(/^00229/, '').replace(/\s/g, '').trim();
+
     this.authService.login({
-      telephone: this.formulaire.value.telephone!,
+      telephone,
       password: this.formulaire.value.password!
     }).subscribe({
       next: () => {

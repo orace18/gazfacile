@@ -104,15 +104,15 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
       }
 
       <!-- Compteur de résultats -->
-      @if (!revendeurService.chargement() && revendeursFiltrés().length > 0) {
+      @if (!revendeurService.chargement() && revendeursFiltres().length > 0) {
         <p class="compteur">
-          {{ revendeursFiltrés().length }} revendeur{{ revendeursFiltrés().length > 1 ? 's' : '' }} trouvé{{ revendeursFiltrés().length > 1 ? 's' : '' }}
+          {{ revendeursFiltres().length }} revendeur{{ revendeursFiltres().length > 1 ? 's' : '' }} trouvé{{ revendeursFiltres().length > 1 ? 's' : '' }}
         </p>
       }
 
       <!-- Liste des cartes -->
       <div class="liste-cartes">
-        @for (revendeur of revendeursFiltrés(); track revendeur.id) {
+        @for (revendeur of revendeursFiltres(); track revendeur.id) {
           <app-revendeur-card
             [revendeur]="revendeur"
             (selectionne)="revendeurSelectionne.emit($event)"
@@ -276,7 +276,7 @@ export class RevendeurListComponent {
   readonly StockStatus = StockStatus;
 
   /** Liste filtrée basée sur la recherche et le filtre de stock. */
-  readonly revendeursFiltrés = computed<Revendeur[]>(() => {
+  readonly revendeursFiltres = computed<Revendeur[]>(() => {
     const revendeurs = this.revendeurService.revendeurs();
     const recherche = this.texteRecherche().toLowerCase().trim();
     const filtre = this.filtreStock();
