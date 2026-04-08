@@ -126,7 +126,7 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
       position: sticky;
       top: 0;
       z-index: 1000;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
     }
 
     .logo {

@@ -184,7 +184,7 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       align-items: center;
       justify-content: center;
       padding: 24px 16px;
-      background: radial-gradient(circle at top, rgba(249, 115, 22, 0.05) 0%, transparent 60%), var(--color-bg);
+      background: radial-gradient(ellipse at top center, rgba(255, 107, 53, 0.1) 0%, transparent 55%), var(--color-bg);
     }
 
     .carte-auth {

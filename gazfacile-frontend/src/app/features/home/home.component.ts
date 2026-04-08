@@ -76,7 +76,7 @@ import { Revendeur } from '../../core/models/revendeur.model';
     }
 
     .heros {
-      background: linear-gradient(135deg, var(--color-surface) 0%, rgba(249, 115, 22, 0.08) 100%);
+      background: linear-gradient(135deg, var(--color-surface) 0%, rgba(255, 107, 53, 0.12) 60%, rgba(255, 107, 53, 0.04) 100%);
       border-bottom: 1px solid var(--color-border);
       padding: 20px 24px;
       flex-shrink: 0;
