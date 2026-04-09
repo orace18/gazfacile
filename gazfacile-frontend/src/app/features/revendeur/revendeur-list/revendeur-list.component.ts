@@ -138,6 +138,7 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      background-color: var(--color-surface);
     }
 
     .barre-recherche {
@@ -145,19 +146,22 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
       gap: 8px;
       align-items: center;
       padding: 12px 12px 4px;
+      background-color: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
     }
 
     .champ-recherche {
       flex: 1;
 
       ::ng-deep .mat-mdc-form-field-infix {
-        min-height: 48px;
+        min-height: 44px;
       }
 
       ::ng-deep .mdc-notched-outline__leading,
       ::ng-deep .mdc-notched-outline__notch,
       ::ng-deep .mdc-notched-outline__trailing {
         border-color: var(--color-border);
+        border-radius: 0 !important;
       }
 
       ::ng-deep input {
@@ -170,15 +174,17 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
     }
 
     .btn-pres-de-moi {
-      background-color: var(--color-surface-2) !important;
-      color: var(--color-primary) !important;
-      border: 1px solid var(--color-primary) !important;
+      background-color: var(--color-primary) !important;
+      color: white !important;
+      border: none !important;
+      border-radius: 0 !important;
       white-space: nowrap;
-      height: 48px;
+      height: 44px;
       gap: 4px;
+      font-weight: 600 !important;
 
       &:hover {
-        background-color: var(--color-primary-light) !important;
+        background-color: var(--color-primary-dark) !important;
       }
 
       mat-spinner {
@@ -187,21 +193,25 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
     }
 
     .filtres {
-      padding: 4px 12px 8px;
+      padding: 8px 12px;
       overflow-x: auto;
+      border-bottom: 1px solid var(--color-border);
     }
 
     .toggle-stock {
+      border-radius: 0 !important;
+
       ::ng-deep .mat-button-toggle {
         background-color: var(--color-surface) !important;
         color: var(--color-text-muted) !important;
         border-color: var(--color-border) !important;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
+        border-radius: 0 !important;
       }
 
       ::ng-deep .mat-button-toggle-checked {
-        background-color: var(--color-primary-light) !important;
-        color: var(--color-primary) !important;
+        background-color: var(--color-primary) !important;
+        color: white !important;
       }
     }
 
@@ -221,21 +231,28 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
       padding: 12px 16px;
       background-color: var(--color-danger-bg);
       color: var(--color-danger);
-      border-radius: var(--radius-sm);
+      border-radius: 0;
       margin: 8px 12px;
       font-size: 0.85rem;
+      border-left: 3px solid var(--color-danger);
     }
 
     .compteur {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--color-text-muted);
-      padding: 0 16px 8px;
+      padding: 6px 16px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background-color: var(--color-surface-2);
+      border-bottom: 1px solid var(--color-border);
     }
 
     .liste-cartes {
       flex: 1;
       overflow-y: auto;
-      padding: 0 12px 12px;
+      padding: 12px;
+      background-color: var(--color-bg);
     }
 
     .aucun-resultat {
@@ -257,6 +274,7 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
       button {
         border-color: var(--color-primary) !important;
         color: var(--color-primary) !important;
+        border-radius: 0 !important;
       }
     }
   `]

@@ -33,19 +33,29 @@ import { Revendeur } from '../../core/models/revendeur.model';
   ],
   template: `
     <div class="page-accueil">
-      <!-- En-tête héros -->
-      <div class="heros">
+      <!-- Hero section bleue -->
+      <section class="heros">
         <div class="heros-contenu">
-          <h1 class="heros-titre">
-            Trouvez du gaz 🔥<br>
-            <span class="highlight">près de chez vous</span>
-          </h1>
-          <p class="heros-desc">
-            Localisez les revendeurs de gaz domestique au Bénin en temps réel.
-            Stock mis à jour instantanément.
-          </p>
+          <div class="heros-texte">
+            <p class="heros-surtitre">PLATEFORME DE GAZ DOMESTIQUE — BÉNIN</p>
+            <h1 class="heros-titre">
+              LE GAZ,<br>
+              <span class="accent">PLUS PROCHE</span><br>
+              DE VOUS
+            </h1>
+            <p class="heros-desc">
+              Localisez les revendeurs de gaz domestique au Bénin en temps réel.
+              Bénin Petro · Oryx · ProGaz · JNP
+            </p>
+          </div>
+          <div class="marques-logos">
+            <span class="marque-badge">Bénin Petro</span>
+            <span class="marque-badge">Oryx</span>
+            <span class="marque-badge">ProGaz</span>
+            <span class="marque-badge">JNP</span>
+          </div>
         </div>
-      </div>
+      </section>
 
       <!-- Vue principale : carte + liste -->
       <div class="vue-principale">
@@ -75,37 +85,72 @@ import { Revendeur } from '../../core/models/revendeur.model';
       height: calc(100vh - 64px);
     }
 
+    /* ── HERO ── */
     .heros {
-      background: linear-gradient(135deg, var(--color-surface) 0%, rgba(255, 107, 53, 0.12) 60%, rgba(255, 107, 53, 0.04) 100%);
-      border-bottom: 1px solid var(--color-border);
-      padding: 20px 24px;
+      background-color: var(--color-primary);
+      padding: 28px 32px 24px;
       flex-shrink: 0;
     }
 
     .heros-contenu {
       max-width: 1200px;
       margin: 0 auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .heros-surtitre {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--color-accent);
+      text-transform: uppercase;
+      margin-bottom: 8px;
     }
 
     .heros-titre {
       font-family: 'Syne', sans-serif;
-      font-size: 1.6rem;
+      font-size: 2.4rem;
       font-weight: 800;
-      color: var(--color-text);
-      margin-bottom: 6px;
-      line-height: 1.25;
+      color: #FFFFFF;
+      line-height: 1.1;
+      text-transform: uppercase;
+      margin-bottom: 12px;
 
-      .highlight {
-        color: var(--color-primary);
+      .accent {
+        color: var(--color-accent);
       }
     }
 
     .heros-desc {
       font-size: 0.9rem;
-      color: var(--color-text-muted);
-      max-width: 500px;
+      color: rgba(255, 255, 255, 0.75);
+      max-width: 420px;
+      line-height: 1.5;
     }
 
+    .marques-logos {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .marque-badge {
+      background-color: rgba(255, 255, 255, 0.15);
+      color: #FFFFFF;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* ── SPLIT VIEW ── */
     .vue-principale {
       display: flex;
       flex: 1;
@@ -116,7 +161,6 @@ import { Revendeur } from '../../core/models/revendeur.model';
       flex: 0 0 60%;
       max-width: 60%;
       height: 100%;
-      padding: 12px;
     }
 
     .panneau-liste {
@@ -124,9 +168,10 @@ import { Revendeur } from '../../core/models/revendeur.model';
       max-width: 40%;
       height: 100%;
       overflow: hidden;
-      border-left: 1px solid var(--color-border);
+      border-left: 2px solid var(--color-border);
       display: flex;
       flex-direction: column;
+      background-color: var(--color-surface);
     }
 
     @media (max-width: 900px) {
@@ -150,21 +195,25 @@ import { Revendeur } from '../../core/models/revendeur.model';
         height: auto;
         min-height: 400px;
         border-left: none;
-        border-top: 1px solid var(--color-border);
+        border-top: 2px solid var(--color-border);
       }
 
       .heros-titre {
-        font-size: 1.3rem;
+        font-size: 1.7rem;
+      }
+
+      .marques-logos {
+        display: none;
       }
     }
 
     @media (max-width: 480px) {
       .heros {
-        padding: 14px 16px;
+        padding: 20px 16px;
       }
 
       .heros-titre {
-        font-size: 1.1rem;
+        font-size: 1.4rem;
       }
 
       .heros-desc {

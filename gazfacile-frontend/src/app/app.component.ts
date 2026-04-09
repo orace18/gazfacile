@@ -16,6 +16,7 @@ import { NavbarComponent } from './shared/components/navbar/navbar.component';
     .contenu-principal {
       min-height: calc(100vh - 64px);
       background-color: var(--color-bg);
+      color: var(--color-text);
     }
   `]
 })

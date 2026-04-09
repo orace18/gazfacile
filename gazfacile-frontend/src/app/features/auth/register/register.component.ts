@@ -184,17 +184,18 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       align-items: center;
       justify-content: center;
       padding: 24px 16px;
-      background: radial-gradient(ellipse at top center, rgba(255, 107, 53, 0.1) 0%, transparent 55%), var(--color-bg);
+      background-color: var(--color-primary);
+      background-image: linear-gradient(160deg, var(--color-primary) 60%, var(--color-primary-dark) 100%);
     }
 
     .carte-auth {
       width: 100%;
       max-width: 460px;
       background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
+      border: none;
+      border-radius: 0;
       padding: 40px 36px;
-      box-shadow: var(--shadow-lg);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
     }
 
     .entete-auth {
@@ -202,16 +203,18 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       margin-bottom: 28px;
 
       .logo-flamme {
-        font-size: 2.5rem;
+        font-size: 2rem;
         display: block;
         margin-bottom: 10px;
       }
 
       h1 {
         font-family: 'Syne', sans-serif;
-        font-size: 1.7rem;
+        font-size: 1.6rem;
         color: var(--color-text);
         margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
       }
 
       .sous-titre {
@@ -228,13 +231,19 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
 
     .champ-pleine-largeur {
       width: 100%;
+
+      ::ng-deep .mdc-notched-outline__leading,
+      ::ng-deep .mdc-notched-outline__notch,
+      ::ng-deep .mdc-notched-outline__trailing {
+        border-radius: 0 !important;
+      }
     }
 
     .prefixe-tel {
       font-size: 0.85rem;
-      color: var(--color-text-muted);
+      color: var(--color-primary);
       margin-right: 8px;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .groupe-role {
@@ -246,6 +255,9 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       color: var(--color-text-muted);
       display: block;
       margin-bottom: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
 
     .radio-role {
@@ -266,11 +278,17 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 14px;
+      padding: 12px 14px;
       background: var(--color-surface-2);
-      border-radius: var(--radius-sm);
+      border-radius: 0;
       border: 1px solid var(--color-border);
       cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
+
+      &:hover {
+        border-color: var(--color-primary);
+        background-color: var(--color-primary-light);
+      }
 
       mat-icon {
         color: var(--color-primary);
@@ -278,9 +296,11 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
 
       .role-titre {
         display: block;
-        font-weight: 600;
+        font-weight: 700;
         color: var(--color-text);
         font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
       }
 
       .role-desc {
@@ -297,17 +317,25 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       padding: 10px 14px;
       background: var(--color-danger-bg);
       color: var(--color-danger);
-      border-radius: var(--radius-sm);
+      border-radius: 0;
+      border-left: 3px solid var(--color-danger);
       font-size: 0.88rem;
     }
 
     .btn-inscription {
-      background-color: var(--color-primary) !important;
+      background-color: var(--color-accent) !important;
       color: white !important;
-      height: 48px;
+      height: 50px;
       font-size: 1rem !important;
-      font-weight: 600 !important;
+      font-weight: 700 !important;
       margin-top: 8px;
+      border-radius: 0 !important;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+
+      &:hover:not(:disabled) {
+        background-color: var(--color-accent-dark) !important;
+      }
 
       &:disabled {
         background-color: var(--color-surface-3) !important;
@@ -332,7 +360,11 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
 
       a {
         color: var(--color-primary);
-        font-weight: 600;
+        font-weight: 700;
+
+        &:hover {
+          color: var(--color-accent);
+        }
       }
     }
   `]

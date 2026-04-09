@@ -119,14 +119,14 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
   `,
   styles: [`
     .navbar {
-      background-color: var(--color-surface) !important;
-      border-bottom: 1px solid var(--color-border);
+      background-color: var(--color-primary) !important;
+      border-bottom: none;
       height: 64px;
-      padding: 0 16px;
+      padding: 0 24px;
       position: sticky;
       top: 0;
       z-index: 1000;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 2px 12px rgba(44, 71, 112, 0.3);
     }
 
     .logo {
@@ -144,8 +144,9 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
         font-family: 'Syne', sans-serif;
         font-size: 1.3rem;
         font-weight: 800;
-        color: var(--color-primary);
-        letter-spacing: -0.02em;
+        color: #FFFFFF;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
       }
     }
 
@@ -159,11 +160,12 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
       gap: 4px;
 
       a, button {
-        color: var(--color-text-muted) !important;
+        color: rgba(255, 255, 255, 0.85) !important;
         transition: color 0.2s;
+        border-radius: 0 !important;
 
         &:hover, &.actif {
-          color: var(--color-text) !important;
+          color: var(--color-accent) !important;
         }
 
         mat-icon {
@@ -176,23 +178,32 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
     }
 
     .btn-register {
-      background-color: var(--color-primary) !important;
+      background-color: var(--color-accent) !important;
       color: white !important;
-      border-radius: 20px !important;
-      padding: 0 16px !important;
+      border-radius: 0 !important;
+      padding: 0 20px !important;
       margin-left: 8px;
+      font-weight: 700 !important;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+
+      &:hover {
+        background-color: var(--color-accent-dark) !important;
+        color: white !important;
+      }
     }
 
     .btn-user {
       display: flex;
       align-items: center;
       gap: 4px;
-      color: var(--color-text) !important;
+      color: rgba(255, 255, 255, 0.9) !important;
+      border-radius: 0 !important;
     }
 
     .nav-mobile-btn {
       display: none !important;
-      color: var(--color-text) !important;
+      color: white !important;
     }
 
     @media (max-width: 768px) {

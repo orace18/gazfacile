@@ -1,12 +1,12 @@
-// === Angular Material — Thème sombre GazFacile ===
+// === Angular Material — Thème clair GazFacile ===
 @use '@angular/material' as mat;
 
 @include mat.core();
 
 $gazfacile-theme: mat.define-theme((
   color: (
-    theme-type: dark,
-    primary: mat.$orange-palette,
+    theme-type: light,
+    primary: mat.$azure-palette,
   ),
   typography: (
     brand-family: 'DM Sans, sans-serif',
@@ -17,30 +17,33 @@ html {
   @include mat.all-component-themes($gazfacile-theme);
 }
 
-// === Variables globales GazFacile ===
+// === Variables globales GazFacile — Charte Wadagni ===
 :root {
-  --color-primary: #FF6B35;
-  --color-primary-dark: #E85A25;
-  --color-primary-light: rgba(255, 107, 53, 0.15);
-  --color-bg: #0C0E1A;
-  --color-surface: #141827;
-  --color-surface-2: #1E2235;
-  --color-surface-3: #2C3149;
-  --color-text: #EDF0FF;
-  --color-text-muted: #7E8BB5;
-  --color-border: #252A42;
-  --color-success: #2DD4A0;
-  --color-success-bg: rgba(45, 212, 160, 0.1);
-  --color-warning: #FFCA28;
-  --color-warning-bg: rgba(255, 202, 40, 0.1);
-  --color-danger: #FF5272;
-  --color-danger-bg: rgba(255, 82, 114, 0.12);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.6);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.7);
+  --color-primary: #4A6FA5;
+  --color-primary-dark: #2C4770;
+  --color-primary-light: rgba(74, 111, 165, 0.12);
+  --color-accent: #E8B84A;
+  --color-accent-dark: #D4A33A;
+  --color-accent-light: rgba(232, 184, 74, 0.15);
+  --color-bg: #F4F7FB;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #EEF2F8;
+  --color-surface-3: #DDE5F0;
+  --color-text: #2C4770;
+  --color-text-muted: #6B7A99;
+  --color-border: #C8D5E8;
+  --color-success: #27AE60;
+  --color-success-bg: rgba(39, 174, 96, 0.1);
+  --color-warning: #E8B84A;
+  --color-warning-bg: rgba(232, 184, 74, 0.12);
+  --color-danger: #E53E3E;
+  --color-danger-bg: rgba(229, 62, 62, 0.1);
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --shadow-sm: 0 1px 4px rgba(44, 71, 112, 0.08);
+  --shadow-md: 0 4px 16px rgba(44, 71, 112, 0.12);
+  --shadow-lg: 0 8px 32px rgba(44, 71, 112, 0.16);
 }
 
 // === Reset et base ===
@@ -90,12 +93,12 @@ a {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-surface);
+  background: var(--color-surface-2);
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--color-primary);
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -111,41 +114,22 @@ a {
 
 // === Utilitaires ===
 .text-primary { color: var(--color-primary); }
-.text-muted { color: var(--color-text-muted); }
+.text-accent  { color: var(--color-accent); }
+.text-muted   { color: var(--color-text-muted); }
 .text-success { color: var(--color-success); }
 .text-warning { color: var(--color-warning); }
-.text-danger { color: var(--color-danger); }
+.text-danger  { color: var(--color-danger); }
 
-.bg-surface { background-color: var(--color-surface); }
+.bg-surface   { background-color: var(--color-surface); }
 .bg-surface-2 { background-color: var(--color-surface-2); }
+.bg-primary   { background-color: var(--color-primary); }
 
-// === Google Maps InfoWindow — thème sombre ===
-.gm-style .gm-style-iw-c {
-  background-color: #141827 !important;
-  border: 1px solid #252A42 !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.8) !important;
-  padding: 0 !important;
-  border-radius: 10px !important;
-}
-.gm-style .gm-style-iw-d {
-  overflow: hidden !important;
-  color: #EDF0FF !important;
-}
-.gm-style .gm-style-iw-tc::after {
-  background: #141827 !important;
-}
-.gm-style .gm-style-iw-chr {
-  background: transparent !important;
-}
-.gm-style .gm-style-iw-chr button {
-  filter: invert(1) opacity(0.6) !important;
-}
-
+// === Popup Leaflet — thème clair ===
 .leaflet-popup-content-wrapper {
   background-color: var(--color-surface) !important;
   color: var(--color-text) !important;
   border: 1px solid var(--color-border) !important;
-  border-radius: var(--radius-md) !important;
+  border-radius: 0 !important;
   box-shadow: var(--shadow-lg) !important;
 }
 
@@ -174,10 +158,10 @@ a {
     margin-top: 10px;
     width: 100%;
     padding: 8px 16px;
-    background-color: var(--color-primary);
+    background-color: var(--color-accent);
     color: white;
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: 0;
     font-family: 'DM Sans', sans-serif;
     font-weight: 600;
     font-size: 0.85rem;
@@ -185,11 +169,12 @@ a {
     transition: background-color 0.2s;
 
     &:hover {
-      background-color: var(--color-primary-dark);
+      background-color: var(--color-accent-dark);
     }
 
     &:disabled {
       background-color: var(--color-surface-3);
+      color: var(--color-text-muted);
       cursor: not-allowed;
     }
   }
@@ -203,6 +188,7 @@ a {
     background-color: var(--color-surface) !important;
     color: var(--color-text) !important;
     border-color: var(--color-border) !important;
+    border-radius: 0 !important;
 
     &:hover {
       background-color: var(--color-surface-2) !important;
@@ -210,16 +196,19 @@ a {
   }
 }
 
-// === Angular Material — Surcharges thème sombre ===
+// === Angular Material — Surcharges thème clair ===
 .mat-mdc-card {
   background-color: var(--color-surface) !important;
   color: var(--color-text) !important;
   border: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 
 .mat-mdc-dialog-container {
   --mdc-dialog-container-color: var(--color-surface) !important;
   color: var(--color-text) !important;
+  border-radius: 0 !important;
 }
 
 .mat-mdc-form-field {
@@ -227,6 +216,7 @@ a {
   .mdc-text-field--outlined .mdc-notched-outline__notch,
   .mdc-text-field--outlined .mdc-notched-outline__trailing {
     border-color: var(--color-border) !important;
+    border-radius: 0 !important;
   }
 
   .mdc-text-field--focused .mdc-notched-outline * {
@@ -243,14 +233,16 @@ a {
 }
 
 .mat-mdc-select-panel {
-  background-color: var(--color-surface-2) !important;
+  background-color: var(--color-surface) !important;
+  border-radius: 0 !important;
+  border: 1px solid var(--color-border) !important;
 }
 
 .mat-mdc-option {
   color: var(--color-text) !important;
 
   &:hover:not(.mdc-list-item--disabled) {
-    background-color: var(--color-surface-3) !important;
+    background-color: var(--color-surface-2) !important;
   }
 
   &.mdc-list-item--selected {
@@ -260,8 +252,9 @@ a {
 }
 
 .mat-mdc-snack-bar-container {
-  --mdc-snackbar-container-color: var(--color-surface-2) !important;
-  --mdc-snackbar-supporting-text-color: var(--color-text) !important;
+  --mdc-snackbar-container-color: var(--color-primary-dark) !important;
+  --mdc-snackbar-supporting-text-color: #FFFFFF !important;
+  border-radius: 0 !important;
 }
 
 .mat-mdc-progress-spinner circle {
@@ -271,26 +264,39 @@ a {
 .mat-mdc-chip {
   background-color: var(--color-surface-2) !important;
   color: var(--color-text) !important;
+  border-radius: 0 !important;
 }
 
-.mat-mdc-tab-body-wrapper {
-  background-color: var(--color-bg) !important;
+.mat-mdc-button-base {
+  border-radius: 0 !important;
 }
 
-// === Boutons ===
+.mdc-button {
+  border-radius: 0 !important;
+}
+
+.mat-mdc-raised-button,
+.mat-mdc-outlined-button,
+.mat-mdc-flat-button {
+  border-radius: 0 !important;
+}
+
+// === Boutons globaux ===
 .btn-primary {
-  background-color: var(--color-primary);
+  background-color: var(--color-accent);
   color: white;
   border: none;
-  border-radius: var(--radius-sm);
-  padding: 10px 20px;
+  border-radius: 0;
+  padding: 10px 24px;
   font-family: 'DM Sans', sans-serif;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s, transform 0.1s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 
   &:hover {
-    background-color: var(--color-primary-dark);
+    background-color: var(--color-accent-dark);
   }
 
   &:active {
@@ -300,6 +306,23 @@ a {
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+  border-radius: 0;
+  padding: 10px 24px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: var(--color-primary);
+    color: white;
   }
 }
 

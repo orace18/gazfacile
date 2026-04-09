@@ -109,15 +109,14 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
     .carte-revendeur {
       background-color: var(--color-surface) !important;
       border: 1px solid var(--color-border) !important;
-      border-radius: var(--radius-md) !important;
+      border-radius: 0 !important;
       cursor: pointer;
-      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
-      margin-bottom: 12px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 10px;
 
       &:hover {
         border-color: var(--color-primary) !important;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 16px rgba(249, 115, 22, 0.12) !important;
+        box-shadow: 0 4px 16px rgba(74, 111, 165, 0.15) !important;
       }
     }
 
@@ -139,6 +138,8 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
       font-weight: 700;
       color: var(--color-text);
       margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
     }
 
     .quartier {
@@ -165,6 +166,7 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
 
       &.livraison-dispo {
         color: var(--color-success);
+        font-weight: 600;
       }
     }
 
@@ -182,10 +184,14 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
     }
 
     .chip-marque {
-      background-color: var(--color-surface-2) !important;
-      color: var(--color-text-muted) !important;
-      font-size: 0.75rem !important;
-      height: 24px !important;
+      background-color: var(--color-primary-light) !important;
+      color: var(--color-primary) !important;
+      font-size: 0.72rem !important;
+      font-weight: 600 !important;
+      height: 22px !important;
+      border-radius: 0 !important;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
     .note {
@@ -202,7 +208,7 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
       color: var(--color-surface-3);
 
       &.active {
-        color: var(--color-warning);
+        color: var(--color-accent);
       }
     }
 
@@ -216,23 +222,34 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
       display: flex;
       gap: 8px;
       padding: 8px 16px 12px !important;
+      border-top: 1px solid var(--color-border);
     }
 
     .btn-carte {
       flex: 1;
-      border-color: var(--color-border) !important;
-      color: var(--color-text-muted) !important;
+      border-color: var(--color-primary) !important;
+      color: var(--color-primary) !important;
       font-size: 0.82rem !important;
+      border-radius: 0 !important;
+      font-weight: 600 !important;
     }
 
     .btn-commander {
       flex: 1;
-      background-color: var(--color-primary) !important;
+      background-color: var(--color-accent) !important;
       color: white !important;
       font-size: 0.82rem !important;
+      border-radius: 0 !important;
+      font-weight: 700 !important;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+
+      &:hover:not(:disabled) {
+        background-color: var(--color-accent-dark) !important;
+      }
 
       &:disabled {
-        background-color: var(--color-surface-2) !important;
+        background-color: var(--color-surface-3) !important;
         color: var(--color-text-muted) !important;
       }
     }
