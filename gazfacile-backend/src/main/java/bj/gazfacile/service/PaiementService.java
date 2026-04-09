@@ -9,7 +9,9 @@ import bj.gazfacile.model.enums.TypeTransaction;
 import bj.gazfacile.repository.CommandeRepository;
 import bj.gazfacile.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -30,8 +32,11 @@ public class PaiementService {
     private final FedaPayService fedaPayService;
     private final TransactionRepository transactionRepository;
     private final CommandeRepository commandeRepository;
+
+    /** Injection par setter pour briser la dépendance circulaire avec AbonnementService. */
+    @Setter(onMethod_ = @Autowired)
     @Lazy
-    private final AbonnementService abonnementService;
+    private AbonnementService abonnementService;
 
     /**
      * Initie un paiement FedaPay pour une commande ou un abonnement.
