@@ -149,9 +149,12 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
       align-items: center;
       text-decoration: none;
       cursor: pointer;
+      background: white;
+      padding: 4px 10px;
+      border-radius: 4px;
 
       .logo-img {
-        height: 40px;
+        height: 36px;
         width: auto;
       }
     }

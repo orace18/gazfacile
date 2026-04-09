@@ -283,7 +283,7 @@ import { StockBadgeComponent } from '../../../shared/components/stock-badge/stoc
     }
 
     .page-titre {
-      font-family: 'Archivo Black', sans-serif;
+      font-family: 'Montserrat', sans-serif;
       font-size: 1.7rem;
       color: #FFFFFF;
       margin-bottom: 4px;
@@ -334,7 +334,7 @@ import { StockBadgeComponent } from '../../../shared/components/stock-badge/stoc
       }
 
       h2 {
-        font-family: 'Archivo Black', sans-serif;
+        font-family: 'Montserrat', sans-serif;
         font-size: 1.2rem;
         color: var(--color-text);
       }
@@ -353,7 +353,7 @@ import { StockBadgeComponent } from '../../../shared/components/stock-badge/stoc
 
     /* ── Sections ── */
     .section-titre {
-      font-family: 'Archivo Black', sans-serif;
+      font-family: 'Montserrat', sans-serif;
       font-size: 1.1rem;
       color: var(--color-text);
       margin-bottom: 16px;

@@ -140,7 +140,7 @@ import { StatutFedaPay, Transaction } from '../../../core/models/revendeur.model
     }
 
     h1 {
-      font-family: 'Archivo Black', sans-serif;
+      font-family: 'Montserrat', sans-serif;
       font-size: 1.5rem;
       color: var(--color-text);
       margin: 0;

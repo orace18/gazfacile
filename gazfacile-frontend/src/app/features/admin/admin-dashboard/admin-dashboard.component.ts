@@ -421,7 +421,7 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay } from '../../../core
       margin-bottom: 20px;
 
       h1 {
-        font-family: 'Archivo Black', sans-serif;
+        font-family: 'Montserrat', sans-serif;
         font-size: 1.6rem;
         color: var(--color-primary);
         margin-bottom: 4px;
@@ -475,7 +475,7 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay } from '../../../core
 
     .kpi-valeur {
       display: block;
-      font-family: 'Archivo Black', sans-serif;
+      font-family: 'Montserrat', sans-serif;
       font-size: 1.5rem;
       color: var(--color-text);
       line-height: 1.1;
@@ -497,7 +497,7 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay } from '../../../core
 
       ::ng-deep mat-card-title {
         display: flex; align-items: center; gap: 6px;
-        font-family: 'Archivo Black', sans-serif;
+        font-family: 'Montserrat', sans-serif;
         font-size: 0.88rem !important;
         color: var(--color-text) !important;
         font-weight: 400 !important;
@@ -544,12 +544,12 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay } from '../../../core
 
       .ca-label { font-size: 0.82rem; color: var(--color-text-muted); margin-bottom: 4px; }
       .ca-valeur {
-        font-family: 'Archivo Black', sans-serif; font-size: 1.8rem; color: var(--color-primary);
+        font-family: 'Montserrat', sans-serif; font-size: 1.8rem; color: var(--color-primary);
         margin-bottom: 12px;
       }
       .ca-stats { display: flex; gap: 20px; }
       .ca-stat { display: flex; flex-direction: column; align-items: center; }
-      .ca-nb { font-family: 'Archivo Black', sans-serif; font-size: 1.2rem; color: var(--color-text); }
+      .ca-nb { font-family: 'Montserrat', sans-serif; font-size: 1.2rem; color: var(--color-text); }
       .ca-desc { font-size: 0.72rem; color: var(--color-text-muted); }
     }
 

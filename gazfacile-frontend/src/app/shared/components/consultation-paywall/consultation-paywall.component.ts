@@ -89,7 +89,7 @@ import { MatIconModule } from '@angular/material/icon';
     }
 
     .titre {
-      font-family: 'Archivo Black', sans-serif;
+      font-family: 'Montserrat', sans-serif;
       font-size: 1.3rem;
       color: var(--color-text);
       margin: 0;

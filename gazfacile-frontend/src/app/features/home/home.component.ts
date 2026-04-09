@@ -103,7 +103,7 @@ import { Revendeur } from '../../core/models/revendeur.model';
     }
 
     .heros-titre {
-      font-family: 'Archivo Black', sans-serif;
+      font-family: 'Montserrat', sans-serif;
       font-size: 2rem;
       font-weight: 400;
       color: #FFFFFF;

@@ -148,7 +148,7 @@ import {
     }
 
     .titre-page {
-      font-family: 'Archivo Black', sans-serif;
+      font-family: 'Montserrat', sans-serif;
       font-size: 1.8rem;
       color: var(--color-primary);
       margin: 0 0 4px;
@@ -276,7 +276,7 @@ import {
     }
 
     .plan-nom {
-      font-family: 'Archivo Black', sans-serif;
+      font-family: 'Montserrat', sans-serif;
       font-size: 1.2rem;
       color: var(--color-text);
       margin: 0 0 4px;
@@ -290,7 +290,7 @@ import {
 
     .plan-prix {
       .prix-valeur {
-        font-family: 'Archivo Black', sans-serif;
+        font-family: 'Montserrat', sans-serif;
         font-size: 1.8rem;
         color: var(--color-primary);
       }

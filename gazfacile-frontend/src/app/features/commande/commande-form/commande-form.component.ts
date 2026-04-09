@@ -237,7 +237,7 @@ export interface DialogCommandeData {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-family: 'Archivo Black', sans-serif;
+      font-family: 'Montserrat', sans-serif;
       color: var(--color-primary) !important;
       padding: 16px 24px 0;
 

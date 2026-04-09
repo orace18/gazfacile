@@ -163,7 +163,7 @@ import { ConsultationPaywallComponent } from '../../../shared/components/consult
     }
 
     .nom {
-      font-family: 'Archivo Black', sans-serif;
+      font-family: 'Montserrat', sans-serif;
       font-size: 0.95rem;
       font-weight: 400;
       color: var(--color-text);

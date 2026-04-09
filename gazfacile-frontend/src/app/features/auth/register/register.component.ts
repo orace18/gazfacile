@@ -56,7 +56,7 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
     <div class="page-auth">
       <div class="carte-auth">
         <div class="entete-auth">
-          <span class="logo-flamme">🔥</span>
+          <img src="assets/logo.svg" alt="GazFacile" class="logo-auth">
           <h1>{{ modeGoogle ? 'Finaliser l\'inscription' : 'Créer un compte' }}</h1>
           <p class="sous-titre">
             {{ modeGoogle ? 'Liez un numéro de téléphone à votre compte Google' : 'Rejoignez la communauté GazFacile au Bénin' }}
@@ -238,12 +238,17 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       text-align: center;
       margin-bottom: 28px;
 
-      .logo-flamme { font-size: 2rem; display: block; margin-bottom: 10px; }
+      .logo-auth {
+        height: 56px;
+        width: auto;
+        display: block;
+        margin: 0 auto 14px;
+      }
 
       h1 {
-        font-family: 'Archivo Black', sans-serif;
+        font-family: 'Montserrat', sans-serif;
         font-size: 1.5rem;
-        font-weight: 400;
+        font-weight: 700;
         color: var(--color-text);
         margin-bottom: 6px;
       }
