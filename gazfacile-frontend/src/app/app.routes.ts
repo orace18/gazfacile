@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
+import { revendeurGuard } from './core/guards/revendeur.guard';
 
 export const routes: Routes = [
   {
@@ -15,6 +16,14 @@ export const routes: Routes = [
         m => m.RevendeurFormComponent
       ),
     canActivate: [authGuard]
+  },
+  {
+    path: 'revendeur/catalogue',
+    loadComponent: () =>
+      import('./features/revendeur/gestion-catalogue/gestion-catalogue.component').then(
+        m => m.GestionCatalogueComponent
+      ),
+    canActivate: [revendeurGuard]
   },
   {
     path: 'auth/login',

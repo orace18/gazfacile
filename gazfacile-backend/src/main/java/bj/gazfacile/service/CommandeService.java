@@ -4,7 +4,6 @@ import bj.gazfacile.dto.CommandeDTO;
 import bj.gazfacile.exception.ResourceNotFoundException;
 import bj.gazfacile.model.Commande;
 import bj.gazfacile.model.Revendeur;
-import bj.gazfacile.model.enums.ModePaiement;
 import bj.gazfacile.model.enums.StatutCommande;
 import bj.gazfacile.model.enums.StatutPaiement;
 import bj.gazfacile.repository.CommandeRepository;
@@ -33,7 +32,6 @@ public class CommandeService {
 
     private final CommandeRepository commandeRepository;
     private final RevendeurRepository revendeurRepository;
-    private final PaiementService paiementService;
 
     /**
      * Crée une nouvelle commande de gaz.
@@ -71,19 +69,8 @@ public class CommandeService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        // Initier le paiement Mobile Money si applicable (MTN, Moov ou Celtiis)
-        if (dto.modePaiement() != ModePaiement.ESPECES) {
-            try {
-                String referenceTransaction = paiementService.initierPaiement(
-                        dto.modePaiement(), dto.clientTelephone(), total, referenceCommande
-                );
-                commande.setReferenceTransaction(referenceTransaction);
-                log.info("Paiement {} initié : {}", dto.modePaiement(), referenceTransaction);
-            } catch (Exception ex) {
-                log.warn("Impossible d'initier le paiement {} : {}", dto.modePaiement(), ex.getMessage());
-            }
-        }
-
+        // Le paiement FedaPay est initié séparément via POST /api/v1/paiement/initier
+        // après création de la commande. La commande démarre toujours EN_ATTENTE.
         commande = commandeRepository.save(commande);
         log.info("Commande créée : {} pour {} FCFA", commande.getId(), total);
         return commande;

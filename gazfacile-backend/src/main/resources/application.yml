@@ -16,28 +16,17 @@ jwt:
 cors:
   allowed-origins: http://localhost:4200,https://gazfacile.netlify.app
 
-paiement:
-  # MTN Mobile Money
-  mtn:
-    base-url: ${MTN_MOMO_BASE_URL:https://sandbox.momodeveloper.mtn.com}
-    subscription-key: ${MTN_MOMO_SUBSCRIPTION_KEY:votre-cle-mtn}
-    api-user: ${MTN_MOMO_API_USER:votre-api-user-mtn}
-    api-key: ${MTN_MOMO_API_KEY:votre-api-key-mtn}
-    environment: ${MTN_MOMO_ENV:sandbox}
-
-  # Moov Money (Flooz) — Moov Africa Bénin
-  moov:
-    base-url: ${MOOV_BASE_URL:https://api.moov-africa.bj}
-    api-key: ${MOOV_API_KEY:votre-api-key-moov}
-    api-secret: ${MOOV_API_SECRET:votre-secret-moov}
-    merchant-id: ${MOOV_MERCHANT_ID:votre-merchant-id}
-
-  # Celtiis Cash — Celtiis Bénin
-  celtiis:
-    base-url: ${CELTIIS_BASE_URL:https://api.celtiis.bj}
-    api-key: ${CELTIIS_API_KEY:votre-api-key-celtiis}
-    api-secret: ${CELTIIS_API_SECRET:votre-secret-celtiis}
-    merchant-code: ${CELTIIS_MERCHANT_CODE:votre-code-marchand}
+fedapay:
+  # Clé API FedaPay (sandbox ou live)
+  api-key: ${FEDAPAY_API_KEY:sk_sandbox_XXXXXXXXXXXXXXXXXXXXXXXX}
+  # URL de l'API FedaPay
+  base-url: ${FEDAPAY_BASE_URL:https://sandbox-api.fedapay.com/v1}
+  # URL de la page de paiement FedaPay
+  checkout-url: ${FEDAPAY_CHECKOUT_URL:https://sandbox-checkout.fedapay.com}
+  # Secret pour vérifier la signature des webhooks
+  webhook-secret: ${FEDAPAY_WEBHOOK_SECRET:votre-webhook-secret}
+  # URL de retour après paiement (votre frontend)
+  callback-url: ${FEDAPAY_CALLBACK_URL:https://gazfacile.netlify.app/paiement/confirmation}
 
 logging:
   level:

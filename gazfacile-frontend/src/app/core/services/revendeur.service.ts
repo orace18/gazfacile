@@ -6,7 +6,9 @@ import {
   Revendeur,
   RevendeurDTO,
   StockUpdateDTO,
-  StockBroadcast
+  StockBroadcast,
+  ProduitRevendeur,
+  ProduitRevendeurDTO
 } from '../models/revendeur.model';
 import { WebSocketService } from './websocket.service';
 
@@ -121,9 +123,14 @@ export class RevendeurService {
   /** Récupère un revendeur par son identifiant. */
   getById(id: string): Observable<Revendeur> {
     return this.http.get<Revendeur>(`${this.apiUrl}/${id}`).pipe(
-      catchError(err => {
-        return throwError(() => new Error('Revendeur introuvable'));
-      })
+      catchError(() => throwError(() => new Error('Revendeur introuvable')))
+    );
+  }
+
+  /** Récupère le dépôt associé à l'utilisateur connecté. */
+  getRevendeurByUserId(): Observable<Revendeur> {
+    return this.http.get<Revendeur>(`${this.apiUrl}/mon-depot`).pipe(
+      catchError(() => throwError(() => new Error('Aucun dépôt trouvé pour ce compte')))
     );
   }
 
@@ -151,6 +158,42 @@ export class RevendeurService {
       catchError(err => {
         return throwError(() => new Error('Erreur lors de la mise à jour du stock'));
       })
+    );
+  }
+
+  // ── Catalogue produits ─────────────────────────────────────────────────────
+
+  /** Récupère le catalogue complet d'un revendeur. */
+  getCatalogue(revendeurId: string): Observable<ProduitRevendeur[]> {
+    return this.http.get<ProduitRevendeur[]>(`${this.apiUrl}/${revendeurId}/produits`).pipe(
+      catchError(() => throwError(() => new Error('Impossible de charger le catalogue')))
+    );
+  }
+
+  /** Ajoute un produit au catalogue. */
+  ajouterProduit(revendeurId: string, dto: ProduitRevendeurDTO): Observable<ProduitRevendeur> {
+    return this.http.post<ProduitRevendeur>(`${this.apiUrl}/${revendeurId}/produits`, dto).pipe(
+      catchError(err => {
+        const message = err.error?.message || 'Erreur lors de l\'ajout du produit';
+        return throwError(() => new Error(message));
+      })
+    );
+  }
+
+  /** Modifie un produit existant. */
+  modifierProduit(revendeurId: string, produitId: string, dto: ProduitRevendeurDTO): Observable<ProduitRevendeur> {
+    return this.http.put<ProduitRevendeur>(`${this.apiUrl}/${revendeurId}/produits/${produitId}`, dto).pipe(
+      catchError(err => {
+        const message = err.error?.message || 'Erreur lors de la modification du produit';
+        return throwError(() => new Error(message));
+      })
+    );
+  }
+
+  /** Supprime un produit du catalogue. */
+  supprimerProduit(revendeurId: string, produitId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${revendeurId}/produits/${produitId}`).pipe(
+      catchError(() => throwError(() => new Error('Erreur lors de la suppression du produit')))
     );
   }
 }

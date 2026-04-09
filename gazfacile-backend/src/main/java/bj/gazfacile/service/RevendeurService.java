@@ -66,6 +66,16 @@ public class RevendeurService {
     }
 
     /**
+     * Retourne le dépôt associé à l'utilisateur connecté (par son username/téléphone).
+     *
+     * @throws ResourceNotFoundException si l'utilisateur n'a pas encore de dépôt
+     */
+    public Revendeur getByUserId(String telephone) {
+        return revendeurRepository.findByUserId(telephone)
+                .orElseThrow(() -> new ResourceNotFoundException("Aucun dépôt trouvé pour ce compte"));
+    }
+
+    /**
      * Inscrit un nouveau revendeur de gaz.
      *
      * @param dto    données du revendeur

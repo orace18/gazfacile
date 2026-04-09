@@ -70,6 +70,17 @@ public class RevendeurController {
     }
 
     /**
+     * Retourne le dépôt de l'utilisateur connecté.
+     * Requiert une authentification.
+     */
+    @GetMapping("/mon-depot")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Revendeur> getMonDepot(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(revendeurService.getByUserId(userDetails.getUsername()));
+    }
+
+    /**
      * Retourne un revendeur par son identifiant.
      * Route publique.
      */

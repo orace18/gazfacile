@@ -11,11 +11,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CommandeService } from '../../../core/services/commande.service';
+import { PaiementService } from '../../../core/services/paiement.service';
 import {
   Revendeur,
   CommandeDTO,
   ModePaiement,
-  StockStatus
+  TypeTransaction
 } from '../../../core/models/revendeur.model';
 
 export interface DialogCommandeData {
@@ -164,45 +165,36 @@ export interface DialogCommandeData {
 
               <mat-radio-button [value]="ModePaiement.MOMO_MTN" class="radio-option paiement-option">
                 <div class="option-paiement">
-                  <span class="paiement-logo mtn">MTN</span>
-                  <div class="paiement-info">
-                    <span class="paiement-nom">MTN Mobile Money</span>
-                    <span class="paiement-desc">Paiement push USSD *880#</span>
+                  <div class="paiement-logo-fedapay">
+                    <mat-icon>payment</mat-icon>
                   </div>
-                </div>
-              </mat-radio-button>
-
-              <mat-radio-button [value]="ModePaiement.MOMO_MOOV" class="radio-option paiement-option">
-                <div class="option-paiement">
-                  <span class="paiement-logo moov">FLOOZ</span>
                   <div class="paiement-info">
-                    <span class="paiement-nom">Moov Money (Flooz)</span>
-                    <span class="paiement-desc">Paiement push USSD *155#</span>
-                  </div>
-                </div>
-              </mat-radio-button>
-
-              <mat-radio-button [value]="ModePaiement.CELTIIS_CASH" class="radio-option paiement-option">
-                <div class="option-paiement">
-                  <span class="paiement-logo celtiis">CEL</span>
-                  <div class="paiement-info">
-                    <span class="paiement-nom">Celtiis Cash</span>
-                    <span class="paiement-desc">Paiement push USSD *168#</span>
+                    <span class="paiement-nom">Payer via FedaPay</span>
+                    <span class="paiement-desc">MTN MoMo · Moov Money · Celtiis Cash</span>
                   </div>
                 </div>
               </mat-radio-button>
 
               <mat-radio-button [value]="ModePaiement.ESPECES" class="radio-option paiement-option">
                 <div class="option-paiement">
-                  <span class="paiement-logo especes">💵</span>
+                  <div class="paiement-logo-especes">
+                    <mat-icon>payments</mat-icon>
+                  </div>
                   <div class="paiement-info">
                     <span class="paiement-nom">Espèces à la livraison</span>
-                    <span class="paiement-desc">Paiement au moment de la livraison</span>
+                    <span class="paiement-desc">Paiement en cash au moment de la livraison</span>
                   </div>
                 </div>
               </mat-radio-button>
 
             </mat-radio-group>
+
+            @if (formulaire.get('modePaiement')?.value !== ModePaiement.ESPECES) {
+              <div class="info-fedapay">
+                <mat-icon>info</mat-icon>
+                Vous serez redirigé vers la page de paiement sécurisée FedaPay après confirmation.
+              </div>
+            }
           </div>
 
         </form>
@@ -477,6 +469,7 @@ export class CommandeFormComponent implements OnInit {
   readonly data = inject<DialogCommandeData>(MAT_DIALOG_DATA);
   readonly dialogRef = inject(MatDialogRef<CommandeFormComponent>);
   private readonly commandeService = inject(CommandeService);
+  private readonly paiementService = inject(PaiementService);
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
 

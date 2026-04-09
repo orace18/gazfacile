@@ -1,5 +1,116 @@
 // Modèles de données de l'application GazFacile
 
+// ── Paiement FedaPay ────────────────────────────────────────────────────────
+
+export enum TypeTransaction {
+  COMMANDE = 'COMMANDE',
+  ABONNEMENT = 'ABONNEMENT'
+}
+
+export enum StatutFedaPay {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  DECLINED = 'DECLINED',
+  CANCELLED = 'CANCELLED',
+  REFUNDED = 'REFUNDED',
+  TRANSFERRED = 'TRANSFERRED'
+}
+
+export interface Transaction {
+  id: string;
+  fedaPayId: number;
+  reference: string;
+  montant: number;
+  description: string;
+  clientTelephone: string;
+  clientEmail?: string;
+  clientNom?: string;
+  type: TypeTransaction;
+  statut: StatutFedaPay;
+  commandeId?: string;
+  revendeurId?: string;
+  checkoutUrl: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaiementInitDTO {
+  type: TypeTransaction;
+  montant: number;
+  description: string;
+  clientTelephone: string;
+  clientEmail?: string;
+  clientNom?: string;
+  commandeId?: string;
+  revendeurId?: string;
+}
+
+export interface PaiementResponseDTO {
+  transactionId: string;
+  reference: string;
+  montant: number;
+  type: TypeTransaction;
+  statut: StatutFedaPay;
+  checkoutUrl: string;
+}
+
+// ── Catalogue produits ──────────────────────────────────────────────────────
+
+export enum MarqueGaz {
+  BENIN_PETRO = 'BENIN_PETRO',
+  ORYX = 'ORYX',
+  PROGAZ = 'PROGAZ',
+  JNP = 'JNP',
+  AUTRE = 'AUTRE'
+}
+
+export enum FormatBouteille {
+  KG_3 = 'KG_3',
+  KG_6 = 'KG_6',
+  KG_12 = 'KG_12',
+  KG_25 = 'KG_25',
+  KG_38 = 'KG_38'
+}
+
+export const MARQUES_LABELS: Record<MarqueGaz, string> = {
+  [MarqueGaz.BENIN_PETRO]: 'Bénin Petro',
+  [MarqueGaz.ORYX]: 'Oryx',
+  [MarqueGaz.PROGAZ]: 'ProGaz',
+  [MarqueGaz.JNP]: 'JNP',
+  [MarqueGaz.AUTRE]: 'Autre'
+};
+
+export const FORMATS_LABELS: Record<FormatBouteille, string> = {
+  [FormatBouteille.KG_3]: '3 kg',
+  [FormatBouteille.KG_6]: '6 kg',
+  [FormatBouteille.KG_12]: '12 kg',
+  [FormatBouteille.KG_25]: '25 kg',
+  [FormatBouteille.KG_38]: '38 kg'
+};
+
+/** Produit du catalogue d'un revendeur. */
+export interface ProduitRevendeur {
+  id: string;
+  revendeurId: string;
+  marque: MarqueGaz;
+  marqueLibelle: string;
+  format: FormatBouteille;
+  formatLibelle: string;
+  prixUnitaire: number;
+  quantiteDisponible: number;
+  disponible: boolean;
+  updatedAt: string;
+}
+
+/** DTO pour créer/modifier un produit. */
+export interface ProduitRevendeurDTO {
+  marque: MarqueGaz;
+  format: FormatBouteille;
+  prixUnitaire: number;
+  quantiteDisponible: number;
+  disponible: boolean;
+}
+
 export enum StockStatus {
   EN_STOCK = 'EN_STOCK',
   STOCK_FAIBLE = 'STOCK_FAIBLE',

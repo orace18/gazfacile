@@ -48,7 +48,9 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**").permitAll()
                 // Routes d'authentification publiques
                 .requestMatchers("/api/v1/auth/**").permitAll()
-                // Paiements plateforme
+                // Webhook FedaPay : public (FedaPay appelle sans token JWT)
+                .requestMatchers(HttpMethod.POST, "/api/v1/paiement/webhook").permitAll()
+                // Autres routes paiement : authentifiées
                 .requestMatchers("/api/v1/paiement/**").authenticated()
                 // Lecture des revendeurs et des avis : publique
                 .requestMatchers(HttpMethod.GET, "/api/v1/revendeurs/**").permitAll()
@@ -58,6 +60,8 @@ public class SecurityConfig {
                 // Création et modification de revendeurs requiert une authentification
                 .requestMatchers(HttpMethod.POST, "/api/v1/revendeurs/**").authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/api/v1/revendeurs/**").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/v1/revendeurs/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/revendeurs/**").authenticated()
                 // Commandes requiert une authentification
                 .requestMatchers("/api/v1/commandes/**").authenticated()
                 // Notifications : authentifié
