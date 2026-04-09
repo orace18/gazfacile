@@ -1,23 +1,25 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
+import { RouterModule } from '@angular/router';
 import { Revendeur, StockStatus } from '../../../core/models/revendeur.model';
 import { StockBadgeComponent } from '../../../shared/components/stock-badge/stock-badge.component';
 import { DistancePipe } from '../../../shared/pipes/distance.pipe';
+import { ConsultationService } from '../../../core/services/consultation.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { ConsultationPaywallComponent } from '../../../shared/components/consultation-paywall/consultation-paywall.component';
 
-/**
- * Carte d'affichage d'un revendeur dans la liste.
- * Affiche les informations clés et permet de commander ou de voir sur la carte.
- */
 @Component({
   selector: 'app-revendeur-card',
   standalone: true,
   imports: [
     CommonModule,
+    RouterModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -31,7 +33,12 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
       <mat-card-content>
         <div class="entete">
           <div class="info-principale">
-            <h3 class="nom">{{ revendeur.nom }}</h3>
+            <h3 class="nom">
+              {{ revendeur.nom }}
+              @if (revendeur.abonnement === 'PREMIUM') {
+                <mat-icon class="icone-premium" matTooltip="Revendeur Premium">workspace_premium</mat-icon>
+              }
+            </h3>
             <p class="quartier">
               <mat-icon class="icone-sm">place</mat-icon>
               {{ revendeur.quartier }}
@@ -44,9 +51,15 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
         </div>
 
         <div class="details">
-          <p class="detail-item">
+          <!-- Téléphone : flou si quota épuisé et non connecté -->
+          <p class="detail-item" [class.detail-verrouille]="estVerrouille()">
             <mat-icon class="icone-sm">phone</mat-icon>
-            {{ revendeur.telephone }}
+            @if (estVerrouille()) {
+              <span class="tel-masque">+229 •• •• •• ••</span>
+              <mat-icon class="icone-verrou" matTooltip="Créez un compte pour voir le numéro">lock</mat-icon>
+            } @else {
+              {{ revendeur.telephone }}
+            }
           </p>
 
           @if (revendeur.livraison) {
@@ -85,6 +98,18 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
             <span class="nb-avis">({{ revendeur.nombreAvis }} avis)</span>
           </div>
         }
+
+        <!-- Compteur consultations restantes (visiteurs anonymes) -->
+        @if (!authService.estConnecte() && consultationService.statut().consultationsRestantes < consultationService.statut().limite) {
+          <div class="compteur-quota">
+            <mat-icon>visibility</mat-icon>
+            @if (consultationService.statut().consultationsRestantes > 0) {
+              {{ consultationService.statut().consultationsRestantes }} consultation(s) gratuite(s) restante(s)
+            } @else {
+              Quota épuisé — <a routerLink="/auth/register" (click)="$event.stopPropagation()">Créer un compte</a>
+            }
+          </div>
+        }
       </mat-card-content>
 
       <mat-card-actions class="actions" (click)="$event.stopPropagation()">
@@ -97,10 +122,15 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
           class="btn-commander"
           [disabled]="revendeur.stockStatus === StockStatus.EPUISE"
           [matTooltip]="revendeur.stockStatus === StockStatus.EPUISE ? 'Stock épuisé' : ''"
-          (click)="commander.emit(revendeur)"
+          (click)="onCommander()"
         >
-          <mat-icon>shopping_cart</mat-icon>
-          Commander
+          @if (estVerrouille()) {
+            <mat-icon>lock</mat-icon>
+            S'inscrire
+          } @else {
+            <mat-icon>shopping_cart</mat-icon>
+            Commander
+          }
         </button>
       </mat-card-actions>
     </mat-card>
@@ -138,6 +168,16 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
       font-weight: 400;
       color: var(--color-text);
       margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .icone-premium {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+      color: var(--color-accent);
     }
 
     .quartier {
@@ -166,6 +206,23 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
         color: var(--color-success);
         font-weight: 600;
       }
+
+      &.detail-verrouille {
+        opacity: 0.7;
+      }
+    }
+
+    .tel-masque {
+      letter-spacing: 0.1em;
+      color: var(--color-text-muted);
+    }
+
+    .icone-verrou {
+      font-size: 0.85rem;
+      width: 0.85rem;
+      height: 0.85rem;
+      color: var(--color-text-muted);
+      margin-left: 2px;
     }
 
     .icone-sm {
@@ -216,6 +273,32 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
       margin-left: 4px;
     }
 
+    .compteur-quota {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      margin-top: 6px;
+      padding: 4px 8px;
+      background: var(--color-surface-2, #f5f7fa);
+      border-radius: var(--radius-sm);
+
+      mat-icon {
+        font-size: 0.85rem;
+        width: 0.85rem;
+        height: 0.85rem;
+      }
+
+      a {
+        color: var(--color-primary);
+        font-weight: 600;
+        text-decoration: none;
+
+        &:hover { text-decoration: underline; }
+      }
+    }
+
     .actions {
       display: flex;
       gap: 8px;
@@ -235,7 +318,7 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
     .btn-commander {
       flex: 1;
       background-color: var(--color-accent) !important;
-      color: white !important;
+      color: #1a1a00 !important;
       font-size: 0.82rem !important;
       border-radius: 0 !important;
       font-weight: 700 !important;
@@ -258,7 +341,37 @@ export class RevendeurCardComponent {
   @Output() selectionne = new EventEmitter<string>();
   @Output() commander = new EventEmitter<Revendeur>();
 
+  readonly consultationService = inject(ConsultationService);
+  readonly authService = inject(AuthService);
+  private readonly dialog = inject(MatDialog);
+
   readonly StockStatus = StockStatus;
   readonly Math = Math;
   readonly etoiles = [1, 2, 3, 4, 5];
+
+  /** Vrai si l'utilisateur n'est pas connecté ET a épuisé son quota. */
+  estVerrouille(): boolean {
+    return !this.authService.estConnecte()
+        && !this.consultationService.statut().autorise;
+  }
+
+  /** Clic sur "Commander" : vérifier le quota avant d'émettre. */
+  onCommander(): void {
+    if (this.authService.estConnecte()) {
+      this.commander.emit(this.revendeur);
+      return;
+    }
+
+    // Visiteur anonyme : consommer une consultation
+    this.consultationService.consulter().subscribe(statut => {
+      if (statut.autorise) {
+        this.commander.emit(this.revendeur);
+      } else {
+        this.dialog.open(ConsultationPaywallComponent, {
+          maxWidth: '440px',
+          width: '100%'
+        });
+      }
+    });
+  }
 }

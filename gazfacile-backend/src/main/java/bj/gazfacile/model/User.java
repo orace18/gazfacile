@@ -47,6 +47,14 @@ public class User implements UserDetails {
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
 
+    /** Identifiant Google (sub) — non null si le compte est lié à Google. */
+    @Indexed(sparse = true)
+    private String googleId;
+
+    /** Vrai si le numéro de téléphone a été vérifié par OTP. */
+    @Builder.Default
+    private boolean telephoneVerifie = false;
+
     @Builder.Default
     private boolean actif = true;
 

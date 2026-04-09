@@ -26,6 +26,21 @@ export const routes: Routes = [
     canActivate: [revendeurGuard]
   },
   {
+    path: 'revendeur/abonnement',
+    loadComponent: () =>
+      import('./features/revendeur/abonnement/abonnement.component').then(
+        m => m.AbonnementComponent
+      ),
+    canActivate: [revendeurGuard]
+  },
+  {
+    path: 'paiement/confirmation',
+    loadComponent: () =>
+      import('./features/paiement/confirmation/paiement-confirmation.component').then(
+        m => m.PaiementConfirmationComponent
+      )
+  },
+  {
     path: 'auth/login',
     loadComponent: () =>
       import('./features/auth/login/login.component').then(m => m.LoginComponent)

@@ -20,4 +20,10 @@ public interface UserRepository extends MongoRepository<User, String> {
 
     /** Vérifie si un utilisateur avec cet email existe déjà. */
     boolean existsByEmail(String email);
+
+    /** Recherche par email (pour la connexion Google). */
+    Optional<User> findByEmail(String email);
+
+    /** Recherche par Google ID (sub). */
+    Optional<User> findByGoogleId(String googleId);
 }

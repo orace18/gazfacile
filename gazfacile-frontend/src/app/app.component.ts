@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { NavbarComponent } from './shared/components/navbar/navbar.component';
+import { ConsultationService } from './core/services/consultation.service';
 
 @Component({
   selector: 'app-root',
@@ -20,4 +21,11 @@ import { NavbarComponent } from './shared/components/navbar/navbar.component';
     }
   `]
 })
-export class AppComponent {}
+export class AppComponent implements OnInit {
+  private readonly consultationService = inject(ConsultationService);
+
+  ngOnInit(): void {
+    // Synchroniser le quota de consultations au démarrage
+    this.consultationService.chargerStatut();
+  }
+}

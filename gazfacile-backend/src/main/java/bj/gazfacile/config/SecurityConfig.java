@@ -50,8 +50,12 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 // Webhook FedaPay : public (FedaPay appelle sans token JWT)
                 .requestMatchers(HttpMethod.POST, "/api/v1/paiement/webhook").permitAll()
+                // Consultation transaction par référence : publique (page confirmation post-paiement)
+                .requestMatchers(HttpMethod.GET, "/api/v1/paiement/transaction/**").permitAll()
                 // Autres routes paiement : authentifiées
                 .requestMatchers("/api/v1/paiement/**").authenticated()
+                // Consultations freemium : publiques (visiteurs anonymes)
+                .requestMatchers("/api/v1/consultations/**").permitAll()
                 // Lecture des revendeurs et des avis : publique
                 .requestMatchers(HttpMethod.GET, "/api/v1/revendeurs/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/avis/revendeur/**").permitAll()
@@ -64,6 +68,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/revendeurs/**").authenticated()
                 // Commandes requiert une authentification
                 .requestMatchers("/api/v1/commandes/**").authenticated()
+                // Abonnements : revendeur ou admin
+                .requestMatchers("/api/v1/abonnement/**").authenticated()
                 // Notifications : authentifié
                 .requestMatchers("/api/v1/notifications/**").authenticated()
                 // Tableau de bord admin : rôle ADMIN uniquement

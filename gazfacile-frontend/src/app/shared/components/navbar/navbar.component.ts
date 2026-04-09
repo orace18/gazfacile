@@ -52,6 +52,10 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
             <mat-icon>inventory_2</mat-icon>
             Mon catalogue
           </a>
+          <a mat-button routerLink="/revendeur/abonnement" routerLinkActive="actif">
+            <mat-icon>workspace_premium</mat-icon>
+            Abonnement
+          </a>
         }
 
         @if (authService.hasRole(Role.ADMIN)) {
@@ -99,6 +103,10 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
           <a mat-menu-item routerLink="/revendeur/catalogue">
             <mat-icon>inventory_2</mat-icon>
             Mon catalogue
+          </a>
+          <a mat-menu-item routerLink="/revendeur/abonnement">
+            <mat-icon>workspace_premium</mat-icon>
+            Abonnement
           </a>
         }
         @if (authService.hasRole(Role.ADMIN)) {

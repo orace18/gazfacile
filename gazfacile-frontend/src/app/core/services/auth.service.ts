@@ -79,7 +79,7 @@ export class AuthService {
   }
 
   /** Sauvegarde la session en localStorage et met à jour le signal. */
-  private sauvegarderSession(reponse: AuthResponse): void {
+  sauvegarderSession(reponse: AuthResponse): void {
     localStorage.setItem(CLE_TOKEN, reponse.token);
     localStorage.setItem(CLE_USER, JSON.stringify(reponse));
     this.currentUser.set(reponse);

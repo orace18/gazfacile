@@ -1,5 +1,19 @@
 // Modèles de données de l'application GazFacile
 
+// ── Enums de base (déclarés en premier pour éviter les références en avant) ──
+
+export enum Abonnement {
+  GRATUIT = 'GRATUIT',
+  STANDARD = 'STANDARD',
+  PREMIUM = 'PREMIUM'
+}
+
+export enum Role {
+  CLIENT = 'CLIENT',
+  REVENDEUR = 'REVENDEUR',
+  ADMIN = 'ADMIN'
+}
+
 // ── Paiement FedaPay ────────────────────────────────────────────────────────
 
 export enum TypeTransaction {
@@ -53,6 +67,53 @@ export interface PaiementResponseDTO {
   statut: StatutFedaPay;
   checkoutUrl: string;
 }
+
+// ── Freemium consultations ───────────────────────────────────────────────────
+
+export interface ConsultationStatut {
+  autorise: boolean;
+  consultationsRestantes: number;
+  limite: number;
+}
+
+// ── Abonnements ─────────────────────────────────────────────────────────────
+
+export interface AbonnementStatut {
+  plan: Abonnement;
+  planLibelle: string;
+  prixMensuel: number;
+  description: string;
+  actif: boolean;
+  expire: boolean;
+  expiry: string | null;
+  maxProduits: number;
+  prioriteClassement: boolean;
+  badgePremium: boolean;
+}
+
+export const ABONNEMENT_PLANS: { plan: Abonnement; libelle: string; prix: number; description: string; features: string[] }[] = [
+  {
+    plan: Abonnement.GRATUIT,
+    libelle: 'Gratuit',
+    prix: 0,
+    description: 'Pour démarrer',
+    features: ['Profil basique', 'Max 3 produits au catalogue', 'Visibilité limitée']
+  },
+  {
+    plan: Abonnement.STANDARD,
+    libelle: 'Standard',
+    prix: 2000,
+    description: 'Pour les revendeurs actifs',
+    features: ['Catalogue illimité', 'Badge vérifié', 'Visibilité normale dans les résultats']
+  },
+  {
+    plan: Abonnement.PREMIUM,
+    libelle: 'Premium',
+    prix: 5000,
+    description: 'Pour maximiser vos ventes',
+    features: ['Tout le Standard', 'Priorité dans les résultats', 'Badge Premium', 'Analytics de vues']
+  }
+];
 
 // ── Catalogue produits ──────────────────────────────────────────────────────
 
@@ -141,18 +202,6 @@ export enum StatutPaiement {
   PAYE = 'PAYE',
   ECHOUE = 'ECHOUE',
   REMBOURSE = 'REMBOURSE'
-}
-
-export enum Abonnement {
-  GRATUIT = 'GRATUIT',
-  STANDARD = 'STANDARD',
-  PREMIUM = 'PREMIUM'
-}
-
-export enum Role {
-  CLIENT = 'CLIENT',
-  REVENDEUR = 'REVENDEUR',
-  ADMIN = 'ADMIN'
 }
 
 /** Revendeur de gaz domestique au Bénin. */

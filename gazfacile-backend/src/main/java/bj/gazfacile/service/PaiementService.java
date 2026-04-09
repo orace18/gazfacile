@@ -5,10 +5,12 @@ import bj.gazfacile.dto.PaiementResponseDTO;
 import bj.gazfacile.exception.ResourceNotFoundException;
 import bj.gazfacile.model.Transaction;
 import bj.gazfacile.model.enums.StatutFedaPay;
+import bj.gazfacile.model.enums.TypeTransaction;
 import bj.gazfacile.repository.CommandeRepository;
 import bj.gazfacile.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -28,6 +30,8 @@ public class PaiementService {
     private final FedaPayService fedaPayService;
     private final TransactionRepository transactionRepository;
     private final CommandeRepository commandeRepository;
+    @Lazy
+    private final AbonnementService abonnementService;
 
     /**
      * Initie un paiement FedaPay pour une commande ou un abonnement.
@@ -36,14 +40,16 @@ public class PaiementService {
     public PaiementResponseDTO initierPaiement(PaiementInitDTO dto) {
         String reference = genererReference(dto.getType().name());
 
-        // 1. Créer la transaction FedaPay
+        // 1. Créer la transaction FedaPay (callback URL avec la référence pour la page de confirmation)
+        String callbackUrl = fedaPayService.getCallbackUrl() + "?reference=" + reference;
         long fedaPayId = fedaPayService.creerTransaction(
                 dto.getMontant(),
                 dto.getDescription(),
                 dto.getClientTelephone(),
                 dto.getClientEmail(),
                 dto.getClientNom(),
-                reference
+                reference,
+                callbackUrl
         );
 
         // 2. Obtenir le token de paiement
@@ -100,14 +106,20 @@ public class PaiementService {
 
         log.info("[Webhook] Transaction {} → {}", transaction.getReference(), statut);
 
-        // Si approuvée et liée à une commande → mettre à jour le statut de paiement
-        if (statut == StatutFedaPay.APPROVED && transaction.getCommandeId() != null) {
-            commandeRepository.findById(transaction.getCommandeId()).ifPresent(commande -> {
-                commande.setStatutPaiement(bj.gazfacile.model.enums.StatutPaiement.PAYE);
-                commande.setReferenceTransaction(transaction.getReference());
-                commandeRepository.save(commande);
-                log.info("[Webhook] Commande {} marquée PAYÉE", commande.getId());
-            });
+        if (statut == StatutFedaPay.APPROVED) {
+            // Paiement commande → mettre à jour le statut de paiement
+            if (transaction.getType() == TypeTransaction.COMMANDE && transaction.getCommandeId() != null) {
+                commandeRepository.findById(transaction.getCommandeId()).ifPresent(commande -> {
+                    commande.setStatutPaiement(bj.gazfacile.model.enums.StatutPaiement.PAYE);
+                    commande.setReferenceTransaction(transaction.getReference());
+                    commandeRepository.save(commande);
+                    log.info("[Webhook] Commande {} marquée PAYÉE", commande.getId());
+                });
+            }
+            // Paiement abonnement → activer l'abonnement du revendeur
+            if (transaction.getType() == TypeTransaction.ABONNEMENT && transaction.getRevendeurId() != null) {
+                abonnementService.activerAbonnement(transaction.getRevendeurId(), transaction.getMontant());
+            }
         }
     }
 

@@ -28,6 +28,16 @@ fedapay:
   # URL de retour après paiement (votre frontend)
   callback-url: ${FEDAPAY_CALLBACK_URL:https://gazfacile.netlify.app/paiement/confirmation}
 
+sms:
+  # Africa's Talking — utiliser "sandbox" en développement
+  api-key: ${SMS_API_KEY:sandbox}
+  username: ${SMS_USERNAME:sandbox}
+  sender: ${SMS_SENDER:GazFacile}
+
+google:
+  # Client ID OAuth2 de votre projet Google Cloud Console
+  client-id: ${GOOGLE_CLIENT_ID:}
+
 logging:
   level:
     bj.gazfacile: DEBUG

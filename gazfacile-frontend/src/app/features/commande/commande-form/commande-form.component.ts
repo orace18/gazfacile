@@ -221,9 +221,9 @@ export interface DialogCommandeData {
           @if (envoi) {
             <mat-spinner diameter="18"></mat-spinner>
           } @else {
-            <mat-icon>check_circle</mat-icon>
+            <mat-icon>{{ formulaire.get('modePaiement')?.value === ModePaiement.ESPECES ? 'check_circle' : 'open_in_new' }}</mat-icon>
           }
-          Confirmer la commande
+          {{ formulaire.get('modePaiement')?.value === ModePaiement.ESPECES ? 'Confirmer la commande' : 'Confirmer et payer' }}
         </button>
       </mat-dialog-actions>
     </div>
@@ -237,7 +237,7 @@ export interface DialogCommandeData {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-family: 'Syne', sans-serif;
+      font-family: 'Archivo Black', sans-serif;
       color: var(--color-primary) !important;
       padding: 16px 24px 0;
 
@@ -393,36 +393,47 @@ export interface DialogCommandeData {
       color: var(--color-text-muted);
     }
 
-    .paiement-logo {
-      width: 52px;
-      height: 28px;
-      border-radius: 5px;
+    .paiement-logo-fedapay {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      background: var(--color-primary);
+      color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.68rem;
-      font-weight: 800;
-      letter-spacing: 0.03em;
       flex-shrink: 0;
+    }
 
-      &.mtn {
-        background: #FFC403;
-        color: #1a1a00;
-      }
+    .paiement-logo-especes {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      background: var(--color-success, #2e7d32);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
 
-      &.moov {
-        background: #0050A0;
-        color: white;
-      }
+    .info-fedapay {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+      border-left: 3px solid var(--color-primary);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-size: 0.78rem;
+      color: var(--color-primary);
 
-      &.celtiis {
-        background: #E8000D;
-        color: white;
-      }
-
-      &.especes {
-        background: var(--color-surface-3);
-        font-size: 1.1rem;
+      mat-icon {
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+        flex-shrink: 0;
       }
     }
 
@@ -503,11 +514,11 @@ export class CommandeFormComponent implements OnInit {
         Validators.pattern(/^(\+229|00229)?[0-9]{8}$/)
       ]],
       clientAdresseLivraison: ['', Validators.required],
-      modePaiement: [ModePaiement.ESPECES, Validators.required]
+      modePaiement: [ModePaiement.MOMO_MTN, Validators.required]
     });
   }
 
-  /** Soumet la commande à l'API. */
+  /** Soumet la commande puis déclenche le paiement FedaPay si nécessaire. */
   soumettre(): void {
     if (this.formulaire.invalid) {
       this.formulaire.markAllAsTouched();
@@ -518,6 +529,10 @@ export class CommandeFormComponent implements OnInit {
     this.erreur = null;
 
     const valeurs = this.formulaire.value;
+    const modePaiement: ModePaiement = valeurs.modePaiement;
+
+    // Pour FedaPay on normalise le mode en MOMO_MTN côté commande
+    // (FedaPay gère lui-même le choix réseau sur sa page de checkout)
     const dto: CommandeDTO = {
       revendeurId: this.data.revendeur.id,
       clientTelephone: valeurs.clientTelephone,
@@ -525,14 +540,35 @@ export class CommandeFormComponent implements OnInit {
       marque: valeurs.marque,
       taille: valeurs.taille,
       quantite: valeurs.quantite,
-      modePaiement: valeurs.modePaiement
+      modePaiement: modePaiement
     };
 
     this.commandeService.creer(dto).subscribe({
       next: commande => {
-        this.envoi = false;
-        this.snackBar.open('Commande passée avec succès !', 'OK', { duration: 4000 });
-        this.dialogRef.close(commande);
+        if (modePaiement === ModePaiement.ESPECES) {
+          // Paiement espèces : fermer le dialog directement
+          this.envoi = false;
+          this.snackBar.open('Commande passée ! Préparez le paiement à la livraison.', 'OK', { duration: 5000 });
+          this.dialogRef.close(commande);
+        } else {
+          // Paiement électronique : initier via FedaPay puis rediriger
+          this.paiementService.initierPaiement({
+            type: TypeTransaction.COMMANDE,
+            montant: this.total + 200,
+            description: `Commande gaz ${valeurs.marque} ${valeurs.taille} × ${valeurs.quantite} — ${this.data.revendeur.nom}`,
+            clientTelephone: valeurs.clientTelephone,
+            commandeId: commande.id
+          }).subscribe({
+            next: response => {
+              this.dialogRef.close(commande);
+              this.paiementService.redirectVersCheckout(response.checkoutUrl);
+            },
+            error: err => {
+              this.envoi = false;
+              this.erreur = err.message || 'Commande créée mais impossible d\'initier le paiement. Contactez le revendeur.';
+            }
+          });
+        }
       },
       error: err => {
         this.envoi = false;

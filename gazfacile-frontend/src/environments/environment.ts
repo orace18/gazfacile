@@ -1,5 +1,6 @@
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:8080/api/v1',
-  wsUrl: 'http://localhost:8080/ws'
+  wsUrl: 'http://localhost:8080/ws',
+  googleClientId: '' // Remplir avec votre Client ID Google Cloud Console
 };

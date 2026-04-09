@@ -3,6 +3,7 @@ package bj.gazfacile;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Point d'entrée principal de l'application GazFacile.
@@ -10,6 +11,7 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
  */
 @SpringBootApplication
 @EnableMongoRepositories(basePackages = "bj.gazfacile.repository")
+@EnableScheduling
 public class GazFacileApplication {
 
     public static void main(String[] args) {

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
@@ -7,11 +7,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../../core/services/auth.service';
+import { GoogleAuthService } from '../../../core/services/google-auth.service';
 
-/**
- * Page de connexion de l'application GazFacile.
- */
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -23,19 +22,31 @@ import { AuthService } from '../../../core/services/auth.service';
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatDividerModule
   ],
   template: `
     <div class="page-auth">
       <div class="carte-auth">
-        <!-- En-tête -->
         <div class="entete-auth">
           <span class="logo-flamme">🔥</span>
           <h1>Connexion</h1>
           <p class="sous-titre">Accédez à votre espace GazFacile</p>
         </div>
 
-        <!-- Formulaire -->
+        <!-- Bouton Google -->
+        <div class="bloc-google">
+          <div #googleBtn class="google-btn-container"></div>
+          @if (googleErreur) {
+            <p class="erreur-google">{{ googleErreur }}</p>
+          }
+        </div>
+
+        <mat-divider class="separateur">
+          <span class="separateur-texte">ou</span>
+        </mat-divider>
+
+        <!-- Formulaire classique -->
         <form [formGroup]="formulaire" (ngSubmit)="soumettre()" class="formulaire">
 
           <mat-form-field appearance="outline" class="champ-pleine-largeur">
@@ -49,18 +60,10 @@ import { AuthService } from '../../../core/services/auth.service';
 
           <mat-form-field appearance="outline" class="champ-pleine-largeur">
             <mat-label>Mot de passe</mat-label>
-            <input
-              matInput
-              formControlName="password"
+            <input matInput formControlName="password"
               [type]="mdpVisible ? 'text' : 'password'"
-              placeholder="Votre mot de passe"
-            >
-            <button
-              matSuffix
-              mat-icon-button
-              type="button"
-              (click)="mdpVisible = !mdpVisible"
-            >
+              placeholder="Votre mot de passe">
+            <button matSuffix mat-icon-button type="button" (click)="mdpVisible = !mdpVisible">
               <mat-icon>{{ mdpVisible ? 'visibility_off' : 'visibility' }}</mat-icon>
             </button>
             @if (formulaire.get('password')?.invalid && formulaire.get('password')?.touched) {
@@ -68,7 +71,6 @@ import { AuthService } from '../../../core/services/auth.service';
             }
           </mat-form-field>
 
-          <!-- Erreur globale -->
           @if (erreur) {
             <div class="erreur-globale">
               <mat-icon>error_outline</mat-icon>
@@ -76,22 +78,14 @@ import { AuthService } from '../../../core/services/auth.service';
             </div>
           }
 
-          <button
-            mat-raised-button
-            type="submit"
-            class="btn-connexion"
-            [disabled]="formulaire.invalid || envoi"
-          >
-            @if (envoi) {
-              <mat-spinner diameter="20"></mat-spinner>
-            } @else {
-              <mat-icon>login</mat-icon>
-            }
+          <button mat-raised-button type="submit" class="btn-connexion"
+            [disabled]="formulaire.invalid || envoi">
+            @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
+            @else { <mat-icon>login</mat-icon> }
             Se connecter
           </button>
         </form>
 
-        <!-- Lien vers inscription -->
         <div class="lien-inscription">
           <p>Pas encore de compte ?
             <a routerLink="/auth/register">Créer un compte</a>
@@ -118,21 +112,16 @@ import { AuthService } from '../../../core/services/auth.service';
       width: 100%;
       max-width: 420px;
       background: var(--color-surface);
-      border: none;
       border-radius: 0;
       padding: 44px 40px;
-      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.25);
     }
 
     .entete-auth {
       text-align: center;
-      margin-bottom: 32px;
+      margin-bottom: 28px;
 
-      .logo-flamme {
-        font-size: 2rem;
-        display: block;
-        margin-bottom: 10px;
-      }
+      .logo-flamme { font-size: 2rem; display: block; margin-bottom: 10px; }
 
       h1 {
         font-family: 'Archivo Black', sans-serif;
@@ -142,10 +131,49 @@ import { AuthService } from '../../../core/services/auth.service';
         margin-bottom: 6px;
       }
 
-      .sous-titre {
-        color: var(--color-text-muted);
-        font-size: 0.88rem;
+      .sous-titre { color: var(--color-text-muted); font-size: 0.88rem; }
+    }
+
+    .bloc-google {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .google-btn-container {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+
+      ::ng-deep iframe { width: 100% !important; }
+    }
+
+    .erreur-google {
+      font-size: 0.8rem;
+      color: var(--color-danger);
+      margin: 0;
+    }
+
+    .separateur {
+      margin: 16px 0 !important;
+      position: relative;
+
+      &::ng-deep .mat-divider {
+        border-top-color: var(--color-border);
       }
+    }
+
+    .separateur-texte {
+      display: block;
+      text-align: center;
+      background: var(--color-surface);
+      padding: 0 12px;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      position: relative;
+      top: -10px;
     }
 
     .formulaire {
@@ -178,14 +206,13 @@ import { AuthService } from '../../../core/services/auth.service';
       padding: 10px 14px;
       background: var(--color-danger-bg);
       color: var(--color-danger);
-      border-radius: 0;
       border-left: 3px solid var(--color-danger);
       font-size: 0.88rem;
     }
 
     .btn-connexion {
       background-color: var(--color-accent) !important;
-      color: white !important;
+      color: #1a1a00 !important;
       height: 50px;
       font-size: 1rem !important;
       font-weight: 700 !important;
@@ -194,18 +221,12 @@ import { AuthService } from '../../../core/services/auth.service';
       text-transform: uppercase;
       letter-spacing: 0.08em;
 
-      &:hover:not(:disabled) {
-        background-color: var(--color-accent-dark) !important;
-      }
-
       &:disabled {
         background-color: var(--color-surface-3) !important;
         color: var(--color-text-muted) !important;
       }
 
-      mat-spinner {
-        margin-right: 8px;
-      }
+      mat-spinner { margin-right: 8px; }
     }
 
     .lien-inscription {
@@ -220,25 +241,21 @@ import { AuthService } from '../../../core/services/auth.service';
         margin-bottom: 6px;
       }
 
-      .lien-revendeur {
-        font-size: 0.8rem;
-        color: var(--color-text-muted);
-        font-style: italic;
-      }
+      .lien-revendeur { font-size: 0.8rem; font-style: italic; }
 
       a {
         color: var(--color-primary);
         font-weight: 700;
-
-        &:hover {
-          color: var(--color-accent);
-        }
+        &:hover { color: var(--color-accent); }
       }
     }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements AfterViewInit {
+  @ViewChild('googleBtn') googleBtnRef!: ElementRef<HTMLDivElement>;
+
   private readonly authService = inject(AuthService);
+  private readonly googleAuthService = inject(GoogleAuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
@@ -246,11 +263,42 @@ export class LoginComponent {
   mdpVisible = false;
   envoi = false;
   erreur: string | null = null;
+  googleErreur: string | null = null;
 
   readonly formulaire = this.fb.group({
     telephone: ['', Validators.required],
     password: ['', Validators.required]
   });
+
+  ngAfterViewInit(): void {
+    // Initialiser le bouton Google après le rendu
+    setTimeout(() => {
+      this.googleAuthService.initialiser(this.googleBtnRef.nativeElement, (idToken) => {
+        this.onGoogleToken(idToken);
+      });
+    }, 300);
+  }
+
+  private onGoogleToken(idToken: string): void {
+    this.googleErreur = null;
+    this.googleAuthService.loginAvecGoogle(idToken).subscribe({
+      next: (auth) => {
+        this.authService.sauvegarderSession(auth);
+        const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
+        this.router.navigate([returnUrl]);
+      },
+      error: (err) => {
+        if (err?.telephoneRequis) {
+          // Rediriger vers l'inscription avec le token en queryParam
+          this.router.navigate(['/auth/register'], {
+            queryParams: { googleToken: idToken }
+          });
+        } else {
+          this.googleErreur = err.message || 'Connexion Google échouée';
+        }
+      }
+    });
+  }
 
   soumettre(): void {
     if (this.formulaire.invalid) {
@@ -261,14 +309,10 @@ export class LoginComponent {
     this.envoi = true;
     this.erreur = null;
 
-    // Normaliser le numéro : retirer +229, 00229 ou espaces
     const telephone = this.formulaire.value.telephone!
       .replace(/^\+229/, '').replace(/^00229/, '').replace(/\s/g, '').trim();
 
-    this.authService.login({
-      telephone,
-      password: this.formulaire.value.password!
-    }).subscribe({
+    this.authService.login({ telephone, password: this.formulaire.value.password! }).subscribe({
       next: () => {
         this.envoi = false;
         const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
