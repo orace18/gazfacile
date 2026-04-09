@@ -9,7 +9,7 @@ $gazfacile-theme: mat.define-theme((
     primary: mat.$azure-palette,
   ),
   typography: (
-    brand-family: 'Montserrat, sans-serif',
+    brand-family: 'Inter, sans-serif',
   ),
 ));
 
@@ -62,7 +62,7 @@ body {
   height: 100%;
   background-color: var(--color-bg);
   color: var(--color-text);
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Inter', sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -70,8 +70,8 @@ body {
 
 // === Typographie ===
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Archivo Black', sans-serif;
-  font-weight: 400; // Archivo Black est déjà ultra-bold par défaut
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
   line-height: 1.15;
   color: var(--color-text);
 }
@@ -139,10 +139,11 @@ a {
 
 .leaflet-popup-content {
   margin: 12px 16px !important;
-  font-family: 'DM Sans', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
 
   h4 {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
     font-size: 1rem;
     margin-bottom: 4px;
     color: var(--color-text);
@@ -162,7 +163,7 @@ a {
     color: white;
     border: none;
     border-radius: 0;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-weight: 600;
     font-size: 0.85rem;
     cursor: pointer;
@@ -239,7 +240,7 @@ a {
 
 .mat-mdc-option {
   color: var(--color-text) !important;
-  font-family: 'Montserrat', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
 
   &:hover:not(.mdc-list-item--disabled) {
     background-color: var(--color-surface-2) !important;
@@ -269,7 +270,7 @@ a {
 
 .mat-mdc-button-base {
   border-radius: var(--radius-sm) !important;
-  font-family: 'Montserrat', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
 }
 
 .mdc-button {
@@ -289,7 +290,7 @@ a {
   border: none;
   border-radius: var(--radius-sm);
   padding: 10px 24px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 700;
   cursor: pointer;
   transition: background-color 0.2s, transform 0.1s;
@@ -316,7 +317,7 @@ a {
   border: 2px solid var(--color-primary);
   border-radius: var(--radius-sm);
   padding: 10px 24px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;

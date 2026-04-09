@@ -30,8 +30,7 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
     <mat-toolbar class="navbar">
       <!-- Logo -->
       <a routerLink="/" class="logo">
-        <span class="logo-icone">🔥</span>
-        <span class="logo-texte">GazFacile</span>
+        <img src="assets/logo.svg" alt="GazFacile" class="logo-img">
       </a>
 
       <span class="spacer"></span>
@@ -148,21 +147,12 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
     .logo {
       display: flex;
       align-items: center;
-      gap: 8px;
       text-decoration: none;
       cursor: pointer;
 
-      .logo-icone {
-        font-size: 1.4rem;
-      }
-
-      .logo-texte {
-        font-family: 'Archivo Black', sans-serif;
-        font-size: 1.2rem;
-        font-weight: 400;
-        color: #FFFFFF;
-        letter-spacing: 0.03em;
-        text-transform: uppercase;
+      .logo-img {
+        height: 40px;
+        width: auto;
       }
     }
 
