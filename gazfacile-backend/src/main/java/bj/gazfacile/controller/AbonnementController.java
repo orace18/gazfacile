@@ -2,8 +2,10 @@ package bj.gazfacile.controller;
 
 import bj.gazfacile.dto.AbonnementInitDTO;
 import bj.gazfacile.dto.AbonnementStatutDTO;
+import bj.gazfacile.dto.PaiementInitDTO;
 import bj.gazfacile.dto.PaiementResponseDTO;
 import bj.gazfacile.service.AbonnementService;
+import bj.gazfacile.service.PaiementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class AbonnementController {
 
     private final AbonnementService abonnementService;
+    private final PaiementService paiementService;
 
     /** Statut d'abonnement du revendeur connecté. */
     @GetMapping("/statut")
@@ -42,8 +45,9 @@ public class AbonnementController {
     public ResponseEntity<PaiementResponseDTO> souscrire(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody AbonnementInitDTO dto) {
-        PaiementResponseDTO response = abonnementService.initierSouscription(
+        PaiementInitDTO paiementDto = abonnementService.preparerSouscription(
                 userDetails.getUsername(), dto);
+        PaiementResponseDTO response = paiementService.initierPaiement(paiementDto);
         return ResponseEntity.ok(response);
     }
 }

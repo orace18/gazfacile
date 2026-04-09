@@ -3,16 +3,12 @@ package bj.gazfacile.service;
 import bj.gazfacile.dto.AbonnementInitDTO;
 import bj.gazfacile.dto.AbonnementStatutDTO;
 import bj.gazfacile.dto.PaiementInitDTO;
-import bj.gazfacile.dto.PaiementResponseDTO;
 import bj.gazfacile.model.Revendeur;
 import bj.gazfacile.model.enums.Abonnement;
 import bj.gazfacile.model.enums.TypeTransaction;
 import bj.gazfacile.repository.RevendeurRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -21,7 +17,7 @@ import java.time.LocalDateTime;
 
 /**
  * Gère les abonnements des revendeurs (STANDARD / PREMIUM).
- * Le paiement est délégué à PaiementService → FedaPay.
+ * Le paiement est délégué au contrôleur → PaiementService → FedaPay.
  * L'activation de l'abonnement se produit dans PaiementService.traiterWebhook()
  * quand la transaction ABONNEMENT passe à APPROVED.
  */
@@ -33,11 +29,6 @@ public class AbonnementService {
     private final RevendeurService revendeurService;
     private final RevendeurRepository revendeurRepository;
 
-    /** Injection par setter pour briser la dépendance circulaire avec PaiementService. */
-    @Setter(onMethod_ = @Autowired)
-    @Lazy
-    private PaiementService paiementService;
-
     /**
      * Retourne le statut d'abonnement du revendeur connecté.
      */
@@ -47,13 +38,15 @@ public class AbonnementService {
     }
 
     /**
-     * Initie le paiement FedaPay pour souscrire à un plan STANDARD ou PREMIUM.
-     * Retourne l'URL de paiement FedaPay.
+     * Prépare le DTO de paiement FedaPay pour souscrire à un plan STANDARD ou PREMIUM.
+     * L'appel effectif à PaiementService est fait par le contrôleur pour éviter
+     * la dépendance circulaire AbonnementService ↔ PaiementService.
      *
      * @param telephone téléphone de l'utilisateur connecté
      * @param dto       plan souhaité
+     * @return PaiementInitDTO prêt à être passé à PaiementService.initierPaiement()
      */
-    public PaiementResponseDTO initierSouscription(String telephone, AbonnementInitDTO dto) {
+    public PaiementInitDTO preparerSouscription(String telephone, AbonnementInitDTO dto) {
         if (dto.plan() == Abonnement.GRATUIT) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Impossible de souscrire au plan Gratuit via paiement");
@@ -71,14 +64,9 @@ public class AbonnementService {
         paiementDto.setClientEmail(revendeur.getEmail());
         paiementDto.setClientNom(revendeur.getNom());
         paiementDto.setRevendeurId(revendeur.getId());
-        // On encode le plan cible dans la description via metadata supplémentaire
-        // (lu dans traiterWebhook via la description de la transaction)
-        // On stocke le plan comme revendeurId|plan dans le DTO via customData
-        // En pratique, traiterWebhook utilise la référence pour retrouver la transaction
-        // et le champ revendeurId pour trouver le revendeur à activer.
 
-        log.info("[Abonnement] Initiation paiement {} pour revendeur {}", dto.plan(), revendeur.getId());
-        return paiementService.initierPaiement(paiementDto);
+        log.info("[Abonnement] DTO paiement préparé — plan {} pour revendeur {}", dto.plan(), revendeur.getId());
+        return paiementDto;
     }
 
     /**
