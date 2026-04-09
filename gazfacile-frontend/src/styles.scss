@@ -9,7 +9,7 @@ $gazfacile-theme: mat.define-theme((
     primary: mat.$azure-palette,
   ),
   typography: (
-    brand-family: 'DM Sans, sans-serif',
+    brand-family: 'Montserrat, sans-serif',
   ),
 ));
 
@@ -38,9 +38,9 @@ html {
   --color-warning-bg: rgba(232, 184, 74, 0.12);
   --color-danger: #E53E3E;
   --color-danger-bg: rgba(229, 62, 62, 0.1);
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
   --shadow-sm: 0 1px 4px rgba(44, 71, 112, 0.08);
   --shadow-md: 0 4px 16px rgba(44, 71, 112, 0.12);
   --shadow-lg: 0 8px 32px rgba(44, 71, 112, 0.16);
@@ -62,7 +62,7 @@ body {
   height: 100%;
   background-color: var(--color-bg);
   color: var(--color-text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -70,9 +70,9 @@ body {
 
 // === Typographie ===
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Syne', sans-serif;
-  font-weight: 700;
-  line-height: 1.2;
+  font-family: 'Archivo Black', sans-serif;
+  font-weight: 400; // Archivo Black est déjà ultra-bold par défaut
+  line-height: 1.15;
   color: var(--color-text);
 }
 
@@ -201,14 +201,14 @@ a {
   background-color: var(--color-surface) !important;
   color: var(--color-text) !important;
   border: 1px solid var(--color-border) !important;
-  border-radius: 0 !important;
+  border-radius: var(--radius-md) !important;
   box-shadow: var(--shadow-sm) !important;
 }
 
 .mat-mdc-dialog-container {
   --mdc-dialog-container-color: var(--color-surface) !important;
   color: var(--color-text) !important;
-  border-radius: 0 !important;
+  border-radius: var(--radius-md) !important;
 }
 
 .mat-mdc-form-field {
@@ -216,7 +216,6 @@ a {
   .mdc-text-field--outlined .mdc-notched-outline__notch,
   .mdc-text-field--outlined .mdc-notched-outline__trailing {
     border-color: var(--color-border) !important;
-    border-radius: 0 !important;
   }
 
   .mdc-text-field--focused .mdc-notched-outline * {
@@ -234,12 +233,13 @@ a {
 
 .mat-mdc-select-panel {
   background-color: var(--color-surface) !important;
-  border-radius: 0 !important;
+  border-radius: var(--radius-md) !important;
   border: 1px solid var(--color-border) !important;
 }
 
 .mat-mdc-option {
   color: var(--color-text) !important;
+  font-family: 'Montserrat', sans-serif !important;
 
   &:hover:not(.mdc-list-item--disabled) {
     background-color: var(--color-surface-2) !important;
@@ -254,7 +254,7 @@ a {
 .mat-mdc-snack-bar-container {
   --mdc-snackbar-container-color: var(--color-primary-dark) !important;
   --mdc-snackbar-supporting-text-color: #FFFFFF !important;
-  border-radius: 0 !important;
+  border-radius: var(--radius-sm) !important;
 }
 
 .mat-mdc-progress-spinner circle {
@@ -264,21 +264,22 @@ a {
 .mat-mdc-chip {
   background-color: var(--color-surface-2) !important;
   color: var(--color-text) !important;
-  border-radius: 0 !important;
+  border-radius: var(--radius-sm) !important;
 }
 
 .mat-mdc-button-base {
-  border-radius: 0 !important;
+  border-radius: var(--radius-sm) !important;
+  font-family: 'Montserrat', sans-serif !important;
 }
 
 .mdc-button {
-  border-radius: 0 !important;
+  border-radius: var(--radius-sm) !important;
 }
 
 .mat-mdc-raised-button,
 .mat-mdc-outlined-button,
 .mat-mdc-flat-button {
-  border-radius: 0 !important;
+  border-radius: var(--radius-sm) !important;
 }
 
 // === Boutons globaux ===
@@ -286,10 +287,10 @@ a {
   background-color: var(--color-accent);
   color: white;
   border: none;
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   padding: 10px 24px;
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 600;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
   cursor: pointer;
   transition: background-color 0.2s, transform 0.1s;
   text-transform: uppercase;
@@ -313,9 +314,9 @@ a {
   background-color: transparent;
   color: var(--color-primary);
   border: 2px solid var(--color-primary);
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   padding: 10px 24px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;

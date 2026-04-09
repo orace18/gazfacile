@@ -141,11 +141,11 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
       }
 
       .logo-texte {
-        font-family: 'Syne', sans-serif;
-        font-size: 1.3rem;
-        font-weight: 800;
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 1.2rem;
+        font-weight: 400;
         color: #FFFFFF;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.03em;
         text-transform: uppercase;
       }
     }

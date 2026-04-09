@@ -133,13 +133,11 @@ import { DistancePipe } from '../../../shared/pipes/distance.pipe';
     }
 
     .nom {
-      font-family: 'Syne', sans-serif;
-      font-size: 1rem;
-      font-weight: 700;
+      font-family: 'Archivo Black', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 400;
       color: var(--color-text);
       margin-bottom: 2px;
-      text-transform: uppercase;
-      letter-spacing: 0.02em;
     }
 
     .quartier {

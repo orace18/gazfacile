@@ -36,18 +36,13 @@ import { Revendeur } from '../../core/models/revendeur.model';
       <!-- Hero section bleue -->
       <section class="heros">
         <div class="heros-contenu">
-          <div class="heros-texte">
-            <p class="heros-surtitre">PLATEFORME DE GAZ DOMESTIQUE — BÉNIN</p>
-            <h1 class="heros-titre">
-              LE GAZ,<br>
-              <span class="accent">PLUS PROCHE</span><br>
-              DE VOUS
-            </h1>
-            <p class="heros-desc">
-              Localisez les revendeurs de gaz domestique au Bénin en temps réel.
-              Bénin Petro · Oryx · ProGaz · JNP
-            </p>
-          </div>
+          <p class="heros-surtitre">Gaz domestique · Bénin · Temps réel</p>
+          <h1 class="heros-titre">
+            Le gaz, <span class="accent">plus proche</span> de vous
+          </h1>
+          <p class="heros-desc">
+            Trouvez un revendeur de gaz près de chez vous en quelques secondes.
+          </p>
           <div class="marques-logos">
             <span class="marque-badge">Bénin Petro</span>
             <span class="marque-badge">Oryx</span>
@@ -88,37 +83,32 @@ import { Revendeur } from '../../core/models/revendeur.model';
     /* ── HERO ── */
     .heros {
       background-color: var(--color-primary);
-      padding: 28px 32px 24px;
+      padding: 24px 32px 20px;
       flex-shrink: 0;
     }
 
     .heros-contenu {
       max-width: 1200px;
       margin: 0 auto;
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 24px;
-      flex-wrap: wrap;
     }
 
     .heros-surtitre {
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      color: var(--color-accent);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      color: rgba(255, 255, 255, 0.6);
       text-transform: uppercase;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .heros-titre {
-      font-family: 'Syne', sans-serif;
-      font-size: 2.4rem;
-      font-weight: 800;
+      font-family: 'Archivo Black', sans-serif;
+      font-size: 2rem;
+      font-weight: 400;
       color: #FFFFFF;
-      line-height: 1.1;
-      text-transform: uppercase;
-      margin-bottom: 12px;
+      line-height: 1.15;
+      margin-bottom: 8px;
 
       .accent {
         color: var(--color-accent);
@@ -126,28 +116,31 @@ import { Revendeur } from '../../core/models/revendeur.model';
     }
 
     .heros-desc {
-      font-size: 0.9rem;
-      color: rgba(255, 255, 255, 0.75);
-      max-width: 420px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 14px;
       line-height: 1.5;
     }
 
     .marques-logos {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
       align-items: center;
     }
 
     .marque-badge {
-      background-color: rgba(255, 255, 255, 0.15);
-      color: #FFFFFF;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      padding: 6px 14px;
-      font-size: 0.8rem;
+      background-color: rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 4px 12px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.72rem;
       font-weight: 600;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
+      border-radius: var(--radius-sm);
     }
 
     /* ── SPLIT VIEW ── */
@@ -199,24 +192,24 @@ import { Revendeur } from '../../core/models/revendeur.model';
       }
 
       .heros-titre {
-        font-size: 1.7rem;
-      }
-
-      .marques-logos {
-        display: none;
+        font-size: 1.6rem;
       }
     }
 
     @media (max-width: 480px) {
       .heros {
-        padding: 20px 16px;
+        padding: 16px;
       }
 
       .heros-titre {
-        font-size: 1.4rem;
+        font-size: 1.3rem;
       }
 
       .heros-desc {
+        display: none;
+      }
+
+      .marques-logos {
         display: none;
       }
     }

@@ -209,12 +209,11 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       }
 
       h1 {
-        font-family: 'Syne', sans-serif;
-        font-size: 1.6rem;
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 400;
         color: var(--color-text);
         margin-bottom: 6px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
       }
 
       .sous-titre {

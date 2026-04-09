@@ -145,27 +145,34 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
       display: flex;
       gap: 8px;
       align-items: center;
-      padding: 12px 12px 4px;
+      padding: 12px 12px 0;
       background-color: var(--color-surface);
       border-bottom: 1px solid var(--color-border);
     }
 
     .champ-recherche {
       flex: 1;
+      /* Supprimer l'espace réservé aux messages d'erreur sous le champ */
+      ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+        display: none;
+      }
 
       ::ng-deep .mat-mdc-form-field-infix {
         min-height: 44px;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
       }
 
       ::ng-deep .mdc-notched-outline__leading,
       ::ng-deep .mdc-notched-outline__notch,
       ::ng-deep .mdc-notched-outline__trailing {
         border-color: var(--color-border);
-        border-radius: 0 !important;
       }
 
       ::ng-deep input {
         color: var(--color-text);
+        font-family: 'Montserrat', sans-serif;
+        font-size: 0.875rem;
       }
 
       ::ng-deep .mat-mdc-form-field-label {
@@ -177,11 +184,17 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
       background-color: var(--color-primary) !important;
       color: white !important;
       border: none !important;
-      border-radius: 0 !important;
+      border-radius: var(--radius-sm) !important;
       white-space: nowrap;
+      /* Même hauteur que le champ sans le subscript */
       height: 44px;
+      min-width: fit-content;
       gap: 4px;
+      font-family: 'Montserrat', sans-serif !important;
       font-weight: 600 !important;
+      font-size: 0.8rem !important;
+      /* Aligner avec le bas du champ — compenser le label flottant */
+      margin-bottom: 12px;
 
       &:hover {
         background-color: var(--color-primary-dark) !important;
