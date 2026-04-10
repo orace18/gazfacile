@@ -8,6 +8,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { AuthService } from '../../../core/services/auth.service';
 import { Role } from '../../../core/models/revendeur.model';
 import { NotificationBellComponent } from '../../../features/notifications/notification-bell/notification-bell.component';
+import { AppLogoComponent } from '../app-logo/app-logo.component';
 
 /**
  * Barre de navigation principale de GazFacile.
@@ -24,13 +25,14 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
-    NotificationBellComponent
+    NotificationBellComponent,
+    AppLogoComponent
   ],
   template: `
     <mat-toolbar class="navbar">
       <!-- Logo -->
       <a routerLink="/" class="logo">
-        <img src="assets/logo.svg" alt="GazFacile" class="logo-img">
+        <app-logo class="logo-img" [height]="36"></app-logo>
       </a>
 
       <span class="spacer"></span>
@@ -151,8 +153,7 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
       cursor: pointer;
 
       .logo-img {
-        height: 36px;
-        width: auto;
+        display: block;
       }
     }
 

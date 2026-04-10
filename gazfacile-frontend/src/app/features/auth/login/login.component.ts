@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../../core/services/auth.service';
 import { GoogleAuthService } from '../../../core/services/google-auth.service';
+import { AppLogoComponent } from '../../../shared/components/app-logo/app-logo.component';
 
 @Component({
   selector: 'app-login',
@@ -23,13 +24,14 @@ import { GoogleAuthService } from '../../../core/services/google-auth.service';
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatDividerModule
+    MatDividerModule,
+    AppLogoComponent
   ],
   template: `
     <div class="page-auth">
       <div class="carte-auth">
         <div class="entete-auth">
-          <img src="assets/logo.svg" alt="GazFacile" class="logo-auth">
+          <app-logo class="logo-auth" [height]="56"></app-logo>
           <h1>Connexion</h1>
           <p class="sous-titre">Accédez à votre espace GazFacile</p>
         </div>
@@ -121,8 +123,6 @@ import { GoogleAuthService } from '../../../core/services/google-auth.service';
       margin-bottom: 28px;
 
       .logo-auth {
-        height: 56px;
-        width: auto;
         display: block;
         margin: 0 auto 14px;
       }

@@ -19,6 +19,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { OtpService } from '../../../core/services/otp.service';
 import { GoogleAuthService } from '../../../core/services/google-auth.service';
 import { Role } from '../../../core/models/revendeur.model';
+import { AppLogoComponent } from '../../../shared/components/app-logo/app-logo.component';
 
 function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null {
   const password = control.get('password');
@@ -50,13 +51,14 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
     MatIconModule,
     MatProgressSpinnerModule,
     MatRadioModule,
-    MatStepperModule
+    MatStepperModule,
+    AppLogoComponent
   ],
   template: `
     <div class="page-auth">
       <div class="carte-auth">
         <div class="entete-auth">
-          <img src="assets/logo.svg" alt="GazFacile" class="logo-auth">
+          <app-logo class="logo-auth" [height]="56"></app-logo>
           <h1>{{ titrePage }}</h1>
           <p class="sous-titre">{{ sousTitrePage }}</p>
         </div>
@@ -249,8 +251,6 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       margin-bottom: 28px;
 
       .logo-auth {
-        height: 56px;
-        width: auto;
         display: block;
         margin: 0 auto 14px;
       }
