@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../../core/services/auth.service';
 import { GoogleAuthService } from '../../../core/services/google-auth.service';
+import { OtpService } from '../../../core/services/otp.service';
 
 @Component({
   selector: 'app-login',
@@ -29,14 +30,93 @@ import { GoogleAuthService } from '../../../core/services/google-auth.service';
     <div class="page-auth">
       <div class="carte-auth">
         <div class="entete-auth">
-          <div class="logo-auth" aria-label="GazFacile">
-            <span class="brand-mark" aria-hidden="true"></span>
-            <span class="brand-text">GazFacile</span>
-          </div>
+          <img src="assets/logo.svg" alt="GazFacile" class="logo-auth">
           <h1>Connexion</h1>
           <p class="sous-titre">Accédez à votre espace GazFacile</p>
         </div>
 
+        <!-- Complétion téléphone Google (étape 1) -->
+        @if (modeGoogle && etapeGoogle === 1) {
+          <div class="bloc-completion-google">
+            <div class="info-google">
+              <mat-icon>account_circle</mat-icon>
+              <p>Dernière étape ! Renseignez votre numéro pour finaliser votre inscription.</p>
+            </div>
+
+            <mat-form-field appearance="outline" class="champ-pleine-largeur">
+              <mat-label>Numéro de téléphone</mat-label>
+              <input matInput [formControl]="telephoneGoogleControl" placeholder="97000000" type="tel">
+              <div matPrefix class="prefixe-tel">+229</div>
+              @if (telephoneGoogleControl.invalid && telephoneGoogleControl.touched) {
+                <mat-error>Le numéro de téléphone est obligatoire</mat-error>
+              }
+            </mat-form-field>
+
+            @if (googleErreur) {
+              <div class="erreur-globale">
+                <mat-icon>error_outline</mat-icon> {{ googleErreur }}
+              </div>
+            }
+
+            <button mat-raised-button class="btn-connexion"
+              [disabled]="telephoneGoogleControl.invalid || envoiOtp"
+              (click)="demanderOtpGoogle()">
+              @if (envoiOtp) { <mat-spinner diameter="20"></mat-spinner> }
+              @else { <mat-icon>sms</mat-icon> }
+              Recevoir le code SMS
+            </button>
+
+            <button mat-button (click)="annulerModeGoogle()">
+              <mat-icon>arrow_back</mat-icon> Retour
+            </button>
+          </div>
+        }
+
+        <!-- Vérification OTP Google (étape 2) -->
+        @if (modeGoogle && etapeGoogle === 2) {
+          <div class="bloc-completion-google">
+            <div class="info-google">
+              <mat-icon>phone_android</mat-icon>
+              <p>Code envoyé au <strong>+229 {{ telephoneGoogleControl.value }}</strong></p>
+            </div>
+
+            <mat-form-field appearance="outline" class="champ-pleine-largeur">
+              <mat-label>Code de vérification (6 chiffres)</mat-label>
+              <input matInput [formControl]="otpGoogleControl"
+                placeholder="123456" maxlength="6" type="tel"
+                inputmode="numeric" autocomplete="one-time-code">
+              <mat-icon matPrefix>lock</mat-icon>
+              @if (otpGoogleControl.hasError('pattern') && otpGoogleControl.touched) {
+                <mat-error>Le code doit comporter 6 chiffres</mat-error>
+              }
+            </mat-form-field>
+
+            @if (googleErreur) {
+              <div class="erreur-globale">
+                <mat-icon>error_outline</mat-icon> {{ googleErreur }}
+              </div>
+            }
+
+            <button mat-raised-button class="btn-connexion"
+              [disabled]="otpGoogleControl.invalid || envoi"
+              (click)="verifierEtLierGoogle()">
+              @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
+              @else { <mat-icon>check_circle</mat-icon> }
+              Confirmer et se connecter
+            </button>
+
+            <button mat-button [disabled]="envoiOtp" (click)="demanderOtpGoogle()">
+              @if (envoiOtp) { <mat-spinner diameter="14"></mat-spinner> }
+              Renvoyer le code
+            </button>
+
+            <button mat-button (click)="etapeGoogle = 1; googleErreur = null">
+              <mat-icon>arrow_back</mat-icon> Modifier le numéro
+            </button>
+          </div>
+        }
+
+        @if (!modeGoogle) {
         <!-- Bouton Google -->
         <div class="bloc-google">
           <div #googleBtn class="google-btn-container"></div>
@@ -97,6 +177,7 @@ import { GoogleAuthService } from '../../../core/services/google-auth.service';
             Vous êtes revendeur ? Inscrivez votre dépôt après connexion.
           </p>
         </div>
+        } <!-- fin @if (!modeGoogle) -->
       </div>
     </div>
   `,
@@ -124,49 +205,10 @@ import { GoogleAuthService } from '../../../core/services/google-auth.service';
       margin-bottom: 28px;
 
       .logo-auth {
+        height: 56px;
+        width: auto;
         display: block;
         margin: 0 auto 14px;
-        width: fit-content;
-        --brand-height: 56px;
-        color: var(--color-primary);
-      }
-
-      .brand-mark {
-        position: relative;
-        display: inline-block;
-        width: calc(var(--brand-height) * 0.64);
-        height: var(--brand-height);
-        vertical-align: middle;
-        margin-right: 10px;
-      }
-
-      .brand-mark::before,
-      .brand-mark::after {
-        content: '';
-        position: absolute;
-        border-radius: 60% 60% 72% 72% / 78% 78% 36% 36%;
-      }
-
-      .brand-mark::before {
-        inset: 0 22% 8% 0;
-        background: linear-gradient(180deg, #f8b02e 0%, #e99400 100%);
-        transform: rotate(10deg);
-      }
-
-      .brand-mark::after {
-        inset: 22% 0 0 26%;
-        background: linear-gradient(180deg, #5d7fb4 0%, #375783 100%);
-        transform: rotate(-12deg);
-      }
-
-      .brand-text {
-        display: inline-block;
-        vertical-align: middle;
-        font-family: 'Montserrat', sans-serif;
-        font-size: calc(var(--brand-height) * 0.48);
-        font-weight: 700;
-        letter-spacing: -0.03em;
-        line-height: 1;
       }
 
       h1 {
@@ -299,6 +341,24 @@ import { GoogleAuthService } from '../../../core/services/google-auth.service';
         &:hover { color: var(--color-accent); }
       }
     }
+
+    .bloc-completion-google {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      .info-google {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+        border-left: 3px solid var(--color-primary);
+
+        mat-icon { color: var(--color-primary); }
+        p { margin: 0; font-size: 0.88rem; color: var(--color-text); }
+      }
+    }
   `]
 })
 export class LoginComponent implements AfterViewInit {
@@ -306,20 +366,32 @@ export class LoginComponent implements AfterViewInit {
 
   private readonly authService = inject(AuthService);
   private readonly googleAuthService = inject(GoogleAuthService);
+  private readonly otpService = inject(OtpService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
 
   mdpVisible = false;
   envoi = false;
+  envoiOtp = false;
   erreur: string | null = null;
   googleErreur: string | null = null;
   googleBtnRendu = false;
+
+  modeGoogle = false;
+  etapeGoogle: 1 | 2 = 1;
+  private googleIdToken = '';
 
   readonly formulaire = this.fb.group({
     telephone: ['', Validators.required],
     password: ['', Validators.required]
   });
+
+  readonly telephoneGoogleControl = this.fb.control('', Validators.required);
+  readonly otpGoogleControl = this.fb.control('', [
+    Validators.required,
+    Validators.pattern(/^\d{6}$/)
+  ]);
 
   ngAfterViewInit(): void {
     this.initialiserBoutonGoogle();
@@ -335,15 +407,76 @@ export class LoginComponent implements AfterViewInit {
       },
       error: (err) => {
         if (err?.telephoneRequis) {
-          // Rediriger vers l'inscription avec le token en queryParam
-          this.router.navigate(['/auth/register'], {
-            queryParams: { googleToken: idToken }
-          });
+          this.googleIdToken = idToken;
+          this.modeGoogle = true;
+          this.etapeGoogle = 1;
+          this.telephoneGoogleControl.reset();
+          this.otpGoogleControl.reset();
         } else {
           this.googleErreur = err.message || 'Connexion Google échouée';
         }
       }
     });
+  }
+
+  demanderOtpGoogle(): void {
+    const telephone = this.telephoneGoogleControl.value?.trim();
+    if (!telephone) return;
+
+    this.envoiOtp = true;
+    this.googleErreur = null;
+
+    this.otpService.envoyer(telephone).subscribe({
+      next: () => {
+        this.envoiOtp = false;
+        this.etapeGoogle = 2;
+        this.otpGoogleControl.reset();
+      },
+      error: err => {
+        this.envoiOtp = false;
+        this.googleErreur = err.message || 'Impossible d\'envoyer le code SMS';
+      }
+    });
+  }
+
+  verifierEtLierGoogle(): void {
+    if (this.otpGoogleControl.invalid) return;
+
+    this.envoi = true;
+    this.googleErreur = null;
+
+    const telephone = this.telephoneGoogleControl.value!.trim();
+    const code = this.otpGoogleControl.value!;
+
+    this.otpService.verifier(telephone, code).subscribe({
+      next: () => {
+        this.googleAuthService.loginAvecGoogle(this.googleIdToken, telephone).subscribe({
+          next: (auth) => {
+            this.envoi = false;
+            this.authService.sauvegarderSession(auth);
+            const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
+            this.router.navigate([returnUrl]);
+          },
+          error: err => {
+            this.envoi = false;
+            this.googleErreur = err.message || 'Impossible de finaliser l\'inscription';
+          }
+        });
+      },
+      error: err => {
+        this.envoi = false;
+        this.googleErreur = err.message || 'Code incorrect';
+      }
+    });
+  }
+
+  annulerModeGoogle(): void {
+    this.modeGoogle = false;
+    this.etapeGoogle = 1;
+    this.googleIdToken = '';
+    this.googleErreur = null;
+    this.telephoneGoogleControl.reset();
+    this.otpGoogleControl.reset();
   }
 
   private initialiserBoutonGoogle(): void {

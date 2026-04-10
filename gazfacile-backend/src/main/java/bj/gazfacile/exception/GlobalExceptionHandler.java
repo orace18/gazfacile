@@ -8,6 +8,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -76,6 +77,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErreurResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 new ErreurResponse(ex.getMessage(), 400, "Requête invalide", LocalDateTime.now())
+        );
+    }
+
+    /** Erreurs métier avec statut HTTP explicite (ex : UNAUTHORIZED, PRECONDITION_REQUIRED). */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErreurResponse> handleResponseStatusException(ResponseStatusException ex) {
+        return ResponseEntity.status(ex.getStatusCode()).body(
+                new ErreurResponse(ex.getReason(), ex.getStatusCode().value(), "Erreur", LocalDateTime.now())
         );
     }
 
