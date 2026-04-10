@@ -56,7 +56,7 @@ public class AbonnementService {
 
         PaiementInitDTO paiementDto = new PaiementInitDTO();
         paiementDto.setType(TypeTransaction.ABONNEMENT);
-        paiementDto.setMontant(dto.plan().getPrixMensuel());
+        paiementDto.setMontant(dto.plan().getPrix());
         paiementDto.setDescription(
                 "Abonnement " + dto.plan().getLibelle() + " — GazFacile (30 jours)"
         );
@@ -79,9 +79,7 @@ public class AbonnementService {
     public void activerAbonnement(String revendeurId, long montantPaye) {
         Revendeur revendeur = revendeurService.getById(revendeurId);
 
-        Abonnement nouveauPlan = montantPaye >= Abonnement.PREMIUM.getPrixMensuel()
-                ? Abonnement.PREMIUM
-                : Abonnement.STANDARD;
+        Abonnement nouveauPlan = trouverPlanParMontant(montantPaye);
 
         LocalDateTime maintenant = LocalDateTime.now();
 
@@ -92,12 +90,20 @@ public class AbonnementService {
                 : maintenant;
 
         revendeur.setAbonnement(nouveauPlan);
-        revendeur.setAbonnementExpiry(baseExpiry.plusDays(Abonnement.DUREE_JOURS));
+        revendeur.setAbonnementExpiry(baseExpiry.plusDays(nouveauPlan.getDureeJours()));
         revendeur.setUpdatedAt(maintenant);
         revendeurRepository.save(revendeur);
 
         log.info("[Abonnement] Revendeur {} activé en plan {} jusqu'au {}",
                 revendeurId, nouveauPlan, revendeur.getAbonnementExpiry());
+    }
+
+    private Abonnement trouverPlanParMontant(long montant) {
+        if (montant >= Abonnement.ANNUEL.getPrix()) return Abonnement.ANNUEL;
+        if (montant >= Abonnement.SEMESTRIEL.getPrix()) return Abonnement.SEMESTRIEL;
+        if (montant >= Abonnement.TRIMESTRIEL.getPrix()) return Abonnement.TRIMESTRIEL;
+        if (montant >= Abonnement.MENSUEL.getPrix()) return Abonnement.MENSUEL;
+        return Abonnement.TEST;
     }
 
     /**

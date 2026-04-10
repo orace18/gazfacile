@@ -5,20 +5,15 @@ import bj.gazfacile.model.enums.Abonnement;
 
 import java.time.LocalDateTime;
 
-/**
- * Statut d'abonnement d'un revendeur, retourné par GET /api/v1/abonnement/statut.
- */
 public record AbonnementStatutDTO(
     Abonnement plan,
     String planLibelle,
-    long prixMensuel,
+    long prix,
     String description,
     boolean actif,
     boolean expire,
     LocalDateTime expiry,
-    int maxProduits,
-    boolean prioriteClassement,
-    boolean badgePremium
+    int maxProduits
 ) {
     public static AbonnementStatutDTO from(Revendeur revendeur) {
         Abonnement plan = revendeur.getAbonnement() != null ? revendeur.getAbonnement() : Abonnement.GRATUIT;
@@ -32,14 +27,12 @@ public record AbonnementStatutDTO(
         return new AbonnementStatutDTO(
             plan,
             plan.getLibelle(),
-            plan.getPrixMensuel(),
+            plan.getPrix(),
             plan.getDescription(),
             actif,
             expire,
             expiry,
-            plan.getMaxProduits(),
-            plan.isPrioriteClassement(),
-            plan.isBadgePremium()
+            plan.getMaxProduits()
         );
     }
 }

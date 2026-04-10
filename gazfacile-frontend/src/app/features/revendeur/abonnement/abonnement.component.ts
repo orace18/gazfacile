@@ -63,22 +63,25 @@ import {
         <div class="grille-plans">
           @for (p of plans; track p.plan) {
             <div class="carte-plan" [class.plan-actuel]="statut()!.plan === p.plan"
-                 [class.plan-recommande]="p.plan === Abonnement.PREMIUM">
+                 [class.plan-recommande]="p.recommande">
 
-              @if (p.plan === Abonnement.PREMIUM) {
+              @if (p.recommande) {
                 <div class="badge-recommande">Recommandé</div>
               }
 
               <div class="plan-entete">
                 <mat-icon class="plan-icone">{{ iconePlan(p.plan) }}</mat-icon>
                 <h2 class="plan-nom">{{ p.libelle }}</h2>
+                @if (p.duree) {
+                  <span class="plan-duree">{{ p.duree }}</span>
+                }
                 <p class="plan-desc">{{ p.description }}</p>
                 <div class="plan-prix">
                   @if (p.prix === 0) {
                     <span class="prix-valeur">Gratuit</span>
                   } @else {
                     <span class="prix-valeur">{{ p.prix | number:'1.0-0' }}</span>
-                    <span class="prix-unite"> FCFA / mois</span>
+                    <span class="prix-unite"> FCFA</span>
                   }
                 </div>
               </div>
@@ -105,7 +108,7 @@ import {
                   <button
                     mat-raised-button
                     class="btn-souscrire"
-                    [class.btn-premium]="p.plan === Abonnement.PREMIUM"
+                    [class.btn-recommande]="p.recommande"
                     [disabled]="enCoursId() === p.plan"
                     (click)="souscrire(p.plan)"
                   >
@@ -190,13 +193,9 @@ import {
         background: var(--color-surface-2);
         color: var(--color-text-muted);
       }
-      &.badge-standard {
+      &.badge-mensuel, &.badge-trimestriel, &.badge-semestriel, &.badge-annuel {
         background: color-mix(in srgb, var(--color-primary) 15%, transparent);
         color: var(--color-primary);
-      }
-      &.badge-premium {
-        background: color-mix(in srgb, var(--color-accent) 20%, transparent);
-        color: #8a6200;
       }
     }
 
@@ -344,10 +343,23 @@ import {
       background-color: var(--color-primary) !important;
       color: white !important;
 
-      &.btn-premium {
+      &.btn-recommande {
         background-color: var(--color-accent) !important;
         color: #1a1a00 !important;
       }
+    }
+
+    .plan-duree {
+      display: inline-block;
+      background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+      color: var(--color-primary);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .erreur {
@@ -427,9 +439,12 @@ export class AbonnementComponent implements OnInit {
 
   iconePlan(plan: Abonnement): string {
     switch (plan) {
-      case Abonnement.PREMIUM:  return 'workspace_premium';
-      case Abonnement.STANDARD: return 'verified';
-      default:                  return 'store';
+      case Abonnement.ANNUEL:       return 'workspace_premium';
+      case Abonnement.SEMESTRIEL:   return 'star';
+      case Abonnement.TRIMESTRIEL:  return 'verified';
+      case Abonnement.MENSUEL:      return 'calendar_month';
+      case Abonnement.TEST:         return 'science';
+      default:                      return 'store';
     }
   }
 }

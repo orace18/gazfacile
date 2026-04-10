@@ -4,8 +4,11 @@
 
 export enum Abonnement {
   GRATUIT = 'GRATUIT',
-  STANDARD = 'STANDARD',
-  PREMIUM = 'PREMIUM'
+  TEST = 'TEST',
+  MENSUEL = 'MENSUEL',
+  TRIMESTRIEL = 'TRIMESTRIEL',
+  SEMESTRIEL = 'SEMESTRIEL',
+  ANNUEL = 'ANNUEL'
 }
 
 export enum Role {
@@ -81,37 +84,63 @@ export interface ConsultationStatut {
 export interface AbonnementStatut {
   plan: Abonnement;
   planLibelle: string;
-  prixMensuel: number;
+  prix: number;
   description: string;
   actif: boolean;
   expire: boolean;
   expiry: string | null;
   maxProduits: number;
-  prioriteClassement: boolean;
-  badgePremium: boolean;
 }
 
-export const ABONNEMENT_PLANS: { plan: Abonnement; libelle: string; prix: number; description: string; features: string[] }[] = [
+export const ABONNEMENT_PLANS: { plan: Abonnement; libelle: string; prix: number; duree: string; description: string; features: string[]; recommande?: boolean }[] = [
   {
     plan: Abonnement.GRATUIT,
     libelle: 'Gratuit',
     prix: 0,
+    duree: '',
     description: 'Pour démarrer',
-    features: ['Profil basique', 'Max 3 produits au catalogue', 'Visibilité limitée']
+    features: ['Profil basique visible', 'Max 3 produits au catalogue', 'Visibilité limitée']
   },
   {
-    plan: Abonnement.STANDARD,
-    libelle: 'Standard',
-    prix: 2000,
-    description: 'Pour les revendeurs actifs',
-    features: ['Catalogue illimité', 'Badge vérifié', 'Visibilité normale dans les résultats']
+    plan: Abonnement.TEST,
+    libelle: 'Test',
+    prix: 100,
+    duree: '1 jour',
+    description: 'Pour tester le paiement',
+    features: ['Catalogue illimité', 'Visibilité complète', '1 jour d\'accès']
   },
   {
-    plan: Abonnement.PREMIUM,
-    libelle: 'Premium',
+    plan: Abonnement.MENSUEL,
+    libelle: 'Mensuel',
+    prix: 1000,
+    duree: '1 mois',
+    description: 'Sans engagement',
+    features: ['Catalogue illimité', 'Visibilité complète', 'Profil vérifié']
+  },
+  {
+    plan: Abonnement.TRIMESTRIEL,
+    libelle: 'Trimestriel',
+    prix: 2500,
+    duree: '3 mois',
+    description: 'Économisez 17%',
+    features: ['Catalogue illimité', 'Visibilité complète', 'Profil vérifié', '3 mois d\'accès']
+  },
+  {
+    plan: Abonnement.SEMESTRIEL,
+    libelle: 'Semestriel',
     prix: 5000,
-    description: 'Pour maximiser vos ventes',
-    features: ['Tout le Standard', 'Priorité dans les résultats', 'Badge Premium', 'Analytics de vues']
+    duree: '6 mois',
+    description: 'Économisez 17%',
+    recommande: true,
+    features: ['Catalogue illimité', 'Visibilité complète', 'Profil vérifié', '6 mois d\'accès']
+  },
+  {
+    plan: Abonnement.ANNUEL,
+    libelle: 'Annuel',
+    prix: 10000,
+    duree: '12 mois',
+    description: 'Meilleur rapport qualité/prix',
+    features: ['Catalogue illimité', 'Visibilité complète', 'Profil vérifié', '12 mois d\'accès']
   }
 ];
 
