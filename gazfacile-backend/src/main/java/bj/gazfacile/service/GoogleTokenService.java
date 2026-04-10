@@ -23,6 +23,14 @@ public class GoogleTokenService {
             .baseUrl("https://oauth2.googleapis.com")
             .build();
 
+    public String getClientId() {
+        return clientId != null ? clientId.trim() : "";
+    }
+
+    public boolean isConfigured() {
+        return !getClientId().isBlank();
+    }
+
     /**
      * Valide l'ID token et retourne les informations de l'utilisateur Google.
      *
@@ -44,8 +52,8 @@ public class GoogleTokenService {
 
             // Vérifier que le token est bien destiné à notre application
             String audience = (String) claims.get("aud");
-            if (clientId != null && !clientId.isBlank() && !clientId.equals(audience)) {
-                log.warn("[Google] Audience invalide : attendu={}, reçu={}", clientId, audience);
+            if (isConfigured() && !getClientId().equals(audience)) {
+                log.warn("[Google] Audience invalide : attendu={}, reçu={}", getClientId(), audience);
                 throw new IllegalArgumentException("Token Google invalide (audience incorrecte)");
             }
 

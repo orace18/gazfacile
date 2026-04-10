@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, ViewChild, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -57,14 +57,25 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       <div class="carte-auth">
         <div class="entete-auth">
           <img src="assets/logo.svg" alt="GazFacile" class="logo-auth">
-          <h1>{{ modeGoogle ? 'Finaliser l\'inscription' : 'Créer un compte' }}</h1>
-          <p class="sous-titre">
-            {{ modeGoogle ? 'Liez un numéro de téléphone à votre compte Google' : 'Rejoignez la communauté GazFacile au Bénin' }}
-          </p>
+          <h1>{{ titrePage }}</h1>
+          <p class="sous-titre">{{ sousTitrePage }}</p>
         </div>
 
         <!-- ÉTAPE 1 : Formulaire -->
         @if (etape === 1) {
+          @if (!modeGoogle) {
+            <div class="bloc-google">
+              <div #googleBtn class="google-btn-container"></div>
+              @if (googleErreur) {
+                <p class="erreur-google">{{ googleErreur }}</p>
+              }
+            </div>
+
+            <div class="separateur">
+              <span class="separateur-texte">ou</span>
+            </div>
+          }
+
           <form [formGroup]="formulaire" (ngSubmit)="demanderOtp()" class="formulaire">
 
             @if (!modeGoogle) {
@@ -261,6 +272,50 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       gap: 8px;
     }
 
+    .bloc-google {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .google-btn-container {
+      width: 100%;
+      min-height: 44px;
+      display: flex;
+      justify-content: center;
+
+      ::ng-deep > div,
+      ::ng-deep iframe {
+        max-width: 100% !important;
+      }
+    }
+
+    .erreur-google {
+      font-size: 0.8rem;
+      color: var(--color-danger);
+      margin: 0;
+      text-align: center;
+    }
+
+    .separateur {
+      position: relative;
+      margin: 16px 0 20px;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .separateur-texte {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--color-surface);
+      padding: 0 12px;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+    }
+
     .champ-pleine-largeur {
       width: 100%;
 
@@ -387,7 +442,9 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
     }
   `]
 })
-export class RegisterComponent implements OnInit {
+export class RegisterComponent implements OnInit, AfterViewInit {
+  @ViewChild('googleBtn') googleBtnRef?: ElementRef<HTMLDivElement>;
+
   private readonly authService = inject(AuthService);
   private readonly googleAuthService = inject(GoogleAuthService);
   private readonly otpService = inject(OtpService);
@@ -405,6 +462,8 @@ export class RegisterComponent implements OnInit {
   envoi = false;
   envoiOtp = false;
   erreur: string | null = null;
+  googleErreur: string | null = null;
+  googleBtnRendu = false;
 
   readonly formulaire = this.fb.group({
     nom: ['', Validators.required],
@@ -423,14 +482,24 @@ export class RegisterComponent implements OnInit {
   ngOnInit(): void {
     const token = this.route.snapshot.queryParamMap.get('googleToken');
     if (token) {
-      this.modeGoogle = true;
-      this.googleToken = token;
-      // En mode Google, seul le téléphone est requis
-      this.formulaire.get('nom')?.clearValidators();
-      this.formulaire.get('password')?.clearValidators();
-      this.formulaire.get('confirmPassword')?.clearValidators();
-      this.formulaire.updateValueAndValidity();
+      this.activerModeGoogle(token);
     }
+  }
+
+  ngAfterViewInit(): void {
+    if (!this.modeGoogle) {
+      this.initialiserBoutonGoogle();
+    }
+  }
+
+  get titrePage(): string {
+    return this.modeGoogle ? "Finaliser l'inscription" : 'Créer un compte';
+  }
+
+  get sousTitrePage(): string {
+    return this.modeGoogle
+      ? 'Liez un numéro de téléphone à votre compte Google'
+      : 'Rejoignez la communauté GazFacile au Bénin';
   }
 
   /** Étape 1 → envoyer l'OTP et passer à l'étape 2. */
@@ -516,5 +585,59 @@ export class RegisterComponent implements OnInit {
         this.erreur = err.message || 'Impossible de lier le compte Google';
       }
     });
+  }
+
+  private initialiserBoutonGoogle(): void {
+    if (!this.googleBtnRef) {
+      this.googleBtnRendu = false;
+      this.googleErreur = 'Connexion Google indisponible pour le moment.';
+      return;
+    }
+
+    this.googleErreur = null;
+    this.googleAuthService.initialiser(this.googleBtnRef.nativeElement, (idToken) => {
+      this.onGoogleToken(idToken);
+    }).subscribe({
+      next: (rendu) => {
+        this.googleBtnRendu = rendu;
+        if (!rendu) {
+          this.googleErreur = 'Connexion Google indisponible pour le moment.';
+        }
+      },
+      error: () => {
+        this.googleBtnRendu = false;
+        this.googleErreur = 'Connexion Google indisponible pour le moment.';
+      }
+    });
+  }
+
+  private onGoogleToken(idToken: string): void {
+    this.googleErreur = null;
+    this.googleAuthService.loginAvecGoogle(idToken).subscribe({
+      next: (auth) => {
+        this.authService.sauvegarderSession(auth);
+        this.router.navigate(['/']);
+      },
+      error: (err) => {
+        if (err?.telephoneRequis) {
+          this.activerModeGoogle(idToken);
+          this.etape = 1;
+          this.erreur = null;
+        } else {
+          this.googleErreur = err.message || 'Connexion Google échouée';
+        }
+      }
+    });
+  }
+
+  private activerModeGoogle(token: string): void {
+    this.modeGoogle = true;
+    this.googleToken = token;
+    this.googleErreur = null;
+    this.formulaire.get('nom')?.clearValidators();
+    this.formulaire.get('password')?.clearValidators();
+    this.formulaire.get('confirmPassword')?.clearValidators();
+    this.formulaire.get('role')?.setValue(Role.CLIENT);
+    this.formulaire.updateValueAndValidity();
   }
 }

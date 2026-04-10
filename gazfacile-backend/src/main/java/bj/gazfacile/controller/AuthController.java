@@ -2,6 +2,7 @@ package bj.gazfacile.controller;
 
 import bj.gazfacile.dto.*;
 import bj.gazfacile.service.AuthService;
+import bj.gazfacile.service.GoogleTokenService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final GoogleTokenService googleTokenService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponseDTO> register(@Valid @RequestBody RegisterDTO dto) {
@@ -60,5 +62,13 @@ public class AuthController {
     @PostMapping("/google")
     public ResponseEntity<AuthResponseDTO> loginGoogle(@Valid @RequestBody GoogleLoginDTO dto) {
         return ResponseEntity.ok(authService.loginAvecGoogle(dto));
+    }
+
+    @GetMapping("/google/config")
+    public ResponseEntity<Map<String, Object>> googleConfig() {
+        return ResponseEntity.ok(Map.of(
+                "clientId", googleTokenService.getClientId(),
+                "configured", googleTokenService.isConfigured()
+        ));
     }
 }
