@@ -212,14 +212,14 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
     }
 
     .toggle-stock {
-      border-radius: 0 !important;
+      
 
       ::ng-deep .mat-button-toggle {
         background-color: var(--color-surface) !important;
         color: var(--color-text-muted) !important;
         border-color: var(--color-border) !important;
         font-size: 0.78rem;
-        border-radius: 0 !important;
+        
       }
 
       ::ng-deep .mat-button-toggle-checked {
@@ -244,7 +244,6 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
       padding: 12px 16px;
       background-color: var(--color-danger-bg);
       color: var(--color-danger);
-      border-radius: 0;
       margin: 8px 12px;
       font-size: 0.85rem;
       border-left: 3px solid var(--color-danger);
@@ -287,7 +286,7 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
       button {
         border-color: var(--color-primary) !important;
         color: var(--color-primary) !important;
-        border-radius: 0 !important;
+        
       }
     }
   `]

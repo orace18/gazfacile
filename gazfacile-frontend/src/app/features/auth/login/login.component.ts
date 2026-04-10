@@ -123,7 +123,6 @@ import { GoogleAuthService } from '../../../core/services/google-auth.service';
       width: 100%;
       max-width: 420px;
       background: var(--color-surface);
-      border-radius: 0;
       padding: 44px 40px;
       box-shadow: 0 16px 48px rgba(0,0,0,0.25);
     }
@@ -227,7 +226,7 @@ import { GoogleAuthService } from '../../../core/services/google-auth.service';
       ::ng-deep .mdc-notched-outline__leading,
       ::ng-deep .mdc-notched-outline__notch,
       ::ng-deep .mdc-notched-outline__trailing {
-        border-radius: 0 !important;
+        
       }
     }
 
@@ -256,7 +255,7 @@ import { GoogleAuthService } from '../../../core/services/google-auth.service';
       font-size: 1rem !important;
       font-weight: 700 !important;
       margin-top: 8px;
-      border-radius: 0 !important;
+      
       text-transform: uppercase;
       letter-spacing: 0.08em;
 

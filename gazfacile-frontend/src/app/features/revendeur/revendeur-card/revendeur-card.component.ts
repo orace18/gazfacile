@@ -139,7 +139,7 @@ import { ConsultationPaywallComponent } from '../../../shared/components/consult
     .carte-revendeur {
       background-color: var(--color-surface) !important;
       border: 1px solid var(--color-border) !important;
-      border-radius: 0 !important;
+      
       cursor: pointer;
       transition: border-color 0.2s, box-shadow 0.2s;
       margin-bottom: 10px;
@@ -244,7 +244,7 @@ import { ConsultationPaywallComponent } from '../../../shared/components/consult
       font-size: 0.72rem !important;
       font-weight: 600 !important;
       height: 22px !important;
-      border-radius: 0 !important;
+      
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
@@ -311,7 +311,7 @@ import { ConsultationPaywallComponent } from '../../../shared/components/consult
       border-color: var(--color-primary) !important;
       color: var(--color-primary) !important;
       font-size: 0.82rem !important;
-      border-radius: 0 !important;
+      
       font-weight: 600 !important;
     }
 
@@ -320,7 +320,7 @@ import { ConsultationPaywallComponent } from '../../../shared/components/consult
       background-color: var(--color-accent) !important;
       color: #1a1a00 !important;
       font-size: 0.82rem !important;
-      border-radius: 0 !important;
+      
       font-weight: 700 !important;
       text-transform: uppercase;
       letter-spacing: 0.04em;

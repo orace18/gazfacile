@@ -382,7 +382,7 @@ import { StockBadgeComponent } from '../../../shared/components/stock-badge/stoc
       ::ng-deep .mdc-notched-outline__leading,
       ::ng-deep .mdc-notched-outline__notch,
       ::ng-deep .mdc-notched-outline__trailing {
-        border-radius: 0 !important;
+        
       }
     }
 

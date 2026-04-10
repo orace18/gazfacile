@@ -149,9 +149,6 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
       align-items: center;
       text-decoration: none;
       cursor: pointer;
-      background: white;
-      padding: 4px 10px;
-      border-radius: 4px;
 
       .logo-img {
         height: 36px;
@@ -171,7 +168,7 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
       a, button {
         color: rgba(255, 255, 255, 0.85) !important;
         transition: color 0.2s;
-        border-radius: 0 !important;
+        
 
         &:hover, &.actif {
           color: var(--color-accent) !important;
@@ -189,7 +186,7 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
     .btn-register {
       background-color: var(--color-accent) !important;
       color: white !important;
-      border-radius: 0 !important;
+      
       padding: 0 20px !important;
       margin-left: 8px;
       font-weight: 700 !important;
@@ -207,7 +204,7 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
       align-items: center;
       gap: 4px;
       color: rgba(255, 255, 255, 0.9) !important;
-      border-radius: 0 !important;
+      
     }
 
     .nav-mobile-btn {

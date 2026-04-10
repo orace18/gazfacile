@@ -229,7 +229,6 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       width: 100%;
       max-width: 460px;
       background: var(--color-surface);
-      border-radius: 0;
       padding: 40px 36px;
       box-shadow: 0 16px 48px rgba(0,0,0,0.25);
     }
@@ -268,7 +267,7 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       ::ng-deep .mdc-notched-outline__leading,
       ::ng-deep .mdc-notched-outline__notch,
       ::ng-deep .mdc-notched-outline__trailing {
-        border-radius: 0 !important;
+        
       }
     }
 
@@ -355,7 +354,7 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       font-size: 1rem !important;
       font-weight: 700 !important;
       margin-top: 8px;
-      border-radius: 0 !important;
+      
       text-transform: uppercase;
       letter-spacing: 0.08em;
 
