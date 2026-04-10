@@ -749,7 +749,7 @@ export class RevendeurFormComponent {
       next: () => {
         this.envoi = false;
         this.snackBar.open('Votre dépôt a été inscrit avec succès !', 'OK', { duration: 5000 });
-        this.router.navigate(['/']);
+        this.router.navigate(['/revendeur/abonnement']);
       },
       error: err => {
         this.envoi = false;
