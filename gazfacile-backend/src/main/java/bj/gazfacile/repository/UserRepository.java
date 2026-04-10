@@ -26,4 +26,7 @@ public interface UserRepository extends MongoRepository<User, String> {
 
     /** Recherche par Google ID (sub). */
     Optional<User> findByGoogleId(String googleId);
+
+    /** Vérifie si un utilisateur avec ce rôle existe. */
+    boolean existsByRolesContaining(bj.gazfacile.model.enums.Role role);
 }
