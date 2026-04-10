@@ -51,6 +51,13 @@ export const routes: Routes = [
       import('./features/auth/register/register.component').then(m => m.RegisterComponent)
   },
   {
+    path: 'admin/login',
+    loadComponent: () =>
+      import('./features/admin/admin-login/admin-login.component').then(
+        m => m.AdminLoginComponent
+      )
+  },
+  {
     path: 'admin',
     loadComponent: () =>
       import('./features/admin/admin-dashboard/admin-dashboard.component').then(

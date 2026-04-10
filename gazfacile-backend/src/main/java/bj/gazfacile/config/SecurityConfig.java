@@ -48,6 +48,8 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**").permitAll()
                 // Routes d'authentification publiques
                 .requestMatchers("/api/v1/auth/**").permitAll()
+                // Setup initial admin (se bloque automatiquement si admin existe)
+                .requestMatchers(HttpMethod.POST, "/api/v1/setup/admin").permitAll()
                 // Webhook FedaPay : public (FedaPay appelle sans token JWT)
                 .requestMatchers(HttpMethod.POST, "/api/v1/paiement/webhook").permitAll()
                 // Consultation transaction par référence : publique (page confirmation post-paiement)
