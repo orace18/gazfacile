@@ -134,14 +134,14 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
   `,
   styles: [`
     .navbar {
-      background-color: var(--color-primary) !important;
-      border-bottom: none;
+      background-color: white !important;
+      border-bottom: 1px solid var(--color-border);
       height: 64px;
       padding: 0 24px;
       position: sticky;
       top: 0;
       z-index: 1000;
-      box-shadow: 0 2px 12px rgba(44, 71, 112, 0.3);
+      box-shadow: 0 2px 12px rgba(44, 71, 112, 0.1);
     }
 
     .logo {
@@ -167,9 +167,8 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
       gap: 4px;
 
       a, button {
-        color: rgba(255, 255, 255, 0.85) !important;
+        color: var(--color-primary) !important;
         transition: color 0.2s;
-        
 
         &:hover, &.actif {
           color: var(--color-accent) !important;
@@ -204,13 +203,12 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
       display: flex;
       align-items: center;
       gap: 4px;
-      color: rgba(255, 255, 255, 0.9) !important;
-      
+      color: var(--color-primary) !important;
     }
 
     .nav-mobile-btn {
       display: none !important;
-      color: white !important;
+      color: var(--color-primary) !important;
     }
 
     @media (max-width: 768px) {
