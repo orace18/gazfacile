@@ -10,7 +10,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../../core/services/auth.service';
 import { GoogleAuthService } from '../../../core/services/google-auth.service';
-import { AppLogoComponent } from '../../../shared/components/app-logo/app-logo.component';
 
 @Component({
   selector: 'app-login',
@@ -24,14 +23,16 @@ import { AppLogoComponent } from '../../../shared/components/app-logo/app-logo.c
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatDividerModule,
-    AppLogoComponent
+    MatDividerModule
   ],
   template: `
     <div class="page-auth">
       <div class="carte-auth">
         <div class="entete-auth">
-          <app-logo class="logo-auth" [height]="56"></app-logo>
+          <div class="logo-auth" aria-label="GazFacile">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-text">GazFacile</span>
+          </div>
           <h1>Connexion</h1>
           <p class="sous-titre">Accédez à votre espace GazFacile</p>
         </div>
@@ -125,6 +126,47 @@ import { AppLogoComponent } from '../../../shared/components/app-logo/app-logo.c
       .logo-auth {
         display: block;
         margin: 0 auto 14px;
+        width: fit-content;
+        --brand-height: 56px;
+        color: var(--color-primary);
+      }
+
+      .brand-mark {
+        position: relative;
+        display: inline-block;
+        width: calc(var(--brand-height) * 0.64);
+        height: var(--brand-height);
+        vertical-align: middle;
+        margin-right: 10px;
+      }
+
+      .brand-mark::before,
+      .brand-mark::after {
+        content: '';
+        position: absolute;
+        border-radius: 60% 60% 72% 72% / 78% 78% 36% 36%;
+      }
+
+      .brand-mark::before {
+        inset: 0 22% 8% 0;
+        background: linear-gradient(180deg, #f8b02e 0%, #e99400 100%);
+        transform: rotate(10deg);
+      }
+
+      .brand-mark::after {
+        inset: 22% 0 0 26%;
+        background: linear-gradient(180deg, #5d7fb4 0%, #375783 100%);
+        transform: rotate(-12deg);
+      }
+
+      .brand-text {
+        display: inline-block;
+        vertical-align: middle;
+        font-family: 'Montserrat', sans-serif;
+        font-size: calc(var(--brand-height) * 0.48);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1;
       }
 
       h1 {

@@ -8,7 +8,6 @@ import { MatMenuModule } from '@angular/material/menu';
 import { AuthService } from '../../../core/services/auth.service';
 import { Role } from '../../../core/models/revendeur.model';
 import { NotificationBellComponent } from '../../../features/notifications/notification-bell/notification-bell.component';
-import { AppLogoComponent } from '../app-logo/app-logo.component';
 
 /**
  * Barre de navigation principale de GazFacile.
@@ -25,14 +24,16 @@ import { AppLogoComponent } from '../app-logo/app-logo.component';
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
-    NotificationBellComponent,
-    AppLogoComponent
+    NotificationBellComponent
   ],
   template: `
     <mat-toolbar class="navbar">
       <!-- Logo -->
       <a routerLink="/" class="logo">
-        <app-logo class="logo-img" [height]="36"></app-logo>
+        <span class="logo-img" aria-label="GazFacile">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-text">GazFacile</span>
+        </span>
       </a>
 
       <span class="spacer"></span>
@@ -154,6 +155,46 @@ import { AppLogoComponent } from '../app-logo/app-logo.component';
 
       .logo-img {
         display: block;
+        --brand-height: 36px;
+        color: white;
+      }
+
+      .brand-mark {
+        position: relative;
+        display: inline-block;
+        width: calc(var(--brand-height) * 0.64);
+        height: var(--brand-height);
+        vertical-align: middle;
+        margin-right: 8px;
+      }
+
+      .brand-mark::before,
+      .brand-mark::after {
+        content: '';
+        position: absolute;
+        border-radius: 60% 60% 72% 72% / 78% 78% 36% 36%;
+      }
+
+      .brand-mark::before {
+        inset: 0 22% 8% 0;
+        background: linear-gradient(180deg, #ffd05f 0%, #f0a400 100%);
+        transform: rotate(10deg);
+      }
+
+      .brand-mark::after {
+        inset: 22% 0 0 26%;
+        background: linear-gradient(180deg, #90add8 0%, #5375a9 100%);
+        transform: rotate(-12deg);
+      }
+
+      .brand-text {
+        display: inline-block;
+        vertical-align: middle;
+        font-family: 'Montserrat', sans-serif;
+        font-size: calc(var(--brand-height) * 0.48);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1;
       }
     }
 
