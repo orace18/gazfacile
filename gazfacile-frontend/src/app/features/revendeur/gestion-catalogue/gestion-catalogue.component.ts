@@ -11,6 +11,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { RouterLink } from '@angular/router';
 import { RevendeurService } from '../../../core/services/revendeur.service';
 import { AuthService } from '../../../core/services/auth.service';
 import {
@@ -20,7 +21,8 @@ import {
   FormatBouteille,
   MARQUES_LABELS,
   FORMATS_LABELS,
-  Revendeur
+  Revendeur,
+  Abonnement
 } from '../../../core/models/revendeur.model';
 import { StockBadgeComponent } from '../../../shared/components/stock-badge/stock-badge.component';
 
@@ -40,7 +42,8 @@ import { StockBadgeComponent } from '../../../shared/components/stock-badge/stoc
     MatSnackBarModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
-    StockBadgeComponent
+    StockBadgeComponent,
+    RouterLink
   ],
   template: `
     <div class="page-catalogue">
@@ -84,6 +87,20 @@ import { StockBadgeComponent } from '../../../shared/components/stock-badge/stoc
         }
 
         @if (!chargement() && revendeur()) {
+
+          <!-- Bannière abonnement requis -->
+          @if (revendeur()!.abonnement === Abonnement.GRATUIT) {
+            <div class="banniere-abonnement">
+              <mat-icon>workspace_premium</mat-icon>
+              <div>
+                <strong>Abonnement requis pour publier votre catalogue</strong>
+                <p>Souscrivez à un plan Standard ou Premium pour rendre vos produits visibles aux clients.</p>
+              </div>
+              <a mat-raised-button routerLink="/revendeur/abonnement" class="btn-souscrire">
+                Voir les offres
+              </a>
+            </div>
+          }
 
           <!-- Formulaire ajout / édition -->
           <div class="section-formulaire">
@@ -142,7 +159,7 @@ import { StockBadgeComponent } from '../../../shared/components/stock-badge/stoc
 
               <div class="form-actions">
                 <button mat-raised-button type="submit" class="btn-valider"
-                        [disabled]="formulaire.invalid || envoi()">
+                        [disabled]="formulaire.invalid || envoi() || revendeur()!.abonnement === Abonnement.GRATUIT">
                   @if (envoi()) {
                     <mat-spinner diameter="18"></mat-spinner>
                   } @else {
@@ -449,6 +466,39 @@ import { StockBadgeComponent } from '../../../shared/components/stock-badge/stoc
       gap: 8px;
     }
 
+    .banniere-abonnement {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+      border: 1px solid var(--color-accent);
+      border-radius: var(--radius-sm);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+
+      mat-icon {
+        color: var(--color-accent-dark);
+        font-size: 2rem;
+        height: 2rem;
+        width: 2rem;
+        flex-shrink: 0;
+      }
+
+      div {
+        flex: 1;
+        strong { display: block; color: var(--color-text); font-size: 0.95rem; }
+        p { margin: 4px 0 0; font-size: 0.82rem; color: var(--color-text-muted); }
+      }
+
+      .btn-souscrire {
+        background-color: var(--color-accent) !important;
+        color: #1a1a00 !important;
+        font-weight: 700 !important;
+        white-space: nowrap;
+      }
+    }
+
     .table-aide {
       font-size: 0.78rem;
       color: var(--color-text-muted);
@@ -591,6 +641,7 @@ export class GestionCatalogueComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
 
+  readonly Abonnement = Abonnement;
   readonly revendeur = signal<Revendeur | null>(null);
   readonly produits = signal<ProduitRevendeur[]>([]);
   readonly chargement = signal(true);
