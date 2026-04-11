@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
 import { revendeurGuard } from './core/guards/revendeur.guard';
+import { inscriptionGuard, inscriptionClientGuard, inscriptionPlanGuard } from './core/guards/inscription.guard';
 
 export const routes: Routes = [
   {
@@ -48,7 +49,41 @@ export const routes: Routes = [
   {
     path: 'auth/register',
     loadComponent: () =>
-      import('./features/auth/register/register.component').then(m => m.RegisterComponent)
+      import('./features/auth/profile-choice/profile-choice.component').then(
+        m => m.ProfileChoiceComponent
+      )
+  },
+  {
+    path: 'auth/register/client',
+    loadComponent: () =>
+      import('./features/auth/client-need/client-need.component').then(
+        m => m.ClientNeedComponent
+      ),
+    canActivate: [inscriptionGuard]
+  },
+  {
+    path: 'auth/register/client/plans',
+    loadComponent: () =>
+      import('./features/auth/client-plan/client-plan.component').then(
+        m => m.ClientPlanComponent
+      ),
+    canActivate: [inscriptionGuard, inscriptionClientGuard]
+  },
+  {
+    path: 'auth/register/revendeur',
+    loadComponent: () =>
+      import('./features/auth/revendeur-plan/revendeur-plan.component').then(
+        m => m.RevendeurPlanComponent
+      ),
+    canActivate: [inscriptionGuard]
+  },
+  {
+    path: 'auth/register/form',
+    loadComponent: () =>
+      import('./features/auth/register-form/register-form.component').then(
+        m => m.RegisterFormComponent
+      ),
+    canActivate: [inscriptionGuard, inscriptionPlanGuard]
   },
   {
     path: 'admin/login',

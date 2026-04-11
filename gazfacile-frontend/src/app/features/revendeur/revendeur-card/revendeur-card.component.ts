@@ -35,7 +35,7 @@ import { ConsultationPaywallComponent } from '../../../shared/components/consult
           <div class="info-principale">
             <h3 class="nom">
               {{ revendeur.nom }}
-              @if (revendeur.abonnement === 'PREMIUM') {
+              @if (revendeur.abonnement !== 'GRATUIT') {
                 <mat-icon class="icone-premium" matTooltip="Revendeur Premium">workspace_premium</mat-icon>
               }
             </h3>

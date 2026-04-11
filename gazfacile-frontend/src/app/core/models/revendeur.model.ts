@@ -17,6 +17,96 @@ export enum Role {
   ADMIN = 'ADMIN'
 }
 
+export enum ClientNeed {
+  CONSULT = 'CONSULT',
+  LIVRAISON = 'LIVRAISON'
+}
+
+export enum PlanType {
+  REVENDEUR = 'REVENDEUR',
+  CLIENT_CONSULT = 'CLIENT_CONSULT',
+  CLIENT_LIVRAISON = 'CLIENT_LIVRAISON'
+}
+
+export interface PlanInscription {
+  id: string;
+  nom: string;
+  type: PlanType;
+  prix: number;
+  duree: string;
+  quota: number;
+  quotaLabel: string;
+  features: string[];
+  recommande?: boolean;
+}
+
+export const REVENDEUR_PLANS: PlanInscription[] = [
+  {
+    id: 'STANDARD', nom: 'Standard', type: PlanType.REVENDEUR,
+    prix: 1000, duree: '1 mois', quota: 0, quotaLabel: '',
+    features: ['Visibilité complète', 'Profil vérifié', 'Catalogue illimité']
+  },
+  {
+    id: 'GOLD', nom: 'Gold', type: PlanType.REVENDEUR,
+    prix: 2500, duree: '3 mois', quota: 0, quotaLabel: '',
+    features: ['Visibilité complète', 'Profil vérifié', 'Catalogue illimité', 'Économisez 17%']
+  },
+  {
+    id: 'DIAMOND', nom: 'Diamond', type: PlanType.REVENDEUR,
+    prix: 5000, duree: '6 mois', quota: 0, quotaLabel: '',
+    features: ['Visibilité complète', 'Profil vérifié', 'Catalogue illimité', 'Économisez 17%'],
+    recommande: true
+  },
+  {
+    id: 'PRO', nom: 'Pro', type: PlanType.REVENDEUR,
+    prix: 7500, duree: '9 mois', quota: 0, quotaLabel: '',
+    features: ['Visibilité complète', 'Profil vérifié', 'Catalogue illimité', 'Économisez 17%']
+  },
+  {
+    id: 'MAX', nom: 'Max', type: PlanType.REVENDEUR,
+    prix: 10000, duree: '12 mois', quota: 0, quotaLabel: '',
+    features: ['Visibilité complète', 'Profil vérifié', 'Catalogue illimité', 'Meilleur rapport qualité/prix']
+  }
+];
+
+export const CLIENT_CONSULT_PLANS: PlanInscription[] = [
+  {
+    id: 'STD_CONSULT', nom: 'Standard', type: PlanType.CLIENT_CONSULT,
+    prix: 100, duree: '1 mois', quota: 3, quotaLabel: '3 consultations/mois',
+    features: ['Voir les revendeurs proches', 'Comparer les prix', '3 consultations par mois']
+  },
+  {
+    id: 'GOLD_CONSULT', nom: 'Gold', type: PlanType.CLIENT_CONSULT,
+    prix: 500, duree: '1 mois', quota: 10, quotaLabel: '10 consultations/mois',
+    features: ['Voir les revendeurs proches', 'Comparer les prix', '10 consultations par mois'],
+    recommande: true
+  },
+  {
+    id: 'DIAMOND_CONSULT', nom: 'Diamond', type: PlanType.CLIENT_CONSULT,
+    prix: 1000, duree: '1 mois', quota: 50, quotaLabel: '50 consultations/mois',
+    features: ['Voir les revendeurs proches', 'Comparer les prix', '50 consultations par mois', 'Accès prioritaire']
+  }
+];
+
+export const CLIENT_LIVRAISON_PLANS: PlanInscription[] = [
+  {
+    id: 'STD_LIVRAISON', nom: 'Standard', type: PlanType.CLIENT_LIVRAISON,
+    prix: 2000, duree: '1 mois', quota: 2, quotaLabel: '2 livraisons/mois',
+    features: ['Livraison dans un rayon de 5km', '2 livraisons par mois', 'Suivi de commande']
+  },
+  {
+    id: 'GOLD_LIVRAISON', nom: 'Gold', type: PlanType.CLIENT_LIVRAISON,
+    prix: 4500, duree: '1 mois', quota: 5, quotaLabel: '5 livraisons/mois',
+    features: ['Livraison dans un rayon de 5km', '5 livraisons par mois', 'Suivi de commande'],
+    recommande: true
+  },
+  {
+    id: 'DIAMOND_LIVRAISON', nom: 'Diamond', type: PlanType.CLIENT_LIVRAISON,
+    prix: 8000, duree: '1 mois', quota: 10, quotaLabel: '10 livraisons/mois',
+    features: ['Livraison dans un rayon de 5km', '10 livraisons par mois', 'Suivi de commande', 'Priorité de livraison']
+  }
+];
+
 // ── Paiement FedaPay ────────────────────────────────────────────────────────
 
 export enum TypeTransaction {
