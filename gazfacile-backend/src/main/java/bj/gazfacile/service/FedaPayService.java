@@ -135,7 +135,7 @@ public class FedaPayService {
      * Construit l'URL de paiement FedaPay à partir du token.
      */
     public String construireCheckoutUrl(String token) {
-        return checkoutBaseUrl + "/?token=" + token;
+        return checkoutBaseUrl + "/" + token;
     }
 
     // ── Vérification de la signature webhook ──────────────────────────────────
