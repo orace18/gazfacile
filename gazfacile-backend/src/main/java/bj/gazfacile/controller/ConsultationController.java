@@ -5,6 +5,7 @@ import bj.gazfacile.service.ConsultationService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -45,6 +46,24 @@ public class ConsultationController {
             HttpServletRequest request) {
         String ip = extractIp(request);
         return ResponseEntity.ok(consultationService.getStatut(fingerprint, ip));
+    }
+
+    /**
+     * Consultation pour un utilisateur connecté (quota abonnement CLIENT_CONSULT).
+     */
+    @PostMapping("/consulter-auth")
+    public ResponseEntity<ConsultationDTO> consulterAuth(Authentication authentication) {
+        String telephone = authentication.getName();
+        return ResponseEntity.ok(consultationService.consulterAuth(telephone));
+    }
+
+    /**
+     * Statut de consultation d'un utilisateur connecté (sans incrémenter).
+     */
+    @GetMapping("/statut-auth")
+    public ResponseEntity<ConsultationDTO> statutAuth(Authentication authentication) {
+        String telephone = authentication.getName();
+        return ResponseEntity.ok(consultationService.getStatutAuth(telephone));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

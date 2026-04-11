@@ -56,6 +56,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/paiement/transaction/**").permitAll()
                 // Autres routes paiement : authentifiées
                 .requestMatchers("/api/v1/paiement/**").authenticated()
+                // Plans d'abonnement : publics (affichés avant inscription)
+                .requestMatchers(HttpMethod.GET, "/api/v1/plans/**").permitAll()
+                // Subscriptions : authentifiées
+                .requestMatchers("/api/v1/subscriptions/**").authenticated()
+                // Consultations authentifiées (quota abonnement)
+                .requestMatchers(HttpMethod.POST, "/api/v1/consultations/consulter-auth").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/consultations/statut-auth").authenticated()
                 // Consultations freemium : publiques (visiteurs anonymes)
                 .requestMatchers("/api/v1/consultations/**").permitAll()
                 // Lecture des revendeurs et des avis : publique

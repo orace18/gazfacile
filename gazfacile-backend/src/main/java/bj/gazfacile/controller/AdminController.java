@@ -1,6 +1,9 @@
 package bj.gazfacile.controller;
 
+import bj.gazfacile.dto.AdminPlanRequest;
+import bj.gazfacile.dto.AdminSubscriptionPlanDTO;
 import bj.gazfacile.dto.DashboardStatsDTO;
+import bj.gazfacile.dto.SubscriptionDTO;
 import bj.gazfacile.model.Commande;
 import bj.gazfacile.model.Revendeur;
 import bj.gazfacile.model.Transaction;
@@ -13,6 +16,8 @@ import bj.gazfacile.repository.TransactionRepository;
 import bj.gazfacile.repository.UserRepository;
 import bj.gazfacile.service.AdminService;
 import bj.gazfacile.service.RevendeurService;
+import bj.gazfacile.service.SubscriptionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,6 +35,7 @@ public class AdminController {
 
     private final AdminService adminService;
     private final RevendeurService revendeurService;
+    private final SubscriptionService subscriptionService;
     private final RevendeurRepository revendeurRepository;
     private final UserRepository userRepository;
     private final CommandeRepository commandeRepository;
@@ -115,5 +121,42 @@ public class AdminController {
     @GetMapping("/transactions")
     public ResponseEntity<List<Transaction>> getToutesTransactions() {
         return ResponseEntity.ok(transactionRepository.findAllByOrderByCreatedAtDesc());
+    }
+
+    // ── Plans d'abonnement ───────────────────────────────────────────────────
+
+    /** Liste tous les plans (y compris inactifs). */
+    @GetMapping("/plans")
+    public ResponseEntity<List<AdminSubscriptionPlanDTO>> getTousPlans() {
+        return ResponseEntity.ok(subscriptionService.getAllPlansAdmin());
+    }
+
+    /** Crée un nouveau plan. */
+    @PostMapping("/plans")
+    public ResponseEntity<AdminSubscriptionPlanDTO> creerPlan(
+            @Valid @RequestBody AdminPlanRequest request) {
+        return ResponseEntity.ok(subscriptionService.createPlan(request));
+    }
+
+    /** Met à jour un plan existant. */
+    @PutMapping("/plans/{id}")
+    public ResponseEntity<AdminSubscriptionPlanDTO> modifierPlan(
+            @PathVariable String id,
+            @Valid @RequestBody AdminPlanRequest request) {
+        return ResponseEntity.ok(subscriptionService.updatePlan(id, request));
+    }
+
+    /** Bascule actif/inactif un plan. */
+    @PatchMapping("/plans/{id}/toggle-actif")
+    public ResponseEntity<AdminSubscriptionPlanDTO> toggleActifPlan(@PathVariable String id) {
+        return ResponseEntity.ok(subscriptionService.togglePlanActif(id));
+    }
+
+    // ── Subscriptions ────────────────────────────────────────────────────────
+
+    /** Liste toutes les subscriptions. */
+    @GetMapping("/subscriptions")
+    public ResponseEntity<List<SubscriptionDTO>> getToutesSubscriptions() {
+        return ResponseEntity.ok(subscriptionService.getAllSubscriptions());
     }
 }

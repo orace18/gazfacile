@@ -1,5 +1,7 @@
 package bj.gazfacile.service;
 
+import bj.gazfacile.dto.AdminPlanRequest;
+import bj.gazfacile.dto.AdminSubscriptionPlanDTO;
 import bj.gazfacile.dto.PaiementInitDTO;
 import bj.gazfacile.dto.SubscriptionDTO;
 import bj.gazfacile.dto.SubscriptionPlanDTO;
@@ -249,5 +251,94 @@ public class SubscriptionService {
      */
     public boolean hasActiveSubscription(String userId) {
         return subscriptionRepository.findByUserIdAndStatut(userId, SubscriptionStatus.ACTIVE).isPresent();
+    }
+
+    // ── Admin : gestion des plans ────────────────────────────────────────────
+
+    /**
+     * Liste TOUS les plans (y compris inactifs), triés par type puis ordre.
+     */
+    public List<AdminSubscriptionPlanDTO> getAllPlansAdmin() {
+        return planRepository.findAllByOrderByTypeAscOrdreAsc()
+                .stream().map(AdminSubscriptionPlanDTO::from).toList();
+    }
+
+    /**
+     * Crée un nouveau plan d'abonnement.
+     */
+    public AdminSubscriptionPlanDTO createPlan(AdminPlanRequest req) {
+        if (planRepository.existsByCode(req.code())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Un plan avec le code '" + req.code() + "' existe déjà.");
+        }
+
+        SubscriptionPlan plan = SubscriptionPlan.builder()
+                .type(req.type())
+                .nom(req.nom())
+                .code(req.code())
+                .prix(req.prix())
+                .dureeJours(req.dureeJours())
+                .quota(req.quota())
+                .description(req.description())
+                .features(req.features() != null ? req.features() : List.of())
+                .actif(true)
+                .ordre(req.ordre())
+                .build();
+
+        plan = planRepository.save(plan);
+        log.info("[Admin] Plan créé : {} ({})", plan.getNom(), plan.getCode());
+        return AdminSubscriptionPlanDTO.from(plan);
+    }
+
+    /**
+     * Met à jour un plan existant.
+     */
+    public AdminSubscriptionPlanDTO updatePlan(String id, AdminPlanRequest req) {
+        SubscriptionPlan plan = planRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Plan introuvable : " + id));
+
+        // Vérifier unicité du code si modifié
+        if (!plan.getCode().equals(req.code()) && planRepository.existsByCode(req.code())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Un plan avec le code '" + req.code() + "' existe déjà.");
+        }
+
+        plan.setType(req.type());
+        plan.setNom(req.nom());
+        plan.setCode(req.code());
+        plan.setPrix(req.prix());
+        plan.setDureeJours(req.dureeJours());
+        plan.setQuota(req.quota());
+        plan.setDescription(req.description());
+        plan.setFeatures(req.features() != null ? req.features() : List.of());
+        plan.setOrdre(req.ordre());
+
+        plan = planRepository.save(plan);
+        log.info("[Admin] Plan mis à jour : {} ({})", plan.getNom(), plan.getCode());
+        return AdminSubscriptionPlanDTO.from(plan);
+    }
+
+    /**
+     * Bascule actif/inactif un plan.
+     */
+    public AdminSubscriptionPlanDTO togglePlanActif(String id) {
+        SubscriptionPlan plan = planRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Plan introuvable : " + id));
+        plan.setActif(!plan.isActif());
+        plan = planRepository.save(plan);
+        log.info("[Admin] Plan {} : actif = {}", plan.getCode(), plan.isActif());
+        return AdminSubscriptionPlanDTO.from(plan);
+    }
+
+    // ── Admin : listing des subscriptions ────────────────────────────────────
+
+    /**
+     * Liste toutes les subscriptions (pour l'admin).
+     */
+    public List<SubscriptionDTO> getAllSubscriptions() {
+        return subscriptionRepository.findAll().stream()
+                .map(SubscriptionDTO::from).toList();
     }
 }

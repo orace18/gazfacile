@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { DashboardStats } from '../models/notification.model';
-import { Revendeur, Abonnement, Transaction } from '../models/revendeur.model';
+import { Revendeur, Abonnement, Transaction, PlanType, SubscriptionDTO } from '../models/revendeur.model';
 
 export interface AdminUser {
   id: string;
@@ -33,6 +33,32 @@ export interface AdminCommande {
   statutCommande: string;
   referenceTransaction?: string;
   createdAt: string;
+}
+
+export interface AdminPlan {
+  id: string;
+  type: PlanType;
+  nom: string;
+  code: string;
+  prix: number;
+  dureeJours: number;
+  quota: number;
+  description: string;
+  features: string[];
+  actif: boolean;
+  ordre: number;
+}
+
+export interface AdminPlanRequest {
+  type: PlanType;
+  nom: string;
+  code: string;
+  prix: number;
+  dureeJours: number;
+  quota: number;
+  description: string;
+  features: string[];
+  ordre: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -76,5 +102,29 @@ export class AdminService {
 
   getTransactions(): Observable<Transaction[]> {
     return this.http.get<Transaction[]>(`${this.apiUrl}/transactions`);
+  }
+
+  // ── Plans d'abonnement ───────────────────────────────────────────────────
+
+  getPlans(): Observable<AdminPlan[]> {
+    return this.http.get<AdminPlan[]>(`${this.apiUrl}/plans`);
+  }
+
+  createPlan(plan: AdminPlanRequest): Observable<AdminPlan> {
+    return this.http.post<AdminPlan>(`${this.apiUrl}/plans`, plan);
+  }
+
+  updatePlan(id: string, plan: AdminPlanRequest): Observable<AdminPlan> {
+    return this.http.put<AdminPlan>(`${this.apiUrl}/plans/${id}`, plan);
+  }
+
+  toggleActifPlan(id: string): Observable<AdminPlan> {
+    return this.http.patch<AdminPlan>(`${this.apiUrl}/plans/${id}/toggle-actif`, {});
+  }
+
+  // ── Subscriptions ────────────────────────────────────────────────────────
+
+  getSubscriptions(): Observable<SubscriptionDTO[]> {
+    return this.http.get<SubscriptionDTO[]>(`${this.apiUrl}/subscriptions`);
   }
 }

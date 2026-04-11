@@ -33,4 +33,7 @@ public class PaiementInitDTO {
 
     /** Identifiant du revendeur (si type = ABONNEMENT). */
     private String revendeurId;
+
+    /** Identifiant de la subscription (si type = ABONNEMENT). */
+    private String subscriptionId;
 }

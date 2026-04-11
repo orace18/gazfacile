@@ -13,5 +13,6 @@ public enum TypeNotification {
     STOCK_EPUISE,
     NOUVEL_AVIS,
     ABONNEMENT_EXPIRE,
+    ABONNEMENT_EXPIRATION_PROCHE,
     INFO_SYSTEME
 }

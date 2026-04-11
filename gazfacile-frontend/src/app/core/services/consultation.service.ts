@@ -52,13 +52,17 @@ export class ConsultationService {
 
   /**
    * Enregistre une consultation et met à jour le quota.
-   * Retourne `true` si autorisé, `false` si quota épuisé.
-   * Les utilisateurs connectés sont toujours autorisés sans appel réseau.
+   * - Connecté : appelle /consulter-auth (quota abonnement)
+   * - Anonyme : appelle /consulter (quota fingerprint)
    */
   consulter(): Observable<ConsultationStatut> {
     if (this.authService.estConnecte()) {
-      const libre: ConsultationStatut = { autorise: true, consultationsRestantes: LIMITE, limite: LIMITE };
-      return of(libre);
+      return this.http.post<ConsultationStatut>(
+        `${this.apiUrl}/consulter-auth`, null
+      ).pipe(
+        tap(s => this.mettreAJourCache(s)),
+        catchError(() => of(this.statut()))
+      );
     }
 
     const fp = this.getFingerprint();
@@ -69,7 +73,6 @@ export class ConsultationService {
     ).pipe(
       tap(s => this.mettreAJourCache(s)),
       catchError(() => {
-        // En cas d'erreur réseau, autoriser (fail-open) mais décrémenter le cache local
         const actuel = this.statut();
         const fallback: ConsultationStatut = {
           autorise: actuel.consultationsRestantes > 0,
@@ -84,10 +87,18 @@ export class ConsultationService {
 
   /**
    * Charge le statut depuis le backend sans incrémenter.
-   * Appelé au démarrage pour synchroniser le compteur.
+   * - Connecté : appelle /statut-auth
+   * - Anonyme : appelle /statut
    */
   chargerStatut(): void {
-    if (this.authService.estConnecte()) return;
+    if (this.authService.estConnecte()) {
+      this.http.get<ConsultationStatut>(`${this.apiUrl}/statut-auth`).pipe(
+        catchError(() => of(null))
+      ).subscribe(s => {
+        if (s) this.mettreAJourCache(s);
+      });
+      return;
+    }
 
     const fp = this.getFingerprint();
     this.http.get<ConsultationStatut>(

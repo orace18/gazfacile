@@ -13,6 +13,7 @@ bj/gazfacile/model/Commande$CommandeBuilder.class
 bj/gazfacile/controller/AdminController.class
 bj/gazfacile/model/enums/PlanType.class
 bj/gazfacile/repository/TransactionRepository.class
+bj/gazfacile/dto/AdminSubscriptionPlanDTO.class
 bj/gazfacile/service/SmsService.class
 bj/gazfacile/model/OtpRecord$OtpRecordBuilder.class
 bj/gazfacile/dto/OtpEnvoyerDTO.class
@@ -81,6 +82,7 @@ bj/gazfacile/model/enums/TypeTransaction.class
 bj/gazfacile/dto/AbonnementInitDTO.class
 bj/gazfacile/controller/ProduitRevendeurController.class
 bj/gazfacile/model/enums/ClientNeed.class
+bj/gazfacile/dto/AdminPlanRequest.class
 bj/gazfacile/exception/GlobalExceptionHandler.class
 bj/gazfacile/dto/LoginDTO.class
 bj/gazfacile/service/AbonnementService.class

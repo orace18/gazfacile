@@ -2,12 +2,17 @@ package bj.gazfacile.service;
 
 import bj.gazfacile.dto.ConsultationDTO;
 import bj.gazfacile.model.ConsultationSession;
+import bj.gazfacile.model.Subscription;
+import bj.gazfacile.model.User;
+import bj.gazfacile.model.enums.PlanType;
 import bj.gazfacile.repository.ConsultationRepository;
+import bj.gazfacile.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 /**
  * Gère le quota de consultations gratuites pour les clients anonymes.
@@ -24,6 +29,62 @@ import java.time.LocalDateTime;
 public class ConsultationService {
 
     private final ConsultationRepository consultationRepository;
+    private final SubscriptionService subscriptionService;
+    private final UserRepository userRepository;
+
+    /**
+     * Vérifie le quota d'un utilisateur connecté (abonnement CLIENT_CONSULT).
+     */
+    public ConsultationDTO consulterAuth(String telephone) {
+        User user = userRepository.findByTelephone(telephone).orElse(null);
+        if (user == null) {
+            return new ConsultationDTO(false, 0, 0);
+        }
+
+        Optional<Subscription> opt = subscriptionService.getActiveSubscription(
+                user.getId(), PlanType.CLIENT_CONSULT);
+
+        if (opt.isEmpty()) {
+            log.debug("[Consultation-Auth] Pas d'abonnement CONSULT actif pour {}", telephone);
+            return new ConsultationDTO(false, 0, 0);
+        }
+
+        Subscription sub = opt.get();
+        if (sub.getQuotaRestant() <= 0) {
+            log.debug("[Consultation-Auth] Quota épuisé pour {}", telephone);
+            return new ConsultationDTO(false, 0, sub.getQuotaRestant());
+        }
+
+        boolean decremented = subscriptionService.decrementQuota(user.getId(), PlanType.CLIENT_CONSULT);
+        if (!decremented) {
+            return new ConsultationDTO(false, 0, 0);
+        }
+
+        int restantes = sub.getQuotaRestant() - 1;
+        log.debug("[Consultation-Auth] {} — consultation OK, restantes: {}", telephone, restantes);
+        return new ConsultationDTO(true, restantes, sub.getQuotaRestant());
+    }
+
+    /**
+     * Retourne le statut de consultation d'un utilisateur connecté (sans incrémenter).
+     */
+    public ConsultationDTO getStatutAuth(String telephone) {
+        User user = userRepository.findByTelephone(telephone).orElse(null);
+        if (user == null) {
+            return new ConsultationDTO(false, 0, 0);
+        }
+
+        Optional<Subscription> opt = subscriptionService.getActiveSubscription(
+                user.getId(), PlanType.CLIENT_CONSULT);
+
+        if (opt.isEmpty()) {
+            return new ConsultationDTO(false, 0, 0);
+        }
+
+        Subscription sub = opt.get();
+        boolean autorise = sub.getQuotaRestant() > 0;
+        return new ConsultationDTO(autorise, sub.getQuotaRestant(), sub.getQuotaRestant());
+    }
 
     /**
      * Vérifie le quota et incrémente si la consultation est autorisée.

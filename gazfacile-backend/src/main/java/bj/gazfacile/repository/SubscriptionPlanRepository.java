@@ -16,4 +16,6 @@ public interface SubscriptionPlanRepository extends MongoRepository<Subscription
     List<SubscriptionPlan> findByTypeAndActifTrueOrderByOrdreAsc(PlanType type);
 
     List<SubscriptionPlan> findByActifTrueOrderByTypeAscOrdreAsc();
+
+    List<SubscriptionPlan> findAllByOrderByTypeAscOrdreAsc();
 }

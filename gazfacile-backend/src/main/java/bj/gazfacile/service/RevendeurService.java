@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Service métier pour la gestion des revendeurs de gaz.
@@ -26,33 +27,35 @@ public class RevendeurService {
 
     private final RevendeurRepository revendeurRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final SubscriptionService subscriptionService;
 
-    /** Retourne tous les revendeurs actifs. */
+    /** Retourne tous les revendeurs actifs ayant une subscription REVENDEUR active. */
     public List<Revendeur> getAllActifs() {
-        return revendeurRepository.findByActifTrue();
+        Set<String> activeUserIds = subscriptionService.getActiveRevendeurUserIds();
+        return revendeurRepository.findByActifTrue().stream()
+                .filter(r -> r.getUserId() != null && activeUserIds.contains(r.getUserId()))
+                .toList();
     }
 
     /**
-     * Recherche les revendeurs à proximité d'un point géographique.
-     *
-     * @param latitude  latitude du point de recherche
-     * @param longitude longitude du point de recherche
-     * @param rayon     rayon de recherche en mètres
+     * Recherche les revendeurs à proximité ayant une subscription REVENDEUR active.
      */
     public List<Revendeur> getNearby(double latitude, double longitude, double rayon) {
         log.debug("Recherche géospatiale : lat={}, lng={}, rayon={}m", latitude, longitude, rayon);
-        return revendeurRepository.findNearby(longitude, latitude, rayon);
+        Set<String> activeUserIds = subscriptionService.getActiveRevendeurUserIds();
+        return revendeurRepository.findNearby(longitude, latitude, rayon).stream()
+                .filter(r -> r.getUserId() != null && activeUserIds.contains(r.getUserId()))
+                .toList();
     }
 
     /**
-     * Recherche les revendeurs à proximité ayant du stock disponible.
-     *
-     * @param latitude  latitude du point de recherche
-     * @param longitude longitude du point de recherche
-     * @param rayon     rayon de recherche en mètres
+     * Recherche les revendeurs à proximité ayant du stock et une subscription active.
      */
     public List<Revendeur> getNearbyWithStock(double latitude, double longitude, double rayon) {
-        return revendeurRepository.findNearbyWithStock(longitude, latitude, rayon);
+        Set<String> activeUserIds = subscriptionService.getActiveRevendeurUserIds();
+        return revendeurRepository.findNearbyWithStock(longitude, latitude, rayon).stream()
+                .filter(r -> r.getUserId() != null && activeUserIds.contains(r.getUserId()))
+                .toList();
     }
 
     /**

@@ -58,6 +58,12 @@ public class Commande {
     /** Référence de la transaction Mobile Money. */
     private String referenceTransaction;
 
+    private String livreurAssigne;
+
+    private double distanceKm;
+
+    private int fraisSupplementaires;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime livraisonAt;

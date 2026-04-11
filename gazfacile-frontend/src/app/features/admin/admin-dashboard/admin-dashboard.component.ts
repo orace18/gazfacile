@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -10,19 +11,22 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
-import { AdminService, AdminUser, AdminCommande } from '../../../core/services/admin.service';
+import { AdminService, AdminUser, AdminCommande, AdminPlan, AdminPlanRequest } from '../../../core/services/admin.service';
 import { DashboardStats } from '../../../core/models/notification.model';
-import { Revendeur, Abonnement, Transaction, StatutFedaPay } from '../../../core/models/revendeur.model';
+import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType, SubscriptionDTO } from '../../../core/models/revendeur.model';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
   imports: [
-    CommonModule, DecimalPipe, DatePipe, FormsModule,
+    CommonModule, DecimalPipe, DatePipe, FormsModule, ReactiveFormsModule,
     MatCardModule, MatIconModule, MatProgressSpinnerModule,
     MatTableModule, MatButtonModule, MatTabsModule,
-    MatChipsModule, MatSelectModule, MatTooltipModule, MatSnackBarModule
+    MatChipsModule, MatSelectModule, MatTooltipModule, MatSnackBarModule,
+    MatFormFieldModule, MatInputModule
   ],
   template: `
     <div class="dashboard-page">
@@ -401,6 +405,201 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay } from '../../../core
             }
           </mat-tab>
 
+          <!-- ── Onglet 6 : Plans d'abonnement ── -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>workspace_premium</mat-icon>&nbsp;Plans
+            </ng-template>
+
+            @if (chargementPlans()) {
+              <div class="chargement-centre"><mat-spinner diameter="40"></mat-spinner></div>
+            } @else {
+
+              <!-- Formulaire création/édition -->
+              <mat-card class="form-plan-carte">
+                <mat-card-header>
+                  <mat-card-title>
+                    <mat-icon>{{ planEnEdition() ? 'edit' : 'add_circle' }}</mat-icon>
+                    {{ planEnEdition() ? 'Modifier le plan' : 'Créer un plan' }}
+                  </mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <form [formGroup]="formulairePlan" (ngSubmit)="soumettreFormPlan()" class="form-plan">
+                    <div class="form-plan-grille">
+                      <mat-form-field appearance="outline">
+                        <mat-label>Type</mat-label>
+                        <mat-select formControlName="type">
+                          <mat-option value="REVENDEUR">Revendeur</mat-option>
+                          <mat-option value="CLIENT_CONSULT">Client Consultation</mat-option>
+                          <mat-option value="CLIENT_LIVRAISON">Client Livraison</mat-option>
+                        </mat-select>
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline">
+                        <mat-label>Nom</mat-label>
+                        <input matInput formControlName="nom" placeholder="Ex: Standard">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline">
+                        <mat-label>Code unique</mat-label>
+                        <input matInput formControlName="code" placeholder="Ex: STANDARD">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline">
+                        <mat-label>Prix (FCFA)</mat-label>
+                        <input matInput type="number" formControlName="prix">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline">
+                        <mat-label>Durée (jours)</mat-label>
+                        <input matInput type="number" formControlName="dureeJours">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline">
+                        <mat-label>Quota</mat-label>
+                        <input matInput type="number" formControlName="quota">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline">
+                        <mat-label>Ordre d'affichage</mat-label>
+                        <input matInput type="number" formControlName="ordre">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="champ-large">
+                        <mat-label>Description</mat-label>
+                        <input matInput formControlName="description" placeholder="Description courte">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="champ-large">
+                        <mat-label>Features (séparées par des virgules)</mat-label>
+                        <input matInput formControlName="featuresStr" placeholder="Ex: Visibilité, Catalogue illimité">
+                      </mat-form-field>
+                    </div>
+
+                    <div class="form-plan-actions">
+                      <button mat-raised-button type="submit" class="btn-plan-submit"
+                        [disabled]="formulairePlan.invalid">
+                        <mat-icon>{{ planEnEdition() ? 'save' : 'add' }}</mat-icon>
+                        {{ planEnEdition() ? 'Enregistrer' : 'Créer le plan' }}
+                      </button>
+                      @if (planEnEdition()) {
+                        <button mat-stroked-button type="button" (click)="annulerEditionPlan()">
+                          <mat-icon>close</mat-icon> Annuler
+                        </button>
+                      }
+                    </div>
+                  </form>
+                </mat-card-content>
+              </mat-card>
+
+              <!-- Tableau des plans -->
+              <div class="table-wrapper">
+                <table mat-table [dataSource]="plans()" class="table-admin">
+                  <ng-container matColumnDef="type">
+                    <th mat-header-cell *matHeaderCellDef>Type</th>
+                    <td mat-cell *matCellDef="let p">
+                      <span class="badge-plan-type" [class]="'plan-' + p.type.toLowerCase()">
+                        {{ libellePlanType(p.type) }}
+                      </span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="nom">
+                    <th mat-header-cell *matHeaderCellDef>Nom / Code</th>
+                    <td mat-cell *matCellDef="let p">
+                      <strong>{{ p.nom }}</strong>
+                      <span class="sous-ligne"><code>{{ p.code }}</code></span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="prix">
+                    <th mat-header-cell *matHeaderCellDef>Prix</th>
+                    <td mat-cell *matCellDef="let p">{{ p.prix | number:'1.0-0' }} FCFA</td>
+                  </ng-container>
+                  <ng-container matColumnDef="duree">
+                    <th mat-header-cell *matHeaderCellDef>Durée</th>
+                    <td mat-cell *matCellDef="let p">{{ p.dureeJours }} jours</td>
+                  </ng-container>
+                  <ng-container matColumnDef="quota">
+                    <th mat-header-cell *matHeaderCellDef>Quota</th>
+                    <td mat-cell *matCellDef="let p">{{ p.quota || '—' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="actif">
+                    <th mat-header-cell *matHeaderCellDef>Statut</th>
+                    <td mat-cell *matCellDef="let p">
+                      <button mat-stroked-button
+                        [class]="p.actif ? 'btn-actif' : 'btn-inactif'"
+                        (click)="togglePlan(p)">
+                        <mat-icon>{{ p.actif ? 'visibility' : 'visibility_off' }}</mat-icon>
+                        {{ p.actif ? 'Actif' : 'Inactif' }}
+                      </button>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef></th>
+                    <td mat-cell *matCellDef="let p">
+                      <button mat-icon-button matTooltip="Modifier" (click)="editerPlan(p)">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                    </td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="colonnesPlans"></tr>
+                  <tr mat-row *matRowDef="let row; columns: colonnesPlans;"
+                    [class.row-inactif]="!row.actif"></tr>
+                </table>
+              </div>
+            }
+          </mat-tab>
+
+          <!-- ── Onglet 7 : Subscriptions ── -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>card_membership</mat-icon>&nbsp;Abonnements
+            </ng-template>
+
+            @if (chargementSubscriptions()) {
+              <div class="chargement-centre"><mat-spinner diameter="40"></mat-spinner></div>
+            } @else {
+              <div class="table-wrapper">
+                <table mat-table [dataSource]="subscriptions()" class="table-admin">
+                  <ng-container matColumnDef="userId">
+                    <th mat-header-cell *matHeaderCellDef>User ID</th>
+                    <td mat-cell *matCellDef="let s">
+                      <code>{{ s.id.substring(0, 8) }}...</code>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="planCode">
+                    <th mat-header-cell *matHeaderCellDef>Plan</th>
+                    <td mat-cell *matCellDef="let s">
+                      <strong>{{ s.planCode }}</strong>
+                      <span class="sous-ligne">{{ s.planType }}</span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="dateDebut">
+                    <th mat-header-cell *matHeaderCellDef>Début</th>
+                    <td mat-cell *matCellDef="let s">{{ s.dateDebut | date:'dd/MM/yy' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="dateFin">
+                    <th mat-header-cell *matHeaderCellDef>Fin</th>
+                    <td mat-cell *matCellDef="let s">{{ s.dateFin | date:'dd/MM/yy' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="quota">
+                    <th mat-header-cell *matHeaderCellDef>Quota restant</th>
+                    <td mat-cell *matCellDef="let s">{{ s.quotaRestant }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="statut">
+                    <th mat-header-cell *matHeaderCellDef>Statut</th>
+                    <td mat-cell *matCellDef="let s">
+                      <span class="badge-sub-statut" [class]="'sub-' + s.statut.toLowerCase()">
+                        {{ libelleStatutSub(s.statut) }}
+                      </span>
+                    </td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="colonnesSubscriptions"></tr>
+                  <tr mat-row *matRowDef="let row; columns: colonnesSubscriptions;"></tr>
+                </table>
+              </div>
+            }
+          </mat-tab>
+
         </mat-tab-group>
       </div>
     </div>
@@ -621,33 +820,108 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay } from '../../../core
 
     code { font-size: 0.78rem; background: var(--color-surface-2); padding: 2px 5px; border-radius: 3px; }
 
+    /* ── Plan form ── */
+    .form-plan-carte {
+      background: var(--color-surface) !important;
+      border: 1px solid var(--color-border) !important;
+      border-radius: var(--radius-md) !important;
+      margin-bottom: 20px;
+
+      ::ng-deep mat-card-title {
+        display: flex; align-items: center; gap: 6px;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 0.92rem !important;
+        color: var(--color-primary) !important;
+        font-weight: 600 !important;
+
+        mat-icon { font-size: 1.1rem; height: 1.1rem; width: 1.1rem; }
+      }
+    }
+
+    .form-plan-grille {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px 16px;
+
+      .champ-large { grid-column: span 2; }
+    }
+
+    .form-plan-actions {
+      display: flex; gap: 12px; margin-top: 8px;
+    }
+
+    .btn-plan-submit {
+      background-color: var(--color-primary) !important;
+      color: white !important;
+    }
+
+    /* ── Plan type badges ── */
+    .badge-plan-type {
+      font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;
+      &.plan-revendeur         { background: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary); }
+      &.plan-client_consult    { background: rgba(59,130,246,0.12); color: #3B82F6; }
+      &.plan-client_livraison  { background: rgba(139,92,246,0.12); color: #7c3aed; }
+    }
+
+    .row-inactif { opacity: 0.5; }
+
+    /* ── Subscription status badges ── */
+    .badge-sub-statut {
+      font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;
+      &.sub-active   { background: rgba(46,125,50,0.12); color: #2e7d32; }
+      &.sub-pending   { background: rgba(245,158,11,0.12); color: #92400e; }
+      &.sub-expired   { background: var(--color-surface-2); color: var(--color-text-muted); }
+    }
+
     @media (max-width: 600px) {
       .kpi-grille { grid-template-columns: repeat(2, 1fr); }
+      .form-plan-grille { grid-template-columns: 1fr; .champ-large { grid-column: span 1; } }
     }
   `]
 })
 export class AdminDashboardComponent implements OnInit {
   private readonly adminService = inject(AdminService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly fb = inject(FormBuilder);
 
   readonly stats           = signal<DashboardStats | null>(null);
   readonly revendeurs      = signal<Revendeur[]>([]);
   readonly utilisateurs    = signal<AdminUser[]>([]);
   readonly commandes       = signal<AdminCommande[]>([]);
   readonly transactions    = signal<Transaction[]>([]);
+  readonly plans           = signal<AdminPlan[]>([]);
+  readonly subscriptions   = signal<SubscriptionDTO[]>([]);
 
   readonly chargementStats        = signal(false);
   readonly chargementRevendeurs   = signal(false);
   readonly chargementUsers        = signal(false);
   readonly chargementCommandes    = signal(false);
   readonly chargementTransactions = signal(false);
+  readonly chargementPlans        = signal(false);
+  readonly chargementSubscriptions = signal(false);
+
+  readonly planEnEdition   = signal<AdminPlan | null>(null);
 
   readonly colonnesRevendeurs   = ['nom', 'telephone', 'abonnement', 'stock', 'actif'];
   readonly colonnesUsers        = ['nom', 'telephone', 'roles', 'inscription', 'actif'];
   readonly colonnesCommandes    = ['date', 'client', 'revendeur', 'total', 'paiement', 'statut'];
   readonly colonnesTransactions = ['date', 'reference', 'type', 'montant', 'client', 'statut'];
+  readonly colonnesPlans        = ['type', 'nom', 'prix', 'duree', 'quota', 'actif', 'actions'];
+  readonly colonnesSubscriptions = ['userId', 'planCode', 'dateDebut', 'dateFin', 'quota', 'statut'];
 
   readonly objectEntries = Object.entries;
+
+  readonly formulairePlan = this.fb.group({
+    type: ['REVENDEUR' as string, Validators.required],
+    nom: ['', Validators.required],
+    code: ['', Validators.required],
+    prix: [0, [Validators.required, Validators.min(0)]],
+    dureeJours: [30, [Validators.required, Validators.min(1)]],
+    quota: [0, Validators.min(0)],
+    description: [''],
+    featuresStr: [''],
+    ordre: [0]
+  });
 
   ngOnInit(): void {
     this.chargerTout();
@@ -659,6 +933,8 @@ export class AdminDashboardComponent implements OnInit {
     this.chargerUsers();
     this.chargerCommandes();
     this.chargerTransactions();
+    this.chargerPlans();
+    this.chargerSubscriptions();
   }
 
   chargerStats(): void {
@@ -751,5 +1027,100 @@ export class AdminDashboardComponent implements OnInit {
 
   libelleStatutFeda(s: string): string {
     return ({ PENDING: 'En attente', APPROVED: 'Approuvé', DECLINED: 'Refusé', CANCELLED: 'Annulé', REFUNDED: 'Remboursé', TRANSFERRED: 'Transféré' } as Record<string,string>)[s] ?? s;
+  }
+
+  // ── Plans d'abonnement ───────────────────────────────────────────────────
+
+  chargerPlans(): void {
+    this.chargementPlans.set(true);
+    this.adminService.getPlans().subscribe({
+      next: p => { this.plans.set(p); this.chargementPlans.set(false); },
+      error: () => this.chargementPlans.set(false)
+    });
+  }
+
+  togglePlan(p: AdminPlan): void {
+    this.adminService.toggleActifPlan(p.id).subscribe({
+      next: updated => {
+        this.plans.update(list => list.map(x => x.id === p.id ? updated : x));
+        this.snackBar.open(`${p.nom} : ${updated.actif ? 'activé' : 'désactivé'}`, 'OK', { duration: 3000 });
+      }
+    });
+  }
+
+  editerPlan(p: AdminPlan): void {
+    this.planEnEdition.set(p);
+    this.formulairePlan.patchValue({
+      type: p.type,
+      nom: p.nom,
+      code: p.code,
+      prix: p.prix,
+      dureeJours: p.dureeJours,
+      quota: p.quota,
+      description: p.description || '',
+      featuresStr: p.features?.join(', ') || '',
+      ordre: p.ordre
+    });
+  }
+
+  annulerEditionPlan(): void {
+    this.planEnEdition.set(null);
+    this.formulairePlan.reset({ type: 'REVENDEUR', prix: 0, dureeJours: 30, quota: 0, ordre: 0 });
+  }
+
+  soumettreFormPlan(): void {
+    if (this.formulairePlan.invalid) return;
+
+    const v = this.formulairePlan.value;
+    const request: AdminPlanRequest = {
+      type: v.type as PlanType,
+      nom: v.nom!,
+      code: v.code!,
+      prix: v.prix!,
+      dureeJours: v.dureeJours!,
+      quota: v.quota || 0,
+      description: v.description || '',
+      features: v.featuresStr ? v.featuresStr.split(',').map(f => f.trim()).filter(f => f) : [],
+      ordre: v.ordre || 0
+    };
+
+    const edition = this.planEnEdition();
+    if (edition) {
+      this.adminService.updatePlan(edition.id, request).subscribe({
+        next: updated => {
+          this.plans.update(list => list.map(x => x.id === edition.id ? updated : x));
+          this.annulerEditionPlan();
+          this.snackBar.open(`Plan "${updated.nom}" mis à jour`, 'OK', { duration: 3000 });
+        },
+        error: err => this.snackBar.open(err.error?.message || 'Erreur', 'OK', { duration: 5000 })
+      });
+    } else {
+      this.adminService.createPlan(request).subscribe({
+        next: created => {
+          this.plans.update(list => [...list, created]);
+          this.annulerEditionPlan();
+          this.snackBar.open(`Plan "${created.nom}" créé`, 'OK', { duration: 3000 });
+        },
+        error: err => this.snackBar.open(err.error?.message || 'Erreur', 'OK', { duration: 5000 })
+      });
+    }
+  }
+
+  libellePlanType(t: string): string {
+    return ({ REVENDEUR: 'Revendeur', CLIENT_CONSULT: 'Consultation', CLIENT_LIVRAISON: 'Livraison' } as Record<string,string>)[t] ?? t;
+  }
+
+  // ── Subscriptions ────────────────────────────────────────────────────────
+
+  chargerSubscriptions(): void {
+    this.chargementSubscriptions.set(true);
+    this.adminService.getSubscriptions().subscribe({
+      next: s => { this.subscriptions.set(s); this.chargementSubscriptions.set(false); },
+      error: () => this.chargementSubscriptions.set(false)
+    });
+  }
+
+  libelleStatutSub(s: string): string {
+    return ({ ACTIVE: 'Actif', PENDING: 'En attente', EXPIRED: 'Expiré' } as Record<string,string>)[s] ?? s;
   }
 }

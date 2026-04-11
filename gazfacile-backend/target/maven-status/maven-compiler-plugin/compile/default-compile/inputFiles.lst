@@ -21,6 +21,8 @@
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/controller/SubscriptionPlanController.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/AbonnementInitDTO.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/AbonnementStatutDTO.java
+/home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/AdminPlanRequest.java
+/home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/AdminSubscriptionPlanDTO.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/AuthResponseDTO.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/AvisDTO.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/CommandeDTO.java

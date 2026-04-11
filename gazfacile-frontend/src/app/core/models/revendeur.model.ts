@@ -411,6 +411,32 @@ export interface RegisterDTO {
   password: string;
   nom: string;
   role?: Role;
+  accountType?: string;
+  clientNeed?: string;
+}
+
+/** DTO plan d'abonnement (depuis le backend). */
+export interface SubscriptionPlanDTO {
+  id: string;
+  type: string;
+  nom: string;
+  code: string;
+  prix: number;
+  dureeJours: number;
+  quota: number;
+  description: string;
+  features: string[];
+}
+
+/** DTO subscription active (depuis le backend). */
+export interface SubscriptionDTO {
+  id: string;
+  planCode: string;
+  planType: string;
+  dateDebut: string;
+  dateFin: string;
+  quotaRestant: number;
+  statut: string;
 }
 
 /** Réponse après authentification. */
