@@ -1,0 +1,44 @@
+server:
+  port: 8080
+
+spring:
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/gazfacile}
+  application:
+    name: gazfacile-backend
+
+jwt:
+  secret: ${JWT_SECRET:gazfacile-super-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm}
+  expiration: 86400000
+  refresh-expiration: 604800000
+
+cors:
+  allowed-origins: http://localhost:4200,https://gazfacile.netlify.app
+
+fedapay:
+  # Clé API FedaPay (sandbox ou live)
+  api-key: ${FEDAPAY_API_KEY:sk_sandbox_XXXXXXXXXXXXXXXXXXXXXXXX}
+  # URL de l'API FedaPay
+  base-url: ${FEDAPAY_BASE_URL:https://sandbox-api.fedapay.com/v1}
+  # URL de la page de paiement FedaPay
+  checkout-url: ${FEDAPAY_CHECKOUT_URL:https://sandbox-checkout.fedapay.com}
+  # Secret pour vérifier la signature des webhooks
+  webhook-secret: ${FEDAPAY_WEBHOOK_SECRET:votre-webhook-secret}
+  # URL de retour après paiement (votre frontend)
+  callback-url: ${FEDAPAY_CALLBACK_URL:https://gazfacile.netlify.app/paiement/confirmation}
+
+sms:
+  # Africa's Talking — utiliser "sandbox" en développement
+  api-key: ${SMS_API_KEY:sandbox}
+  username: ${SMS_USERNAME:sandbox}
+  sender: ${SMS_SENDER:GazFacile}
+
+google:
+  # Client ID OAuth2 de votre projet Google Cloud Console
+  client-id: ${GOOGLE_CLIENT_ID:}
+
+logging:
+  level:
+    bj.gazfacile: DEBUG
+    org.springframework.data.mongodb: INFO

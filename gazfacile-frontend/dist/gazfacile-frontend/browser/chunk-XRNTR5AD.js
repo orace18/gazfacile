@@ -1,0 +1,1 @@
+var o={production:!0,apiUrl:"https://gazfacile.onrender.com/api/v1",wsUrl:"https://gazfacile.onrender.com/ws",googleClientId:"587446978043-ubm5jfag6l6gqh4rjq4lo0rh4rqfgjbk.apps.googleusercontent.com"};export{o as a};
