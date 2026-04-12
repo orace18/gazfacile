@@ -1,6 +1,6 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -9,8 +9,8 @@ import { StatutFedaPay, Transaction } from '../../../core/models/revendeur.model
 
 /**
  * Page de confirmation de paiement.
- * FedaPay redirige vers cette page après le checkout avec ?reference=XXX.
- * On interroge le backend pour obtenir le statut final de la transaction.
+ * FedaPay redirige vers cette page après le checkout avec ?reference=XXX&status=approved.
+ * Le statut dans l'URL sert de fallback visuel si le webhook n'a pas encore mis la base à jour.
  */
 @Component({
   selector: 'app-paiement-confirmation',
@@ -170,9 +170,13 @@ import { StatutFedaPay, Transaction } from '../../../core/models/revendeur.model
     }
   `]
 })
-export class PaiementConfirmationComponent implements OnInit {
+export class PaiementConfirmationComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly paiementService = inject(PaiementService);
+  private pollTimer: number | null = null;
+  private tentativeRafraichissement = 0;
+  private readonly delaiRafraichissementMs = 2500;
+  private readonly maxTentativesRafraichissement = 6;
 
   readonly StatutFedaPay = StatutFedaPay;
 
@@ -182,25 +186,94 @@ export class PaiementConfirmationComponent implements OnInit {
 
   ngOnInit(): void {
     const reference = this.route.snapshot.queryParamMap.get('reference');
+    const statutUrl = this.parseStatut(this.route.snapshot.queryParamMap.get('status'));
+
     if (!reference) {
       this.chargement.set(false);
       this.erreur.set('Aucune référence de transaction trouvée dans l\'URL.');
       return;
     }
 
-    this.paiementService.getTransaction(reference).subscribe({
-      next: t => {
-        this.transaction.set(t);
-        this.chargement.set(false);
-      },
-      error: () => {
-        this.chargement.set(false);
-        this.erreur.set('Impossible de retrouver la transaction. Vérifiez votre historique.');
-      }
-    });
+    this.chargerTransaction(reference, statutUrl);
+  }
+
+  ngOnDestroy(): void {
+    this.arreterRafraichissement();
   }
 
   getStatutLabel(statut: StatutFedaPay): string {
     return this.paiementService.getStatutLabel(statut);
+  }
+
+  private chargerTransaction(reference: string, statutUrl: StatutFedaPay | null, depuisRafraichissement = false): void {
+    if (!depuisRafraichissement) {
+      this.chargement.set(true);
+      this.erreur.set(null);
+      this.tentativeRafraichissement = 0;
+    }
+
+    this.paiementService.getTransaction(reference).subscribe({
+      next: t => {
+        const statutAffiche = this.resoudreStatutAffiche(t.statut, statutUrl);
+        this.transaction.set(
+          statutAffiche === t.statut
+            ? t
+            : { ...t, statut: statutAffiche }
+        );
+        this.chargement.set(false);
+
+        if (t.statut === StatutFedaPay.PENDING && statutAffiche !== StatutFedaPay.PENDING) {
+          this.planifierRafraichissement(reference, statutUrl);
+          return;
+        }
+
+        this.arreterRafraichissement();
+      },
+      error: () => {
+        this.chargement.set(false);
+        if (!this.transaction()) {
+          this.erreur.set('Impossible de retrouver la transaction. Vérifiez votre historique.');
+        }
+      }
+    });
+  }
+
+  private planifierRafraichissement(reference: string, statutUrl: StatutFedaPay | null): void {
+    if (this.pollTimer !== null || this.tentativeRafraichissement >= this.maxTentativesRafraichissement) {
+      return;
+    }
+
+    this.tentativeRafraichissement += 1;
+    this.pollTimer = window.setTimeout(() => {
+      this.pollTimer = null;
+      this.chargerTransaction(reference, statutUrl, true);
+    }, this.delaiRafraichissementMs);
+  }
+
+  private arreterRafraichissement(): void {
+    if (this.pollTimer !== null) {
+      window.clearTimeout(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  private resoudreStatutAffiche(statutTransaction: StatutFedaPay, statutUrl: StatutFedaPay | null): StatutFedaPay {
+    if (statutTransaction !== StatutFedaPay.PENDING) {
+      return statutTransaction;
+    }
+
+    if (statutUrl && statutUrl !== StatutFedaPay.PENDING) {
+      return statutUrl;
+    }
+
+    return statutTransaction;
+  }
+
+  private parseStatut(statut: string | null): StatutFedaPay | null {
+    if (!statut) {
+      return null;
+    }
+
+    return StatutFedaPay[statut.trim().toUpperCase() as keyof typeof StatutFedaPay] ?? null;
   }
 }
