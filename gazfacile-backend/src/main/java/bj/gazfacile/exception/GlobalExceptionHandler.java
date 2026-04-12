@@ -1,5 +1,8 @@
 package bj.gazfacile.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -8,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -19,6 +23,7 @@ import java.util.Map;
  * Retourne des réponses d'erreur standardisées en JSON.
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     /** Structure de réponse d'erreur standardisée. */
@@ -45,21 +50,30 @@ public class GlobalExceptionHandler {
         reponse.put("erreurs", erreursChamps);
         reponse.put("timestamp", LocalDateTime.now());
 
-        return ResponseEntity.badRequest().body(reponse);
+        return json(HttpStatus.BAD_REQUEST, reponse);
     }
 
     /** Ressource non trouvée en base de données. */
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErreurResponse> handleResourceNotFoundException(ResourceNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+        return json(HttpStatus.NOT_FOUND,
                 new ErreurResponse(ex.getMessage(), 404, "Ressource introuvable", LocalDateTime.now())
+        );
+    }
+
+    /** Ressource statique introuvable (ex. fichier .js demandé au backend). */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErreurResponse> handleNoResourceFoundException(NoResourceFoundException ex, HttpServletRequest request) {
+        log.warn("[Exception] Ressource introuvable sur {} {}", request.getMethod(), request.getRequestURI());
+        return json(HttpStatus.NOT_FOUND,
+                new ErreurResponse("Ressource introuvable : " + ex.getResourcePath(), 404, "Ressource introuvable", LocalDateTime.now())
         );
     }
 
     /** Accès refusé (autorisation insuffisante). */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErreurResponse> handleAccessDeniedException(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+        return json(HttpStatus.FORBIDDEN,
                 new ErreurResponse("Accès refusé : permissions insuffisantes", 403, "Accès interdit", LocalDateTime.now())
         );
     }
@@ -67,7 +81,7 @@ public class GlobalExceptionHandler {
     /** Identifiants de connexion incorrects. */
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErreurResponse> handleBadCredentialsException(BadCredentialsException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+        return json(HttpStatus.UNAUTHORIZED,
                 new ErreurResponse("Numéro de téléphone ou mot de passe incorrect", 401, "Non autorisé", LocalDateTime.now())
         );
     }
@@ -75,7 +89,7 @@ public class GlobalExceptionHandler {
     /** Erreurs métier (ex : téléphone déjà utilisé). */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErreurResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+        return json(HttpStatus.BAD_REQUEST,
                 new ErreurResponse(ex.getMessage(), 400, "Requête invalide", LocalDateTime.now())
         );
     }
@@ -83,16 +97,23 @@ public class GlobalExceptionHandler {
     /** Erreurs métier avec statut HTTP explicite (ex : UNAUTHORIZED, PRECONDITION_REQUIRED). */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErreurResponse> handleResponseStatusException(ResponseStatusException ex) {
-        return ResponseEntity.status(ex.getStatusCode()).body(
+        return json(HttpStatus.valueOf(ex.getStatusCode().value()),
                 new ErreurResponse(ex.getReason(), ex.getStatusCode().value(), "Erreur", LocalDateTime.now())
         );
     }
 
     /** Erreur serveur inattendue. */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErreurResponse> handleGenericException(Exception ex) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+    public ResponseEntity<ErreurResponse> handleGenericException(Exception ex, HttpServletRequest request) {
+        log.error("[Exception] Erreur inattendue sur {} {}", request.getMethod(), request.getRequestURI(), ex);
+        return json(HttpStatus.INTERNAL_SERVER_ERROR,
                 new ErreurResponse("Une erreur interne s'est produite", 500, "Erreur serveur", LocalDateTime.now())
         );
+    }
+
+    private <T> ResponseEntity<T> json(HttpStatus status, T body) {
+        return ResponseEntity.status(status)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body);
     }
 }
