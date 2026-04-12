@@ -53,9 +53,11 @@ public class PaiementController {
             @RequestHeader(value = "x-fedapay-signature", required = false) String signature,
             @RequestBody String payload) {
 
+        log.info("[Webhook] Requête reçue — signature présente: {}", signature != null);
+
         // Vérifier la signature FedaPay
         if (signature == null || !fedaPayService.verifierSignatureWebhook(payload, signature)) {
-            log.warn("[Webhook] Signature invalide ou absente — requête ignorée");
+            log.warn("[Webhook] Signature invalide ou absente — requête ignorée. Payload: {}", payload.substring(0, Math.min(200, payload.length())));
             return ResponseEntity.status(401).build();
         }
 

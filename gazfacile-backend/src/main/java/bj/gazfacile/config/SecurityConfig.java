@@ -42,6 +42,8 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Page d'erreur Spring Boot (évite Access Denied en cascade)
+                .requestMatchers("/error").permitAll()
                 // Swagger / OpenAPI
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // Routes publiques WebSocket
