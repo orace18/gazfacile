@@ -11,6 +11,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -70,8 +71,9 @@ public class FedaPayService {
         String prenom = parties[0];
         String nomFamille = parties.length > 1 ? parties[1] : "-";
 
+        String emailEffectif = email != null ? email : reference + "@gazfacile.bj";
         Map<String, Object> customer = Map.of(
-                "email", email != null ? email : reference + "@gazfacile.bj",
+                "email", emailEffectif,
                 "firstname", prenom,
                 "lastname", nomFamille,
                 "phone_number", Map.of(
@@ -88,12 +90,18 @@ public class FedaPayService {
                 "customer", customer
         );
 
+        String url = baseUrl + "/transactions";
+        log.info("[FedaPay] → POST {} | token: {} | body: description={}, montant={} FCFA, ref={}, telephone={}, email={}, nom={}, callback_url={}",
+                url, masquerCle(apiKey), description, montant, reference, telephone, emailEffectif, nom, fullCallbackUrl);
+
         ResponseEntity<Map> reponse = restTemplate.exchange(
-                baseUrl + "/transactions",
+                url,
                 HttpMethod.POST,
                 new HttpEntity<>(body, headers),
                 Map.class
         );
+
+        log.info("[FedaPay] ← POST {} | statut: {} | réponse: {}", url, reponse.getStatusCode(), reponse.getBody());
 
         Map<String, Object> data = (Map<String, Object>) reponse.getBody();
         Map<String, Object> transaction = (Map<String, Object>) data.get("v1/transaction");
@@ -115,12 +123,17 @@ public class FedaPayService {
     public String obtenirToken(long fedaPayId) {
         HttpHeaders headers = buildHeaders();
 
+        String url = baseUrl + "/transactions/" + fedaPayId + "/token";
+        log.info("[FedaPay] → POST {} | token: {} | transactionId: {}", url, masquerCle(apiKey), fedaPayId);
+
         ResponseEntity<Map> reponse = restTemplate.exchange(
-                baseUrl + "/transactions/" + fedaPayId + "/token",
+                url,
                 HttpMethod.POST,
                 new HttpEntity<>(headers),
                 Map.class
         );
+
+        log.info("[FedaPay] ← POST {} | statut: {} | réponse: {}", url, reponse.getStatusCode(), reponse.getBody());
 
         Map<String, Object> data = (Map<String, Object>) reponse.getBody();
         String token = (String) data.get("token");
@@ -136,6 +149,37 @@ public class FedaPayService {
      */
     public String construireCheckoutUrl(String token) {
         return checkoutBaseUrl + "/" + token;
+    }
+
+    /**
+     * Récupère le statut réel d'une transaction depuis l'API FedaPay.
+     * Utilisé en complément du webhook quand l'utilisateur revient
+     * sur la page de confirmation avant la synchronisation locale.
+     */
+    @SuppressWarnings("unchecked")
+    public String recupererStatutTransaction(long fedaPayId) {
+        HttpHeaders headers = buildHeaders();
+
+        String url = baseUrl + "/transactions/" + fedaPayId;
+        log.info("[FedaPay] → GET {} | token: {} | transactionId: {}", url, masquerCle(apiKey), fedaPayId);
+
+        ResponseEntity<Map> reponse = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                Map.class
+        );
+
+        log.info("[FedaPay] ← GET {} | statut: {} | réponse: {}", url, reponse.getStatusCode(), reponse.getBody());
+
+        Map<String, Object> transaction = extraireTransaction((Map<String, Object>) reponse.getBody());
+        Object statut = transaction.get("status");
+        if (!(statut instanceof String statutTexte) || statutTexte.isBlank()) {
+            throw new IllegalStateException("Statut FedaPay absent pour la transaction " + fedaPayId);
+        }
+
+        log.info("[FedaPay] Statut récupéré pour transaction {} → {}", fedaPayId, statutTexte);
+        return statutTexte;
     }
 
     // ── Vérification de la signature webhook ──────────────────────────────────
@@ -168,6 +212,31 @@ public class FedaPayService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + apiKey);
         return headers;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> extraireTransaction(Map<String, Object> body) {
+        if (body == null || body.isEmpty()) {
+            throw new IllegalStateException("Réponse FedaPay vide");
+        }
+
+        Object transaction = body.get("v1/transaction");
+        if (transaction instanceof Map<?, ?> map) {
+            return (Map<String, Object>) map;
+        }
+
+        transaction = body.get("transaction");
+        if (transaction instanceof Map<?, ?> map) {
+            return (Map<String, Object>) map;
+        }
+
+        return new HashMap<>(body);
+    }
+
+    /** Masque une clé API en ne laissant apparaître que les 8 premiers caractères. */
+    private String masquerCle(String cle) {
+        if (cle == null || cle.length() <= 8) return "****";
+        return cle.substring(0, 8) + "****";
     }
 
     /** Normalise le numéro de téléphone béninois au format international. */

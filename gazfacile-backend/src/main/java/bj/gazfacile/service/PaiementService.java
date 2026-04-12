@@ -99,33 +99,7 @@ public class PaiementService {
 
         if (transaction == null) return;
 
-        StatutFedaPay statut = parseStatut(nouveauStatut);
-        transaction.setStatut(statut);
-        transaction.setUpdatedAt(LocalDateTime.now());
-        transactionRepository.save(transaction);
-
-        log.info("[Webhook] Transaction {} → {}", transaction.getReference(), statut);
-
-        if (statut == StatutFedaPay.APPROVED) {
-            // Paiement commande → mettre à jour le statut de paiement
-            if (transaction.getType() == TypeTransaction.COMMANDE && transaction.getCommandeId() != null) {
-                commandeRepository.findById(transaction.getCommandeId()).ifPresent(commande -> {
-                    commande.setStatutPaiement(bj.gazfacile.model.enums.StatutPaiement.PAYE);
-                    commande.setReferenceTransaction(transaction.getReference());
-                    commandeRepository.save(commande);
-                    log.info("[Webhook] Commande {} marquée PAYÉE", commande.getId());
-                });
-            }
-            // Paiement abonnement (nouveau système Subscription)
-            if (transaction.getType() == TypeTransaction.ABONNEMENT && transaction.getSubscriptionId() != null) {
-                subscriptionService.activateSubscription(transaction.getSubscriptionId(), transaction.getId());
-                log.info("[Webhook] Subscription {} activée", transaction.getSubscriptionId());
-            }
-            // Paiement abonnement (ancien système Revendeur.abonnement — fallback)
-            else if (transaction.getType() == TypeTransaction.ABONNEMENT && transaction.getRevendeurId() != null) {
-                abonnementService.activerAbonnement(transaction.getRevendeurId(), transaction.getMontant());
-            }
-        }
+        appliquerStatut(transaction, parseStatut(nouveauStatut), "webhook");
     }
 
     /**
@@ -146,11 +120,72 @@ public class PaiementService {
      * Retourne une transaction par sa référence interne.
      */
     public Transaction getByReference(String reference) {
-        return transactionRepository.findByReference(reference)
+        Transaction transaction = transactionRepository.findByReference(reference)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction introuvable : " + reference));
+
+        return synchroniserTransactionSiNecessaire(transaction);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private Transaction synchroniserTransactionSiNecessaire(Transaction transaction) {
+        if (transaction.getFedaPayId() == null || transaction.getStatut() != StatutFedaPay.PENDING) {
+            return transaction;
+        }
+
+        try {
+            String statutFedaPay = fedaPayService.recupererStatutTransaction(transaction.getFedaPayId());
+            return appliquerStatut(transaction, parseStatut(statutFedaPay), "api");
+        } catch (Exception ex) {
+            log.warn("[Paiement] Synchronisation FedaPay impossible pour {} (id {}): {}",
+                    transaction.getReference(), transaction.getFedaPayId(), ex.getMessage());
+            return transaction;
+        }
+    }
+
+    private Transaction appliquerStatut(Transaction transaction, StatutFedaPay nouveauStatut, String source) {
+        StatutFedaPay ancienStatut = transaction.getStatut();
+        if (ancienStatut == nouveauStatut) {
+            return transaction;
+        }
+
+        transaction.setStatut(nouveauStatut);
+        transaction.setUpdatedAt(LocalDateTime.now());
+        transaction = transactionRepository.save(transaction);
+
+        log.info("[Paiement] Transaction {} synchronisée via {} : {} → {}",
+                transaction.getReference(), source, ancienStatut, nouveauStatut);
+
+        if (ancienStatut != StatutFedaPay.APPROVED && nouveauStatut == StatutFedaPay.APPROVED) {
+            appliquerEffetsMetierPaiementApprouve(transaction);
+        }
+
+        return transaction;
+    }
+
+    private void appliquerEffetsMetierPaiementApprouve(Transaction transaction) {
+        // Paiement commande → mettre à jour le statut de paiement
+        if (transaction.getType() == TypeTransaction.COMMANDE && transaction.getCommandeId() != null) {
+            commandeRepository.findById(transaction.getCommandeId()).ifPresent(commande -> {
+                commande.setStatutPaiement(bj.gazfacile.model.enums.StatutPaiement.PAYE);
+                commande.setReferenceTransaction(transaction.getReference());
+                commandeRepository.save(commande);
+                log.info("[Paiement] Commande {} marquée PAYÉE", commande.getId());
+            });
+        }
+
+        // Paiement abonnement (nouveau système Subscription)
+        if (transaction.getType() == TypeTransaction.ABONNEMENT && transaction.getSubscriptionId() != null) {
+            subscriptionService.activateSubscription(transaction.getSubscriptionId(), transaction.getId());
+            log.info("[Paiement] Subscription {} activée", transaction.getSubscriptionId());
+            return;
+        }
+
+        // Paiement abonnement (ancien système Revendeur.abonnement — fallback)
+        if (transaction.getType() == TypeTransaction.ABONNEMENT && transaction.getRevendeurId() != null) {
+            abonnementService.activerAbonnement(transaction.getRevendeurId(), transaction.getMontant());
+        }
+    }
 
     private String genererReference(String prefixe) {
         return prefixe.substring(0, 3).toUpperCase() + "-" +
@@ -158,10 +193,15 @@ public class PaiementService {
     }
 
     private StatutFedaPay parseStatut(String statut) {
+        if (statut == null || statut.isBlank()) {
+            return StatutFedaPay.PENDING;
+        }
+
         return switch (statut.toLowerCase()) {
+            case "pending"     -> StatutFedaPay.PENDING;
             case "approved"    -> StatutFedaPay.APPROVED;
             case "declined"    -> StatutFedaPay.DECLINED;
-            case "cancelled"   -> StatutFedaPay.CANCELLED;
+            case "canceled", "cancelled" -> StatutFedaPay.CANCELLED;
             case "refunded"    -> StatutFedaPay.REFUNDED;
             case "transferred" -> StatutFedaPay.TRANSFERRED;
             default            -> StatutFedaPay.PENDING;

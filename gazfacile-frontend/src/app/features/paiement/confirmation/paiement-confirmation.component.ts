@@ -274,6 +274,11 @@ export class PaiementConfirmationComponent implements OnInit, OnDestroy {
       return null;
     }
 
-    return StatutFedaPay[statut.trim().toUpperCase() as keyof typeof StatutFedaPay] ?? null;
+    const statutNormalise = statut.trim().toUpperCase();
+    if (statutNormalise === 'CANCELED') {
+      return StatutFedaPay.CANCELLED;
+    }
+
+    return StatutFedaPay[statutNormalise as keyof typeof StatutFedaPay] ?? null;
   }
 }

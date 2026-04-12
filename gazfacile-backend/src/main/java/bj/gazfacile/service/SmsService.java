@@ -31,6 +31,12 @@ public class SmsService {
 
     private static final String AT_BASE_URL = "https://api.africastalking.com/version1/messaging";
 
+    /** Masque une clé API en ne laissant apparaître que les 4 premiers caractères. */
+    private String masquerCle(String cle) {
+        if (cle == null || cle.length() <= 4) return "****";
+        return cle.substring(0, 4) + "****";
+    }
+
     /**
      * Envoie un SMS contenant le code OTP.
      *
@@ -54,15 +60,20 @@ public class SmsService {
                     .defaultHeader("Accept", "application/json")
                     .build();
 
-            client.post()
+            String encodedMessage = java.net.URLEncoder.encode(message, java.nio.charset.StandardCharsets.UTF_8);
+            log.info("[SMS] → POST {} | apiKey: {} | body: username={}, to={}, from={}, message={}",
+                    AT_BASE_URL, masquerCle(apiKey), username, telephone, sender, message);
+
+            org.springframework.http.ResponseEntity<String> reponse = client.post()
                     .contentType(org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED)
                     .body("username=" + username
                             + "&to=" + telephone
-                            + "&message=" + java.net.URLEncoder.encode(message, java.nio.charset.StandardCharsets.UTF_8)
+                            + "&message=" + encodedMessage
                             + "&from=" + sender)
                     .retrieve()
-                    .toBodilessEntity();
+                    .toEntity(String.class);
 
+            log.info("[SMS] ← POST {} | statut: {} | réponse: {}", AT_BASE_URL, reponse.getStatusCode(), reponse.getBody());
             log.info("[SMS] OTP envoyé à {}", telephone);
         } catch (Exception e) {
             log.error("[SMS] Échec d'envoi à {} : {}", telephone, e.getMessage());

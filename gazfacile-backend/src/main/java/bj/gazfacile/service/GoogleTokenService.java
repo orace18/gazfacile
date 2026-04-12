@@ -40,11 +40,23 @@ public class GoogleTokenService {
      */
     @SuppressWarnings("unchecked")
     public GoogleUserInfo valider(String idToken) {
+        String tokenMasque = (idToken != null && idToken.length() > 20)
+                ? idToken.substring(0, 20) + "****"
+                : "****";
+        log.info("[Google] → GET https://oauth2.googleapis.com/tokeninfo | id_token: {}", tokenMasque);
+
         try {
             Map<String, Object> claims = restClient.get()
                     .uri("/tokeninfo?id_token={token}", idToken)
                     .retrieve()
                     .body(Map.class);
+
+            log.info("[Google] ← tokeninfo | réponse: sub={}, email={}, name={}, aud={}, exp={}",
+                    claims != null ? claims.get("sub") : null,
+                    claims != null ? claims.get("email") : null,
+                    claims != null ? claims.get("name") : null,
+                    claims != null ? claims.get("aud") : null,
+                    claims != null ? claims.get("exp") : null);
 
             if (claims == null) {
                 throw new IllegalArgumentException("Token Google invalide");
