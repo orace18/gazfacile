@@ -25,7 +25,7 @@ public class DataSeeder {
     private void seedPlans() {
         List<SubscriptionPlan> plans = List.of(
                 // ── Revendeur (5 plans) ──
-                buildPlan(PlanType.REVENDEUR, "Standard", "STANDARD", 1000, 30, 0,
+                buildPlan(PlanType.REVENDEUR, "Standard", "STANDARD", 100, 30, 0,
                         "Sans engagement", 1,
                         List.of("Visibilité complète", "Profil vérifié", "Catalogue illimité")),
                 buildPlan(PlanType.REVENDEUR, "Gold", "GOLD", 2500, 90, 0,
