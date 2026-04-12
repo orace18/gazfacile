@@ -10,13 +10,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { FormsModule } from '@angular/forms';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RevendeurService } from '../../../core/services/revendeur.service';
 import { GeolocationService } from '../../../core/services/geolocation.service';
-import { RevendeurDTO, ModePaiement } from '../../../core/models/revendeur.model';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../environments/environment';
+import { RevendeurDTO } from '../../../core/models/revendeur.model';
 
 /**
  * Formulaire d'inscription d'un nouveau revendeur de gaz.
@@ -37,8 +34,7 @@ import { environment } from '../../../../environments/environment';
     MatCheckboxModule,
     MatChipsModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule,
-    FormsModule
+    MatSnackBarModule
   ],
   template: `
     <div class="page-inscription">
@@ -204,114 +200,35 @@ import { environment } from '../../../../environments/environment';
                     </div>
                   }
 
+                  @if (erreur) {
+                    <div class="erreur">
+                      <mat-icon>error</mat-icon>
+                      {{ erreur }}
+                    </div>
+                  }
+
                   <div class="actions-etape">
                     <button mat-button matStepperPrevious type="button">
                       <mat-icon>arrow_back</mat-icon>
                       Précédent
                     </button>
-                    <button mat-raised-button matStepperNext type="button" class="btn-suivant"
-                      [disabled]="etape2.invalid">
-                      Suivant
-                      <mat-icon>arrow_forward</mat-icon>
+                    <button
+                      mat-raised-button
+                      type="button"
+                      class="btn-inscrire"
+                      (click)="soumettre()"
+                      [disabled]="etape2.invalid || envoi"
+                    >
+                      @if (envoi) {
+                        <mat-spinner diameter="18"></mat-spinner>
+                      } @else {
+                        <mat-icon>store</mat-icon>
+                      }
+                      Inscrire mon dépôt
                     </button>
                   </div>
                 </div>
               </form>
-            </mat-step>
-
-            <!-- Étape 3 : Paiement abonnement -->
-            <mat-step>
-              <ng-template matStepLabel>Paiement de l'abonnement</ng-template>
-              <div class="etape-contenu">
-
-                <div class="info-abonnement">
-                  <div class="abonnement-header">
-                    <mat-icon class="icone-abonnement">workspace_premium</mat-icon>
-                    <div>
-                      <h3>Abonnement mensuel revendeur</h3>
-                      <p>Visible par tous les clients de GazFacile pendant 1 mois</p>
-                    </div>
-                  </div>
-                  <div class="abonnement-prix">
-                    <span class="montant">1 000</span>
-                    <span class="devise">FCFA / mois</span>
-                  </div>
-                  <ul class="abonnement-avantages">
-                    <li><mat-icon>check</mat-icon> Profil visible sur la carte</li>
-                    <li><mat-icon>check</mat-icon> Réception de commandes en ligne</li>
-                    <li><mat-icon>check</mat-icon> Notifications temps réel</li>
-                    <li><mat-icon>check</mat-icon> Renouvellement automatique chaque mois</li>
-                  </ul>
-                </div>
-
-                <!-- Choix mode de paiement -->
-                <div class="groupe-paiement-abo">
-                  <label class="label-section">Payer via Mobile Money</label>
-                  <div class="options-paiement-abo">
-                    <button type="button" class="btn-paiement-abo"
-                      [class.selectionne]="modePaiementAbo === 'MTN'"
-                      (click)="modePaiementAbo = 'MTN'">
-                      <span class="logo-mtn">MTN</span>
-                      <span>MoMo</span>
-                    </button>
-                    <button type="button" class="btn-paiement-abo"
-                      [class.selectionne]="modePaiementAbo === 'MOOV'"
-                      (click)="modePaiementAbo = 'MOOV'">
-                      <span class="logo-moov">FLOOZ</span>
-                      <span>Moov</span>
-                    </button>
-                    <button type="button" class="btn-paiement-abo"
-                      [class.selectionne]="modePaiementAbo === 'CELTIIS'"
-                      (click)="modePaiementAbo = 'CELTIIS'">
-                      <span class="logo-celtiis">CEL</span>
-                      <span>Celtiis</span>
-                    </button>
-                  </div>
-                </div>
-
-                <mat-form-field appearance="outline" class="champ-pleine-largeur">
-                  <mat-label>Numéro Mobile Money à débiter</mat-label>
-                  <input matInput [(ngModel)]="telephonePaiement" placeholder="Ex: 97000000" type="tel">
-                  <mat-icon matPrefix>phone</mat-icon>
-                  <mat-hint>Le numéro qui recevra la demande de paiement USSD</mat-hint>
-                </mat-form-field>
-
-                @if (erreur) {
-                  <div class="erreur">
-                    <mat-icon>error</mat-icon>
-                    {{ erreur }}
-                  </div>
-                }
-
-                @if (paiementInitie) {
-                  <div class="paiement-en-cours">
-                    <mat-icon>pending</mat-icon>
-                    Demande envoyée ! Validez le paiement sur votre téléphone (*880# pour MTN, *155# pour Moov).
-                    Votre dépôt sera activé après confirmation.
-                  </div>
-                }
-
-                <div class="actions-etape">
-                  <button mat-button matStepperPrevious type="button">
-                    <mat-icon>arrow_back</mat-icon>
-                    Précédent
-                  </button>
-                  <button
-                    mat-raised-button
-                    type="button"
-                    class="btn-inscrire"
-                    (click)="soumettreAvecPaiement()"
-                    [disabled]="!telephonePaiement || !modePaiementAbo || envoi"
-                  >
-                    @if (envoi) {
-                      <mat-spinner diameter="18"></mat-spinner>
-                    } @else {
-                      <mat-icon>payment</mat-icon>
-                    }
-                    Payer 1 000 FCFA et inscrire
-                  </button>
-                </div>
-              </div>
             </mat-step>
 
           </mat-stepper>
@@ -493,126 +410,6 @@ import { environment } from '../../../../environments/environment';
       margin-top: 8px;
     }
 
-    .info-abonnement {
-      background: linear-gradient(135deg, rgba(249,115,22,0.1), rgba(249,115,22,0.05));
-      border: 1px solid rgba(249,115,22,0.3);
-      border-radius: var(--radius-md);
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-
-    .abonnement-header {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 16px;
-
-      h3 {
-        font-family: 'Syne', sans-serif;
-        font-size: 1rem;
-        color: var(--color-text);
-        margin: 0 0 4px;
-      }
-      p { font-size: 0.82rem; color: var(--color-text-muted); margin: 0; }
-    }
-
-    .icone-abonnement {
-      color: var(--color-primary);
-      font-size: 2rem !important;
-      height: 2rem !important;
-      width: 2rem !important;
-    }
-
-    .abonnement-prix {
-      text-align: center;
-      margin: 12px 0;
-
-      .montant {
-        font-family: 'Syne', sans-serif;
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: var(--color-primary);
-      }
-      .devise {
-        font-size: 0.9rem;
-        color: var(--color-text-muted);
-        margin-left: 6px;
-      }
-    }
-
-    .abonnement-avantages {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-
-      li {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.83rem;
-        color: var(--color-text-muted);
-
-        mat-icon {
-          color: var(--color-success);
-          font-size: 1rem !important;
-          height: 1rem !important;
-          width: 1rem !important;
-        }
-      }
-    }
-
-    .groupe-paiement-abo {
-      margin-bottom: 16px;
-    }
-
-    .options-paiement-abo {
-      display: flex;
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .btn-paiement-abo {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      padding: 12px 8px;
-      background: var(--color-surface-2);
-      border: 2px solid var(--color-border);
-      border-radius: var(--radius-sm);
-      color: var(--color-text-muted);
-      cursor: pointer;
-      font-size: 0.78rem;
-      transition: all 0.2s;
-
-      &.selectionne {
-        border-color: var(--color-primary);
-        color: var(--color-text);
-        background: rgba(249,115,22,0.1);
-      }
-    }
-
-    .logo-mtn { background: #FFC403; color: #1a1a00; padding: 3px 8px; border-radius: 4px; font-weight: 800; font-size: 0.75rem; }
-    .logo-moov { background: #0050A0; color: white; padding: 3px 8px; border-radius: 4px; font-weight: 800; font-size: 0.75rem; }
-    .logo-celtiis { background: #E8000D; color: white; padding: 3px 8px; border-radius: 4px; font-weight: 800; font-size: 0.75rem; }
-
-    .paiement-en-cours {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      padding: 12px 14px;
-      background: var(--color-warning-bg);
-      color: var(--color-warning);
-      border-radius: var(--radius-sm);
-      font-size: 0.85rem;
-      margin-top: 8px;
-      line-height: 1.5;
-    }
-
     .btn-suivant, .btn-inscrire {
       background-color: var(--color-primary) !important;
       color: white !important;
@@ -634,14 +431,10 @@ export class RevendeurFormComponent {
   private readonly geoService = inject(GeolocationService);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
-  private readonly http = inject(HttpClient);
 
   marques: string[] = [];
   envoi = false;
   erreur: string | null = null;
-  paiementInitie = false;
-  modePaiementAbo: 'MTN' | 'MOOV' | 'CELTIIS' | null = null;
-  telephonePaiement = '';
   readonly chargementGeo = signal<boolean>(false);
   readonly positionObtenue = signal<boolean>(false);
 
@@ -690,37 +483,6 @@ export class RevendeurFormComponent {
     });
   }
 
-  soumettreAvecPaiement(): void {
-    if (this.etape1.invalid || this.etape2.invalid) return;
-    if (!this.telephonePaiement || !this.modePaiementAbo) return;
-
-    this.envoi = true;
-    this.erreur = null;
-
-    const modeMap: Record<string, ModePaiement> = {
-      MTN: ModePaiement.MOMO_MTN,
-      MOOV: ModePaiement.MOMO_MOOV,
-      CELTIIS: ModePaiement.CELTIIS_CASH
-    };
-
-    // Initier le paiement de l'abonnement (1000 FCFA)
-    this.http.post(`${environment.apiUrl}/paiement/abonnement`, {
-      telephone: this.telephonePaiement,
-      modePaiement: modeMap[this.modePaiementAbo],
-      montant: 1000
-    }).subscribe({
-      next: () => {
-        this.paiementInitie = true;
-        this.soumettre();
-      },
-      error: () => {
-        // En mode sandbox/dev : continuer malgré l'échec du paiement
-        this.paiementInitie = true;
-        this.soumettre();
-      }
-    });
-  }
-
   soumettre(): void {
     if (this.etape1.invalid || this.etape2.invalid) {
       this.etape1.markAllAsTouched();
@@ -749,7 +511,7 @@ export class RevendeurFormComponent {
       next: () => {
         this.envoi = false;
         this.snackBar.open('Votre dépôt a été inscrit avec succès !', 'OK', { duration: 5000 });
-        this.router.navigate(['/revendeur/abonnement']);
+        this.router.navigate(['/revendeur/catalogue']);
       },
       error: err => {
         this.envoi = false;

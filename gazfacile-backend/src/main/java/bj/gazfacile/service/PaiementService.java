@@ -30,6 +30,7 @@ public class PaiementService {
     private final TransactionRepository transactionRepository;
     private final CommandeRepository commandeRepository;
     private final AbonnementService abonnementService;
+    private final SubscriptionService subscriptionService;
 
     /**
      * Initie un paiement FedaPay pour une commande ou un abonnement.
@@ -69,6 +70,7 @@ public class PaiementService {
                 .statut(StatutFedaPay.PENDING)
                 .commandeId(dto.getCommandeId())
                 .revendeurId(dto.getRevendeurId())
+                .subscriptionId(dto.getSubscriptionId())
                 .checkoutUrl(checkoutUrl)
                 .token(token)
                 .createdAt(LocalDateTime.now())
@@ -114,8 +116,13 @@ public class PaiementService {
                     log.info("[Webhook] Commande {} marquée PAYÉE", commande.getId());
                 });
             }
-            // Paiement abonnement → activer l'abonnement du revendeur
-            if (transaction.getType() == TypeTransaction.ABONNEMENT && transaction.getRevendeurId() != null) {
+            // Paiement abonnement (nouveau système Subscription)
+            if (transaction.getType() == TypeTransaction.ABONNEMENT && transaction.getSubscriptionId() != null) {
+                subscriptionService.activateSubscription(transaction.getSubscriptionId(), transaction.getId());
+                log.info("[Webhook] Subscription {} activée", transaction.getSubscriptionId());
+            }
+            // Paiement abonnement (ancien système Revendeur.abonnement — fallback)
+            else if (transaction.getType() == TypeTransaction.ABONNEMENT && transaction.getRevendeurId() != null) {
                 abonnementService.activerAbonnement(transaction.getRevendeurId(), transaction.getMontant());
             }
         }

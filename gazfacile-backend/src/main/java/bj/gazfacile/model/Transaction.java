@@ -53,8 +53,11 @@ public class Transaction {
     /** Identifiant de la commande liée (si type = COMMANDE). */
     private String commandeId;
 
-    /** Identifiant du revendeur lié (si type = ABONNEMENT). */
+    /** Identifiant du revendeur lié (si type = ABONNEMENT, ancien système). */
     private String revendeurId;
+
+    /** Identifiant de la subscription liée (si type = ABONNEMENT, nouveau système). */
+    private String subscriptionId;
 
     /** URL de paiement FedaPay à afficher au client. */
     private String checkoutUrl;

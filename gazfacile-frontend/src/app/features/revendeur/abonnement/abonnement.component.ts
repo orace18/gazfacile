@@ -6,13 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { AbonnementService } from '../../../core/services/abonnement.service';
+import { SubscriptionService } from '../../../core/services/subscription.service';
 import { PaiementService } from '../../../core/services/paiement.service';
-import {
-  Abonnement,
-  AbonnementStatut,
-  ABONNEMENT_PLANS
-} from '../../../core/models/revendeur.model';
+import { SubscriptionPlanDTO, SubscriptionDTO } from '../../../core/models/revendeur.model';
 
 @Component({
   selector: 'app-abonnement',
@@ -37,93 +33,96 @@ import {
         <div class="chargement">
           <mat-spinner diameter="40"></mat-spinner>
         </div>
-      } @else if (statut()) {
+      } @else {
 
         <!-- Statut actuel -->
-        <div class="statut-actuel">
-          <div class="badge-plan" [class]="'badge-' + statut()!.plan.toLowerCase()">
-            <mat-icon>{{ iconePlan(statut()!.plan) }}</mat-icon>
-            {{ statut()!.planLibelle }}
-          </div>
-          @if (statut()!.plan !== Abonnement.GRATUIT) {
-            @if (statut()!.expire) {
+        @if (subscription()) {
+          <div class="statut-actuel">
+            <div class="badge-plan badge-actif">
+              <mat-icon>workspace_premium</mat-icon>
+              {{ subscription()!.planCode }}
+            </div>
+            @if (subscription()!.statut === 'ACTIVE') {
+              <span class="chip-actif">
+                <mat-icon>check_circle</mat-icon>
+                Actif jusqu'au {{ subscription()!.dateFin | date:'dd/MM/yyyy' }}
+              </span>
+            } @else if (subscription()!.statut === 'PENDING') {
+              <span class="chip-pending">
+                <mat-icon>hourglass_top</mat-icon>
+                Paiement en attente
+              </span>
+            } @else {
               <span class="chip-expire">
                 <mat-icon>warning</mat-icon> Expiré
               </span>
-            } @else {
-              <span class="chip-actif">
-                <mat-icon>check_circle</mat-icon>
-                Actif jusqu'au {{ statut()!.expiry | date:'dd/MM/yyyy' }}
-              </span>
             }
-          }
-        </div>
+          </div>
+        } @else {
+          <div class="statut-actuel">
+            <div class="badge-plan badge-inactif">
+              <mat-icon>store</mat-icon>
+              Aucun abonnement
+            </div>
+            <span class="chip-expire">
+              <mat-icon>info</mat-icon>
+              Souscrivez pour être visible sur GazFacile
+            </span>
+          </div>
+        }
 
         <!-- Grille des plans -->
-        <div class="grille-plans">
-          @for (p of plans; track p.plan) {
-            <div class="carte-plan" [class.plan-actuel]="statut()!.plan === p.plan"
-                 [class.plan-recommande]="p.recommande">
+        @if (plans().length > 0) {
+          <div class="grille-plans">
+            @for (p of plans(); track p.id) {
+              <div class="carte-plan"
+                   [class.plan-actuel]="subscription()?.planCode === p.code && subscription()?.statut === 'ACTIVE'">
 
-              @if (p.recommande) {
-                <div class="badge-recommande">Recommandé</div>
-              }
-
-              <div class="plan-entete">
-                <mat-icon class="plan-icone">{{ iconePlan(p.plan) }}</mat-icon>
-                <h2 class="plan-nom">{{ p.libelle }}</h2>
-                @if (p.duree) {
-                  <span class="plan-duree">{{ p.duree }}</span>
-                }
-                <p class="plan-desc">{{ p.description }}</p>
-                <div class="plan-prix">
-                  @if (p.prix === 0) {
-                    <span class="prix-valeur">Gratuit</span>
-                  } @else {
+                <div class="plan-entete">
+                  <mat-icon class="plan-icone">{{ iconePlan(p.code) }}</mat-icon>
+                  <h2 class="plan-nom">{{ p.nom }}</h2>
+                  <span class="plan-duree">{{ formatDuree(p.dureeJours) }}</span>
+                  <p class="plan-desc">{{ p.description }}</p>
+                  <div class="plan-prix">
                     <span class="prix-valeur">{{ p.prix | number:'1.0-0' }}</span>
                     <span class="prix-unite"> FCFA</span>
+                  </div>
+                </div>
+
+                <ul class="liste-features">
+                  @for (f of p.features; track f) {
+                    <li>
+                      <mat-icon class="icone-check">check</mat-icon>
+                      {{ f }}
+                    </li>
+                  }
+                </ul>
+
+                <div class="plan-action">
+                  @if (subscription()?.planCode === p.code && subscription()?.statut === 'ACTIVE') {
+                    <button mat-stroked-button disabled class="btn-plan-actuel">
+                      <mat-icon>check_circle</mat-icon> Plan actuel
+                    </button>
+                  } @else {
+                    <button
+                      mat-raised-button
+                      class="btn-souscrire"
+                      [disabled]="enCoursCode() === p.code"
+                      (click)="souscrire(p.code)"
+                    >
+                      @if (enCoursCode() === p.code) {
+                        <mat-spinner diameter="16"></mat-spinner>
+                      } @else {
+                        <mat-icon>open_in_new</mat-icon>
+                      }
+                      {{ subscription()?.statut === 'ACTIVE' ? 'Renouveler' : 'Souscrire' }}
+                    </button>
                   }
                 </div>
               </div>
-
-              <ul class="liste-features">
-                @for (f of p.features; track f) {
-                  <li>
-                    <mat-icon class="icone-check">check</mat-icon>
-                    {{ f }}
-                  </li>
-                }
-              </ul>
-
-              <div class="plan-action">
-                @if (statut()!.plan === p.plan && !statut()!.expire) {
-                  <button mat-stroked-button disabled class="btn-plan-actuel">
-                    <mat-icon>check_circle</mat-icon> Plan actuel
-                  </button>
-                } @else if (p.plan === Abonnement.GRATUIT) {
-                  <button mat-stroked-button disabled>
-                    Plan de base
-                  </button>
-                } @else {
-                  <button
-                    mat-raised-button
-                    class="btn-souscrire"
-                    [class.btn-recommande]="p.recommande"
-                    [disabled]="enCoursId() === p.plan"
-                    (click)="souscrire(p.plan)"
-                  >
-                    @if (enCoursId() === p.plan) {
-                      <mat-spinner diameter="16"></mat-spinner>
-                    } @else {
-                      <mat-icon>open_in_new</mat-icon>
-                    }
-                    {{ statut()!.expire || statut()!.plan === Abonnement.GRATUIT ? 'Souscrire' : 'Renouveler' }}
-                  </button>
-                }
-              </div>
-            </div>
-          }
-        </div>
+            }
+          </div>
+        }
 
         @if (erreur()) {
           <div class="erreur">
@@ -189,13 +188,13 @@ import {
       font-size: 0.9rem;
       text-transform: uppercase;
 
-      &.badge-gratuit {
-        background: var(--color-surface-2);
-        color: var(--color-text-muted);
-      }
-      &.badge-mensuel, &.badge-trimestriel, &.badge-semestriel, &.badge-annuel {
+      &.badge-actif {
         background: color-mix(in srgb, var(--color-primary) 15%, transparent);
         color: var(--color-primary);
+      }
+      &.badge-inactif {
+        background: var(--color-surface-2);
+        color: var(--color-text-muted);
       }
     }
 
@@ -205,6 +204,16 @@ import {
       gap: 4px;
       font-size: 0.82rem;
       color: var(--color-success, #2e7d32);
+
+      mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+    }
+
+    .chip-pending {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.82rem;
+      color: var(--color-warning, #ed6c02);
 
       mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
     }
@@ -241,25 +250,6 @@ import {
         border-color: var(--color-primary);
         box-shadow: 0 0 0 1px var(--color-primary);
       }
-
-      &.plan-recommande {
-        border-color: var(--color-accent);
-      }
-    }
-
-    .badge-recommande {
-      position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--color-accent);
-      color: #1a1a00;
-      font-size: 0.72rem;
-      font-weight: 700;
-      padding: 2px 12px;
-      border-radius: 20px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
     }
 
     .plan-entete {
@@ -297,6 +287,19 @@ import {
         font-size: 0.8rem;
         color: var(--color-text-muted);
       }
+    }
+
+    .plan-duree {
+      display: inline-block;
+      background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+      color: var(--color-primary);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .liste-features {
@@ -342,24 +345,6 @@ import {
     .btn-souscrire {
       background-color: var(--color-primary) !important;
       color: white !important;
-
-      &.btn-recommande {
-        background-color: var(--color-accent) !important;
-        color: #1a1a00 !important;
-      }
-    }
-
-    .plan-duree {
-      display: inline-block;
-      background: color-mix(in srgb, var(--color-primary) 10%, transparent);
-      color: var(--color-primary);
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 2px 10px;
-      border-radius: 20px;
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
     }
 
     .erreur {
@@ -392,59 +377,73 @@ import {
   `]
 })
 export class AbonnementComponent implements OnInit {
-  private readonly abonnementService = inject(AbonnementService);
+  private readonly subscriptionService = inject(SubscriptionService);
   private readonly paiementService = inject(PaiementService);
   private readonly snackBar = inject(MatSnackBar);
 
-  readonly Abonnement = Abonnement;
-  readonly plans = ABONNEMENT_PLANS;
-
-  statut = signal<AbonnementStatut | null>(null);
+  plans = signal<SubscriptionPlanDTO[]>([]);
+  subscription = signal<SubscriptionDTO | null>(null);
   chargement = signal(true);
-  enCoursId = signal<Abonnement | null>(null);
+  enCoursCode = signal<string | null>(null);
   erreur = signal<string | null>(null);
 
   ngOnInit(): void {
-    this.chargerStatut();
+    this.charger();
   }
 
-  chargerStatut(): void {
+  charger(): void {
     this.chargement.set(true);
-    this.abonnementService.getStatut().subscribe({
-      next: s => {
-        this.statut.set(s);
-        this.chargement.set(false);
+
+    // Charger les plans REVENDEUR
+    this.subscriptionService.getPlans('REVENDEUR').subscribe({
+      next: plans => {
+        this.plans.set(plans);
+        // Charger la subscription active
+        this.subscriptionService.getCurrent().subscribe({
+          next: sub => {
+            this.subscription.set(sub);
+            this.chargement.set(false);
+          },
+          error: () => {
+            // Pas de subscription active — c'est OK
+            this.subscription.set(null);
+            this.chargement.set(false);
+          }
+        });
       },
       error: () => {
         this.chargement.set(false);
-        this.erreur.set('Impossible de charger le statut d\'abonnement');
+        this.erreur.set('Impossible de charger les plans d\'abonnement');
       }
     });
   }
 
-  souscrire(plan: Abonnement): void {
-    this.enCoursId.set(plan);
+  souscrire(planCode: string): void {
+    this.enCoursCode.set(planCode);
     this.erreur.set(null);
-    this.abonnementService.souscrire(plan).subscribe({
+    this.subscriptionService.subscribe(planCode).subscribe({
       next: response => {
-        this.enCoursId.set(null);
+        this.enCoursCode.set(null);
         this.paiementService.redirectVersCheckout(response.checkoutUrl);
       },
       error: err => {
-        this.enCoursId.set(null);
+        this.enCoursCode.set(null);
         this.erreur.set(err.message);
       }
     });
   }
 
-  iconePlan(plan: Abonnement): string {
-    switch (plan) {
-      case Abonnement.ANNUEL:       return 'workspace_premium';
-      case Abonnement.SEMESTRIEL:   return 'star';
-      case Abonnement.TRIMESTRIEL:  return 'verified';
-      case Abonnement.MENSUEL:      return 'calendar_month';
-      case Abonnement.TEST:         return 'science';
-      default:                      return 'store';
-    }
+  iconePlan(code: string): string {
+    const c = code.toUpperCase();
+    if (c.includes('MAX') || c.includes('PRO') || c.includes('ANNUEL')) return 'workspace_premium';
+    if (c.includes('DIAMOND') || c.includes('SEMESTRIEL')) return 'star';
+    if (c.includes('GOLD') || c.includes('TRIMESTRIEL')) return 'verified';
+    return 'calendar_month';
+  }
+
+  formatDuree(jours: number): string {
+    if (jours >= 365) return `${Math.round(jours / 365)} an${jours >= 730 ? 's' : ''}`;
+    if (jours >= 30) return `${Math.round(jours / 30)} mois`;
+    return `${jours} jour${jours > 1 ? 's' : ''}`;
   }
 }

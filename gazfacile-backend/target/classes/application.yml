@@ -20,9 +20,9 @@ fedapay:
   # Clé API FedaPay (sandbox ou live)
   api-key: ${FEDAPAY_API_KEY:sk_sandbox_XXXXXXXXXXXXXXXXXXXXXXXX}
   # URL de l'API FedaPay
-  base-url: ${FEDAPAY_BASE_URL:https://sandbox-api.fedapay.com/v1}
+  base-url: ${FEDAPAY_BASE_URL:https://api.fedapay.com/v1}
   # URL de la page de paiement FedaPay
-  checkout-url: ${FEDAPAY_CHECKOUT_URL:https://sandbox-checkout.fedapay.com}
+  checkout-url: ${FEDAPAY_CHECKOUT_URL:https://process.fedapay.com}
   # Secret pour vérifier la signature des webhooks
   webhook-secret: ${FEDAPAY_WEBHOOK_SECRET:votre-webhook-secret}
   # URL de retour après paiement (votre frontend)
