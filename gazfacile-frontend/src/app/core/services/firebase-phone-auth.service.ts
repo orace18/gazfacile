@@ -150,12 +150,23 @@ export class FirebasePhoneAuthService {
     const code = typeof error === 'object' && error && 'code' in error
       ? String(error.code)
       : '';
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
 
     switch (code) {
       case 'auth/invalid-phone-number':
         return 'Le numéro de téléphone est invalide.';
       case 'auth/missing-phone-number':
         return 'Le numéro de téléphone est obligatoire.';
+      case 'auth/operation-not-allowed':
+        return 'L’authentification par téléphone n’est pas activée dans Firebase.';
+      case 'auth/unauthorized-domain':
+      case 'auth/app-not-authorized':
+        return host
+          ? `Le domaine ${host} n’est pas autorisé dans Firebase Authentication.`
+          : 'Le domaine courant n’est pas autorisé dans Firebase Authentication.';
+      case 'auth/invalid-app-credential':
+      case 'auth/missing-app-credential':
+        return 'Le reCAPTCHA Firebase est invalide ou expiré. Rechargez la page puis réessayez.';
       case 'auth/too-many-requests':
         return 'Trop de tentatives. Réessayez dans quelques minutes.';
       case 'auth/quota-exceeded':
@@ -169,7 +180,9 @@ export class FirebasePhoneAuthService {
       case 'auth/network-request-failed':
         return 'Connexion réseau impossible. Réessayez.';
       default:
-        return 'La vérification SMS a échoué. Vérifiez la configuration Firebase.';
+        return code
+          ? `La vérification SMS a échoué (${code}). Vérifiez la configuration Firebase.`
+          : 'La vérification SMS a échoué. Vérifiez la configuration Firebase.';
     }
   }
 }

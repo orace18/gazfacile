@@ -38,6 +38,8 @@ services:
     environment:
       MONGO_URI: mongodb://${MONGO_USER:-gazfacile}:${MONGO_PASSWORD:-gazfacile2024}@mongodb:27017/gazfacile?authSource=admin
       JWT_SECRET: ${JWT_SECRET:-gazfacile-secret-key-production-256-bits-minimum-length}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
       MTN_MOMO_BASE_URL: ${MTN_MOMO_BASE_URL:-https://sandbox.momodeveloper.mtn.com}
       MTN_MOMO_SUBSCRIPTION_KEY: ${MTN_MOMO_SUBSCRIPTION_KEY:-}
       MTN_MOMO_API_USER: ${MTN_MOMO_API_USER:-}
