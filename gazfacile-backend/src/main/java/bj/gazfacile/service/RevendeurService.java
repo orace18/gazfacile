@@ -81,11 +81,11 @@ public class RevendeurService {
     /**
      * Inscrit un nouveau revendeur de gaz.
      *
-     * @param dto    données du revendeur
-     * @param userId identifiant de l'utilisateur créateur
+     * @param dto               données du revendeur
+     * @param telephoneCompte   téléphone/username du compte créateur
      * @return le revendeur créé
      */
-    public Revendeur inscrire(RevendeurDTO dto, String userId) {
+    public Revendeur inscrire(RevendeurDTO dto, String telephoneCompte) {
         LocalDateTime maintenant = LocalDateTime.now();
 
         Revendeur revendeur = Revendeur.builder()
@@ -97,15 +97,16 @@ public class RevendeurService {
                 .location(dto.location())
                 .marques(dto.marques())
                 .livraison(dto.livraison())
-                .userId(userId)
+                .userId(telephoneCompte)
                 .actif(true)
                 .createdAt(maintenant)
                 .updatedAt(maintenant)
                 .build();
 
         revendeur = revendeurRepository.save(revendeur);
+        subscriptionService.syncLegacyRevendeurSubscriptionByTelephone(telephoneCompte, revendeur);
         log.info("Nouveau revendeur inscrit : {} ({})", revendeur.getNom(), revendeur.getId());
-        return revendeur;
+        return revendeurRepository.findById(revendeur.getId()).orElse(revendeur);
     }
 
     /**

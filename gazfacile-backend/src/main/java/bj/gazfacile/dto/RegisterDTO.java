@@ -22,5 +22,7 @@ public record RegisterDTO(
         String nom,
 
         /** Rôle souhaité : CLIENT ou REVENDEUR. Par défaut CLIENT. */
-        Role role
+        Role role,
+
+        String firebaseIdToken
 ) {}

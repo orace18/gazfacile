@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -13,7 +13,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RevendeurService } from '../../../core/services/revendeur.service';
 import { GeolocationService } from '../../../core/services/geolocation.service';
-import { RevendeurDTO } from '../../../core/models/revendeur.model';
+import { Revendeur, RevendeurDTO } from '../../../core/models/revendeur.model';
 
 /**
  * Formulaire d'inscription d'un nouveau revendeur de gaz.
@@ -44,8 +44,27 @@ import { RevendeurDTO } from '../../../core/models/revendeur.model';
           <p class="sous-titre">Rejoignez GazFacile et soyez visible par des milliers de clients au Bénin</p>
         </div>
 
-        <div class="formulaire-carte">
-          <mat-stepper orientation="vertical" [linear]="true" #stepper>
+        @if (chargementDepot()) {
+          <div class="etat-depot">
+            <mat-spinner diameter="40"></mat-spinner>
+            <p>Vérification de votre dépôt...</p>
+          </div>
+        } @else if (depotExistant()) {
+          <div class="etat-depot depot-existant">
+            <mat-icon>storefront</mat-icon>
+            <h2>Votre dépôt est déjà enregistré</h2>
+            <p><strong>{{ depotExistant()!.nom }}</strong> à {{ depotExistant()!.quartier }}</p>
+            <p>Vous pouvez maintenant gérer votre catalogue et vos stocks.</p>
+            <div class="actions-etape">
+              <a mat-raised-button routerLink="/revendeur/catalogue" class="btn-inscrire">
+                <mat-icon>inventory_2</mat-icon>
+                Gérer mon catalogue
+              </a>
+            </div>
+          </div>
+        } @else {
+          <div class="formulaire-carte">
+            <mat-stepper orientation="vertical" [linear]="true" #stepper>
 
             <!-- Étape 1 : Informations personnelles -->
             <mat-step [stepControl]="etape1">
@@ -231,8 +250,9 @@ import { RevendeurDTO } from '../../../core/models/revendeur.model';
               </form>
             </mat-step>
 
-          </mat-stepper>
-        </div>
+            </mat-stepper>
+          </div>
+        }
       </div>
     </div>
   `,
@@ -288,6 +308,39 @@ import { RevendeurDTO } from '../../../core/models/revendeur.model';
 
       ::ng-deep .mat-step-icon {
         background-color: var(--color-primary) !important;
+      }
+    }
+
+    .etat-depot {
+      max-width: 680px;
+      margin: 0 auto;
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+      padding: 40px 32px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: var(--color-text-muted);
+
+      mat-icon {
+        font-size: 3rem;
+        width: 3rem;
+        height: 3rem;
+        color: var(--color-primary);
+      }
+
+      h2 {
+        margin: 0;
+        font-family: 'Syne', sans-serif;
+        font-size: 1.5rem;
+        color: var(--color-text);
+      }
+
+      p {
+        margin: 0;
       }
     }
 
@@ -425,7 +478,7 @@ import { RevendeurDTO } from '../../../core/models/revendeur.model';
     }
   `]
 })
-export class RevendeurFormComponent {
+export class RevendeurFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly revendeurService = inject(RevendeurService);
   private readonly geoService = inject(GeolocationService);
@@ -435,6 +488,8 @@ export class RevendeurFormComponent {
   marques: string[] = [];
   envoi = false;
   erreur: string | null = null;
+  readonly depotExistant = signal<Revendeur | null>(null);
+  readonly chargementDepot = signal<boolean>(true);
   readonly chargementGeo = signal<boolean>(false);
   readonly positionObtenue = signal<boolean>(false);
 
@@ -451,6 +506,18 @@ export class RevendeurFormComponent {
     longitude: ['', Validators.required],
     latitude: ['', Validators.required]
   });
+
+  ngOnInit(): void {
+    this.revendeurService.getRevendeurByUserId().subscribe({
+      next: revendeur => {
+        this.depotExistant.set(revendeur);
+        this.chargementDepot.set(false);
+      },
+      error: () => {
+        this.chargementDepot.set(false);
+      }
+    });
+  }
 
   ajouterMarque(marque: string): void {
     const marqueNettoyee = marque.trim();

@@ -1,4 +1,4 @@
-import { Component, inject, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
@@ -10,7 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../../core/services/auth.service';
 import { GoogleAuthService } from '../../../core/services/google-auth.service';
-import { OtpService } from '../../../core/services/otp.service';
+import { FirebasePhoneAuthService } from '../../../core/services/firebase-phone-auth.service';
 
 @Component({
   selector: 'app-login',
@@ -59,7 +59,7 @@ import { OtpService } from '../../../core/services/otp.service';
             }
 
             <button mat-raised-button class="btn-connexion"
-              [disabled]="telephoneGoogleControl.invalid || envoiOtp"
+              [disabled]="telephoneGoogleControl.invalid || envoiOtp || !firebasePhoneConfigured"
               (click)="demanderOtpGoogle()">
               @if (envoiOtp) { <mat-spinner diameter="20"></mat-spinner> }
               @else { <mat-icon>sms</mat-icon> }
@@ -110,9 +110,21 @@ import { OtpService } from '../../../core/services/otp.service';
               Renvoyer le code
             </button>
 
-            <button mat-button (click)="etapeGoogle = 1; googleErreur = null">
+            <button mat-button (click)="revenirEtapeGoogle()">
               <mat-icon>arrow_back</mat-icon> Modifier le numéro
             </button>
+          </div>
+        }
+
+        @if (modeGoogle && !firebasePhoneConfigured) {
+          <div class="erreur-globale">
+            <mat-icon>error_outline</mat-icon> La vérification SMS Firebase n’est pas configurée.
+          </div>
+        }
+
+        @if (modeGoogle && firebasePhoneConfigured) {
+          <div class="recaptcha-bloc">
+            <div [attr.id]="recaptchaContainerId" class="recaptcha-container"></div>
           </div>
         }
 
@@ -359,14 +371,24 @@ import { OtpService } from '../../../core/services/otp.service';
         p { margin: 0; font-size: 0.88rem; color: var(--color-text); }
       }
     }
+
+    .recaptcha-bloc {
+      display: flex;
+      justify-content: center;
+      margin: 12px 0 16px;
+    }
+
+    .recaptcha-container {
+      min-height: 78px;
+    }
   `]
 })
-export class LoginComponent implements AfterViewInit {
+export class LoginComponent implements AfterViewInit, OnDestroy {
   @ViewChild('googleBtn') googleBtnRef?: ElementRef<HTMLDivElement>;
 
   private readonly authService = inject(AuthService);
   private readonly googleAuthService = inject(GoogleAuthService);
-  private readonly otpService = inject(OtpService);
+  readonly phoneAuthService = inject(FirebasePhoneAuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
@@ -381,6 +403,7 @@ export class LoginComponent implements AfterViewInit {
   modeGoogle = false;
   etapeGoogle: 1 | 2 = 1;
   private googleIdToken = '';
+  readonly recaptchaContainerId = 'login-google-phone-recaptcha';
 
   readonly formulaire = this.fb.group({
     telephone: ['', Validators.required],
@@ -392,6 +415,10 @@ export class LoginComponent implements AfterViewInit {
     Validators.required,
     Validators.pattern(/^\d{6}$/)
   ]);
+
+  get firebasePhoneConfigured(): boolean {
+    return this.phoneAuthService.estConfigure();
+  }
 
   ngAfterViewInit(): void {
     this.initialiserBoutonGoogle();
@@ -407,6 +434,7 @@ export class LoginComponent implements AfterViewInit {
       },
       error: (err) => {
         if (err?.telephoneRequis) {
+          this.phoneAuthService.reinitialiser();
           this.googleIdToken = idToken;
           this.modeGoogle = true;
           this.etapeGoogle = 1;
@@ -422,11 +450,15 @@ export class LoginComponent implements AfterViewInit {
   demanderOtpGoogle(): void {
     const telephone = this.telephoneGoogleControl.value?.trim();
     if (!telephone) return;
+    if (!this.firebasePhoneConfigured) {
+      this.googleErreur = 'La vérification SMS Firebase n’est pas configurée.';
+      return;
+    }
 
     this.envoiOtp = true;
     this.googleErreur = null;
 
-    this.otpService.envoyer(telephone).subscribe({
+    this.phoneAuthService.envoyerCode(telephone, this.recaptchaContainerId).subscribe({
       next: () => {
         this.envoiOtp = false;
         this.etapeGoogle = 2;
@@ -446,13 +478,12 @@ export class LoginComponent implements AfterViewInit {
     this.googleErreur = null;
 
     const telephone = this.telephoneGoogleControl.value!.trim();
-    const code = this.otpGoogleControl.value!;
-
-    this.otpService.verifier(telephone, code).subscribe({
-      next: () => {
-        this.googleAuthService.loginAvecGoogle(this.googleIdToken, telephone).subscribe({
+    this.phoneAuthService.verifierCode(this.otpGoogleControl.value!).subscribe({
+      next: (verification) => {
+        this.googleAuthService.loginAvecGoogle(this.googleIdToken, telephone, undefined, verification.firebaseIdToken).subscribe({
           next: (auth) => {
             this.envoi = false;
+            this.phoneAuthService.reinitialiser();
             this.authService.sauvegarderSession(auth);
             const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
             this.router.navigate([returnUrl]);
@@ -477,6 +508,14 @@ export class LoginComponent implements AfterViewInit {
     this.googleErreur = null;
     this.telephoneGoogleControl.reset();
     this.otpGoogleControl.reset();
+    this.phoneAuthService.reinitialiser();
+  }
+
+  revenirEtapeGoogle(): void {
+    this.etapeGoogle = 1;
+    this.googleErreur = null;
+    this.otpGoogleControl.reset();
+    this.phoneAuthService.reinitialiser();
   }
 
   private initialiserBoutonGoogle(): void {
@@ -526,5 +565,9 @@ export class LoginComponent implements AfterViewInit {
         this.erreur = err.message || 'Identifiants incorrects';
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.phoneAuthService.reinitialiser();
   }
 }

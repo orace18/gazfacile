@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, ViewChild, inject, OnInit } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -14,7 +14,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../core/services/auth.service';
-import { OtpService } from '../../../core/services/otp.service';
+import { FirebasePhoneAuthService } from '../../../core/services/firebase-phone-auth.service';
 import { GoogleAuthService } from '../../../core/services/google-auth.service';
 import { InscriptionStateService } from '../../../core/services/inscription-state.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
@@ -154,7 +154,7 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
             }
 
             <button mat-raised-button type="submit" class="btn-inscription"
-              [disabled]="envoiOtp || envoi || formulaire.get('telephone')?.invalid || formulaire.get('telephonePaiement')?.invalid">
+              [disabled]="envoiOtp || envoi || (!googleSessionActive && !firebasePhoneConfigured) || formulaire.get('telephone')?.invalid || formulaire.get('telephonePaiement')?.invalid">
               @if (envoiOtp || envoi) { <mat-spinner diameter="20"></mat-spinner> }
               @else if (googleSessionActive) { <mat-icon>payments</mat-icon> }
               @else { <mat-icon>sms</mat-icon> }
@@ -202,9 +202,21 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
               Renvoyer le code
             </button>
 
-            <button mat-button (click)="etape = 1; erreur = null">
+            <button mat-button (click)="modifierNumero()">
               <mat-icon>arrow_back</mat-icon> Modifier le numéro
             </button>
+          </div>
+        }
+
+        @if (!googleSessionActive && !firebasePhoneConfigured) {
+          <div class="erreur-globale">
+            <mat-icon>error_outline</mat-icon> La vérification SMS Firebase n’est pas configurée.
+          </div>
+        }
+
+        @if (!googleSessionActive && firebasePhoneConfigured) {
+          <div class="recaptcha-bloc">
+            <div [attr.id]="recaptchaContainerId" class="recaptcha-container"></div>
           </div>
         }
 
@@ -360,6 +372,16 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       p { margin: 0; font-size: 0.88rem; color: var(--color-text); }
     }
 
+    .recaptcha-bloc {
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
+    }
+
+    .recaptcha-container {
+      min-height: 78px;
+    }
+
     .erreur-globale {
       display: flex;
       align-items: center;
@@ -410,12 +432,12 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
     }
   `]
 })
-export class RegisterFormComponent implements OnInit, AfterViewInit {
+export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('googleBtn') googleBtnRef?: ElementRef<HTMLDivElement>;
 
   private readonly authService = inject(AuthService);
   private readonly googleAuthService = inject(GoogleAuthService);
-  private readonly otpService = inject(OtpService);
+  readonly phoneAuthService = inject(FirebasePhoneAuthService);
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly paiementService = inject(PaiementService);
   private readonly router = inject(Router);
@@ -434,6 +456,8 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
   erreur: string | null = null;
   googleErreur: string | null = null;
   googleBtnRendu = false;
+  readonly recaptchaContainerId = 'register-phone-recaptcha';
+  private firebaseIdToken = '';
 
   readonly formulaire = this.fb.group({
     nom: ['', Validators.required],
@@ -451,6 +475,10 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
 
   private get role(): Role {
     return this.inscriptionState.role() ?? Role.CLIENT;
+  }
+
+  get firebasePhoneConfigured(): boolean {
+    return this.phoneAuthService.estConfigure();
   }
 
   ngOnInit(): void {
@@ -496,11 +524,16 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
   demanderOtp(): void {
     const telephone = this.formulaire.get('telephone')?.value?.trim();
     if (!telephone) return;
+    if (!this.firebasePhoneConfigured) {
+      this.erreur = 'La vérification SMS Firebase n’est pas configurée.';
+      return;
+    }
 
     this.envoiOtp = true;
     this.erreur = null;
+    this.firebaseIdToken = '';
 
-    this.otpService.envoyer(telephone).subscribe({
+    this.phoneAuthService.envoyerCode(telephone, this.recaptchaContainerId).subscribe({
       next: () => {
         this.envoiOtp = false;
         this.etape = 2;
@@ -520,10 +553,10 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
     this.erreur = null;
 
     const telephone = this.formulaire.get('telephone')!.value!.trim();
-    const code = this.otpControl.value!;
 
-    this.otpService.verifier(telephone, code).subscribe({
-      next: () => {
+    this.phoneAuthService.verifierCode(this.otpControl.value!).subscribe({
+      next: (verification) => {
+        this.firebaseIdToken = verification.firebaseIdToken;
         if (this.modeGoogle) {
           this.lierGoogle(telephone);
         } else {
@@ -551,7 +584,8 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
       password: this.formulaire.value.password!,
       role: this.role,
       accountType: state.role() ?? undefined,
-      clientNeed: state.clientNeed() ?? undefined
+      clientNeed: state.clientNeed() ?? undefined,
+      firebaseIdToken: this.firebaseIdToken
     }).subscribe({
       next: () => {
         this.lancerSouscription();
@@ -576,10 +610,12 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
 
     this.subscriptionService.subscribe(plan.id, telephonePaiement).subscribe({
       next: (response) => {
+        this.phoneAuthService.reinitialiser();
         this.inscriptionState.reset();
         this.paiementService.redirectVersCheckout(response.checkoutUrl);
       },
       error: err => {
+        this.phoneAuthService.reinitialiser();
         this.envoi = false;
         this.erreur = err.message || 'Inscription réussie mais erreur lors du paiement. Vous pouvez souscrire depuis votre profil.';
       }
@@ -587,7 +623,7 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
   }
 
   private lierGoogle(telephone: string): void {
-    this.googleAuthService.loginAvecGoogle(this.googleToken, telephone, this.role).subscribe({
+    this.googleAuthService.loginAvecGoogle(this.googleToken, telephone, this.role, this.firebaseIdToken).subscribe({
       next: (auth) => {
         this.authService.sauvegarderSession(auth);
         this.lancerSouscription();
@@ -636,6 +672,7 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
       },
       error: (err) => {
         if (err?.telephoneRequis) {
+          this.phoneAuthService.reinitialiser();
           this.activerModeGoogle(idToken);
           this.etape = 1;
           this.erreur = null;
@@ -655,5 +692,16 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
     this.formulaire.get('password')?.clearValidators();
     this.formulaire.get('confirmPassword')?.clearValidators();
     this.formulaire.updateValueAndValidity();
+  }
+
+  modifierNumero(): void {
+    this.etape = 1;
+    this.erreur = null;
+    this.firebaseIdToken = '';
+    this.phoneAuthService.reinitialiser();
+  }
+
+  ngOnDestroy(): void {
+    this.phoneAuthService.reinitialiser();
   }
 }

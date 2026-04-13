@@ -32,11 +32,14 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final OtpService otpService;
     private final GoogleTokenService googleTokenService;
+    private final FirebasePhoneTokenService firebasePhoneTokenService;
 
     // ── Inscription / Connexion classique ────────────────────────────────────
 
     public AuthResponseDTO register(RegisterDTO dto) {
-        if (userRepository.existsByTelephone(dto.telephone())) {
+        String telephone = firebasePhoneTokenService.normaliserTelephoneLocal(dto.telephone());
+
+        if (userRepository.existsByTelephone(telephone)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Ce numéro de téléphone est déjà associé à un compte");
         }
@@ -45,16 +48,20 @@ public class AuthService {
                     "Cette adresse email est déjà associée à un compte");
         }
 
+        FirebasePhoneTokenService.VerifiedPhoneIdentity phoneIdentity =
+                firebasePhoneTokenService.verifierTelephone(dto.firebaseIdToken(), telephone);
+
         Role role = (dto.role() != null) ? dto.role() : Role.CLIENT;
         if (role == Role.ADMIN) role = Role.CLIENT;
 
         User utilisateur = User.builder()
-                .telephone(dto.telephone())
+                .telephone(phoneIdentity.telephoneLocal())
                 .email(dto.email())
                 .password(passwordEncoder.encode(dto.password()))
                 .nom(dto.nom())
                 .roles(Set.of(role))
-                .telephoneVerifie(false)
+                .firebaseUid(phoneIdentity.firebaseUid())
+                .telephoneVerifie(true)
                 .actif(true)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -65,10 +72,12 @@ public class AuthService {
     }
 
     public AuthResponseDTO login(LoginDTO dto) {
+        String telephone = firebasePhoneTokenService.normaliserTelephoneLocal(dto.telephone());
+
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(dto.telephone(), dto.password())
+                new UsernamePasswordAuthenticationToken(telephone, dto.password())
         );
-        User utilisateur = userRepository.findByTelephone(dto.telephone())
+        User utilisateur = userRepository.findByTelephone(telephone)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Utilisateur introuvable"));
         log.info("Connexion réussie : {}", utilisateur.getTelephone());
@@ -144,10 +153,15 @@ public class AuthService {
                     "TELEPHONE_REQUIS");
         }
 
-        if (userRepository.existsByTelephone(dto.telephone())) {
+        FirebasePhoneTokenService.VerifiedPhoneIdentity phoneIdentity =
+                firebasePhoneTokenService.verifierTelephone(dto.firebaseIdToken(), dto.telephone());
+
+        if (userRepository.existsByTelephone(phoneIdentity.telephoneLocal())) {
             // Le téléphone existe déjà — lier les comptes
-            utilisateur = userRepository.findByTelephone(dto.telephone()).get();
+            utilisateur = userRepository.findByTelephone(phoneIdentity.telephoneLocal()).get();
             utilisateur.setGoogleId(info.googleId());
+            utilisateur.setFirebaseUid(phoneIdentity.firebaseUid());
+            utilisateur.setTelephoneVerifie(true);
             if (utilisateur.getEmail() == null || utilisateur.getEmail().isBlank()) {
                 utilisateur.setEmail(info.email());
             }
@@ -158,13 +172,14 @@ public class AuthService {
 
         // Créer un nouveau compte
         utilisateur = User.builder()
-                .telephone(dto.telephone())
+                .telephone(phoneIdentity.telephoneLocal())
                 .email(info.email())
                 .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                 .nom(info.nom())
                 .googleId(info.googleId())
+                .firebaseUid(phoneIdentity.firebaseUid())
                 .roles(Set.of(role))
-                .telephoneVerifie(false)
+                .telephoneVerifie(true)
                 .actif(true)
                 .createdAt(LocalDateTime.now())
                 .build();

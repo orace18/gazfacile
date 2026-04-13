@@ -296,6 +296,7 @@ export interface RegisterDTO {
   role?: Role;
   accountType?: string;
   clientNeed?: string;
+  firebaseIdToken: string;
 }
 
 /** DTO plan d'abonnement (depuis le backend). */

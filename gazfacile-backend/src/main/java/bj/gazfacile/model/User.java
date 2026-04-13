@@ -51,6 +51,10 @@ public class User implements UserDetails {
     @Indexed(sparse = true)
     private String googleId;
 
+    /** UID Firebase Auth si le téléphone a été vérifié via Phone Auth. */
+    @Indexed(unique = true, sparse = true)
+    private String firebaseUid;
+
     /** Vrai si le numéro de téléphone a été vérifié par OTP. */
     @Builder.Default
     private boolean telephoneVerifie = false;

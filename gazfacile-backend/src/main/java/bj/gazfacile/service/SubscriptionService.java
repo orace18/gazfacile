@@ -5,12 +5,15 @@ import bj.gazfacile.dto.AdminSubscriptionPlanDTO;
 import bj.gazfacile.dto.PaiementInitDTO;
 import bj.gazfacile.dto.SubscriptionDTO;
 import bj.gazfacile.dto.SubscriptionPlanDTO;
+import bj.gazfacile.model.Revendeur;
 import bj.gazfacile.model.Subscription;
 import bj.gazfacile.model.SubscriptionPlan;
 import bj.gazfacile.model.User;
+import bj.gazfacile.model.enums.Abonnement;
 import bj.gazfacile.model.enums.PlanType;
 import bj.gazfacile.model.enums.SubscriptionStatus;
 import bj.gazfacile.model.enums.TypeTransaction;
+import bj.gazfacile.repository.RevendeurRepository;
 import bj.gazfacile.repository.SubscriptionPlanRepository;
 import bj.gazfacile.repository.SubscriptionRepository;
 import bj.gazfacile.repository.UserRepository;
@@ -21,7 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -34,6 +39,7 @@ public class SubscriptionService {
     private final SubscriptionPlanRepository planRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final UserRepository userRepository;
+    private final RevendeurRepository revendeurRepository;
 
     /**
      * Liste les plans actifs par type.
@@ -169,6 +175,7 @@ public class SubscriptionService {
         subscription.setStatut(SubscriptionStatus.ACTIVE);
         subscription.setTransactionId(transactionId);
         subscriptionRepository.save(subscription);
+        syncLegacyRevendeurSubscription(subscription.getUserId(), plan, subscription.getDateFin());
 
         log.info("[Subscription] Activée — id: {}, plan: {}, fin: {}",
                 subscriptionId, plan.getCode(), subscription.getDateFin());
@@ -218,13 +225,19 @@ public class SubscriptionService {
     }
 
     /**
-     * Retourne les userIds ayant une subscription ACTIVE de type REVENDEUR.
+     * Retourne les identifiants de compte d'un revendeur actif.
+     * Compatibilité: inclut l'id Mongo user ET le téléphone utilisé comme username.
      */
     public Set<String> getActiveRevendeurUserIds() {
-        return subscriptionRepository.findByStatutAndPlanType(SubscriptionStatus.ACTIVE, PlanType.REVENDEUR)
+        Set<String> userIds = subscriptionRepository.findByStatutAndPlanType(SubscriptionStatus.ACTIVE, PlanType.REVENDEUR)
                 .stream()
                 .map(Subscription::getUserId)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
+
+        Set<String> accountIdentifiers = new HashSet<>(userIds);
+        userRepository.findAllById(userIds).forEach(user -> accountIdentifiers.add(user.getTelephone()));
+        return accountIdentifiers;
     }
 
     /**
@@ -259,6 +272,16 @@ public class SubscriptionService {
      */
     public boolean hasActiveSubscription(String userId) {
         return subscriptionRepository.findByUserIdAndStatut(userId, SubscriptionStatus.ACTIVE).isPresent();
+    }
+
+    public void syncLegacyRevendeurSubscriptionByTelephone(String telephone, Revendeur revendeur) {
+        getCurrentSubscription(telephone)
+                .filter(sub -> sub.planType() == PlanType.REVENDEUR)
+                .ifPresent(sub -> {
+                    revendeur.setAbonnement(mapLegacyAbonnement(sub.planCode(), sub.dateFin()));
+                    revendeur.setAbonnementExpiry(sub.dateFin());
+                    revendeurRepository.save(revendeur);
+                });
     }
 
     // ── Admin : gestion des plans ────────────────────────────────────────────
@@ -325,6 +348,38 @@ public class SubscriptionService {
         plan = planRepository.save(plan);
         log.info("[Admin] Plan mis à jour : {} ({})", plan.getNom(), plan.getCode());
         return AdminSubscriptionPlanDTO.from(plan);
+    }
+
+    private void syncLegacyRevendeurSubscription(String userId, SubscriptionPlan plan, LocalDateTime dateFin) {
+        if (plan.getType() != PlanType.REVENDEUR) {
+            return;
+        }
+
+        userRepository.findById(userId)
+                .flatMap(user -> revendeurRepository.findByUserId(user.getTelephone()))
+                .ifPresent(revendeur -> {
+                    revendeur.setAbonnement(mapLegacyAbonnement(plan.getCode(), dateFin));
+                    revendeur.setAbonnementExpiry(dateFin);
+                    revendeurRepository.save(revendeur);
+                });
+    }
+
+    private Abonnement mapLegacyAbonnement(String planCode, LocalDateTime dateFin) {
+        if (planCode == null) {
+            return Abonnement.GRATUIT;
+        }
+
+        String code = planCode.toUpperCase();
+        if (code.contains("MAX") || code.contains("ANNUEL")) return Abonnement.ANNUEL;
+        if (code.contains("PRO")) return Abonnement.ANNUEL;
+        if (code.contains("DIAMOND") || code.contains("SEMESTRIEL")) return Abonnement.SEMESTRIEL;
+        if (code.contains("GOLD") || code.contains("TRIMESTRIEL")) return Abonnement.TRIMESTRIEL;
+
+        if (dateFin != null) {
+            return Abonnement.MENSUEL;
+        }
+
+        return Abonnement.TEST;
     }
 
     /**

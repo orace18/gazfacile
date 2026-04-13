@@ -102,8 +102,8 @@ public class RevendeurController {
             @Valid @RequestBody RevendeurDTO dto,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        String userId = userDetails.getUsername();
-        Revendeur revendeur = revendeurService.inscrire(dto, userId);
+        String telephoneCompte = userDetails.getUsername();
+        Revendeur revendeur = revendeurService.inscrire(dto, telephoneCompte);
         return ResponseEntity.status(HttpStatus.CREATED).body(revendeur);
     }
 

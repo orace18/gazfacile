@@ -14,6 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { RevendeurService } from '../../../core/services/revendeur.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { SubscriptionService } from '../../../core/services/subscription.service';
 import {
   ProduitRevendeur,
   ProduitRevendeurDTO,
@@ -21,8 +22,7 @@ import {
   FormatBouteille,
   MARQUES_LABELS,
   FORMATS_LABELS,
-  Revendeur,
-  Abonnement
+  Revendeur
 } from '../../../core/models/revendeur.model';
 import { StockBadgeComponent } from '../../../shared/components/stock-badge/stock-badge.component';
 
@@ -89,7 +89,7 @@ import { StockBadgeComponent } from '../../../shared/components/stock-badge/stoc
         @if (!chargement() && revendeur()) {
 
           <!-- Bannière abonnement requis -->
-          @if (revendeur()!.abonnement === Abonnement.GRATUIT) {
+          @if (!abonnementActif()) {
             <div class="banniere-abonnement">
               <mat-icon>workspace_premium</mat-icon>
               <div>
@@ -159,7 +159,7 @@ import { StockBadgeComponent } from '../../../shared/components/stock-badge/stoc
 
               <div class="form-actions">
                 <button mat-raised-button type="submit" class="btn-valider"
-                        [disabled]="formulaire.invalid || envoi() || revendeur()!.abonnement === Abonnement.GRATUIT">
+                        [disabled]="formulaire.invalid || envoi() || !abonnementActif()">
                   @if (envoi()) {
                     <mat-spinner diameter="18"></mat-spinner>
                   } @else {
@@ -638,15 +638,16 @@ export class GestionCatalogueComponent implements OnInit {
 
   private readonly revendeurService = inject(RevendeurService);
   private readonly authService = inject(AuthService);
+  private readonly subscriptionService = inject(SubscriptionService);
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
 
-  readonly Abonnement = Abonnement;
   readonly revendeur = signal<Revendeur | null>(null);
   readonly produits = signal<ProduitRevendeur[]>([]);
   readonly chargement = signal(true);
   readonly envoi = signal(false);
   readonly produitEnEdition = signal<ProduitRevendeur | null>(null);
+  readonly abonnementActif = signal(false);
 
   readonly colonnes = ['marque', 'format', 'prix', 'quantite', 'disponible', 'actions'];
 
@@ -677,6 +678,7 @@ export class GestionCatalogueComponent implements OnInit {
     this.revendeurService.getRevendeurByUserId().subscribe({
       next: r => {
         this.revendeur.set(r);
+        this.chargerAbonnement();
         this.chargerCatalogue(r.id);
       },
       error: () => {
@@ -694,6 +696,17 @@ export class GestionCatalogueComponent implements OnInit {
       error: () => {
         this.snackBar.open('Erreur lors du chargement du catalogue', 'Fermer', { duration: 4000 });
         this.chargement.set(false);
+      }
+    });
+  }
+
+  private chargerAbonnement(): void {
+    this.subscriptionService.getCurrent().subscribe({
+      next: sub => {
+        this.abonnementActif.set(Boolean(sub && sub.planType === 'REVENDEUR' && sub.statut === 'ACTIVE'));
+      },
+      error: () => {
+        this.abonnementActif.set(false);
       }
     });
   }

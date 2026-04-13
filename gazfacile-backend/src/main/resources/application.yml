@@ -38,6 +38,10 @@ google:
   # Client ID OAuth2 de votre projet Google Cloud Console
   client-id: ${GOOGLE_CLIENT_ID:}
 
+firebase:
+  # JSON complet du service account Firebase Admin
+  service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON:}
+
 logging:
   level:
     bj.gazfacile: DEBUG
