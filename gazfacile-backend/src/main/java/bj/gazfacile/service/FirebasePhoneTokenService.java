@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
 import com.google.firebase.auth.UserRecord;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -19,9 +20,12 @@ import java.nio.charset.StandardCharsets;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class FirebasePhoneTokenService {
 
     private static final String FIREBASE_APP_NAME = "gazfacile-phone-auth";
+
+    private final PhoneNumberService phoneNumberService;
 
     @Value("${firebase.service-account-json:}")
     private String serviceAccountJson;
@@ -95,19 +99,11 @@ public class FirebasePhoneTokenService {
     }
 
     public String normaliserTelephoneLocal(String telephone) {
-        if (telephone == null || telephone.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le numéro de téléphone est obligatoire");
-        }
-
-        return telephone
-                .replaceFirst("^\\+229", "")
-                .replaceFirst("^00229", "")
-                .replaceAll("\\s+", "")
-                .trim();
+        return phoneNumberService.normaliserTelephoneLocal(telephone);
     }
 
     public String normaliserTelephoneInternational(String telephone) {
-        return "+229" + normaliserTelephoneLocal(telephone);
+        return phoneNumberService.normaliserTelephoneInternational(telephone);
     }
 
     public record VerifiedPhoneIdentity(

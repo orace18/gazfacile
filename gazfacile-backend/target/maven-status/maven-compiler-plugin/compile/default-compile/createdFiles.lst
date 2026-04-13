@@ -59,6 +59,7 @@ bj/gazfacile/controller/AvisController.class
 bj/gazfacile/GazFacileApplication.class
 bj/gazfacile/repository/RevendeurRepository.class
 bj/gazfacile/model/Avis.class
+bj/gazfacile/dto/OtpLoginDTO.class
 bj/gazfacile/service/ProduitRevendeurService.class
 bj/gazfacile/controller/SubscriptionController.class
 bj/gazfacile/dto/SubscriptionDTO.class
@@ -108,6 +109,7 @@ bj/gazfacile/model/SubscriptionPlan.class
 bj/gazfacile/model/enums/FormatBouteille.class
 bj/gazfacile/model/Commande.class
 bj/gazfacile/service/CommandeService.class
+bj/gazfacile/service/PhoneNumberService.class
 bj/gazfacile/dto/GoogleLoginDTO.class
 bj/gazfacile/config/AbonnementScheduler.class
 bj/gazfacile/exception/ResourceNotFoundException.class

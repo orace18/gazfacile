@@ -290,13 +290,17 @@ export interface LoginDTO {
 /** DTO pour l'inscription. */
 export interface RegisterDTO {
   telephone: string;
-  email?: string;
-  password: string;
   nom: string;
   role?: Role;
   accountType?: string;
   clientNeed?: string;
-  firebaseIdToken: string;
+  otpCode: string;
+}
+
+/** DTO pour la connexion OTP. */
+export interface OtpLoginDTO {
+  telephone: string;
+  code: string;
 }
 
 /** DTO plan d'abonnement (depuis le backend). */

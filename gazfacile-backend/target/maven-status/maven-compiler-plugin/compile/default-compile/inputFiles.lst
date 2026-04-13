@@ -31,6 +31,7 @@
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/GoogleLoginDTO.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/LoginDTO.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/OtpEnvoyerDTO.java
+/home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/OtpLoginDTO.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/OtpVerifierDTO.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/PaiementInitDTO.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/dto/PaiementResponseDTO.java
@@ -97,6 +98,7 @@
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/NotificationService.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/OtpService.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/PaiementService.java
+/home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/PhoneNumberService.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/ProduitRevendeurService.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/RevendeurService.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/SmsService.java

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap, catchError, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { AuthResponse, LoginDTO, RegisterDTO, Role } from '../models/revendeur.model';
+import { AuthResponse, LoginDTO, OtpLoginDTO, RegisterDTO, Role } from '../models/revendeur.model';
 
 const CLE_TOKEN = 'gf_token';
 const CLE_USER = 'gf_user';
@@ -36,6 +36,20 @@ export class AuthService {
       tap(reponse => this.sauvegarderSession(reponse)),
       catchError(err => {
         const message = err.error?.message || 'Numéro de téléphone ou mot de passe incorrect';
+        return throwError(() => new Error(message));
+      })
+    );
+  }
+
+  /**
+   * Authentifie un utilisateur avec un code OTP déjà reçu par SMS.
+   * Stocke le token en localStorage.
+   */
+  loginAvecOtp(dto: OtpLoginDTO): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/login/otp`, dto).pipe(
+      tap(reponse => this.sauvegarderSession(reponse)),
+      catchError(err => {
+        const message = err.error?.message || 'Numéro de téléphone ou code OTP incorrect';
         return throwError(() => new Error(message));
       })
     );

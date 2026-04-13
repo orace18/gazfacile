@@ -3,6 +3,7 @@ package bj.gazfacile.service;
 import bj.gazfacile.dto.AuthResponseDTO;
 import bj.gazfacile.dto.GoogleLoginDTO;
 import bj.gazfacile.dto.LoginDTO;
+import bj.gazfacile.dto.OtpLoginDTO;
 import bj.gazfacile.dto.RegisterDTO;
 import bj.gazfacile.model.User;
 import bj.gazfacile.model.enums.Role;
@@ -33,34 +34,27 @@ public class AuthService {
     private final OtpService otpService;
     private final GoogleTokenService googleTokenService;
     private final FirebasePhoneTokenService firebasePhoneTokenService;
+    private final PhoneNumberService phoneNumberService;
 
     // ── Inscription / Connexion classique ────────────────────────────────────
 
     public AuthResponseDTO register(RegisterDTO dto) {
-        String telephone = firebasePhoneTokenService.normaliserTelephoneLocal(dto.telephone());
+        String telephone = phoneNumberService.normaliserTelephoneLocal(dto.telephone());
 
         if (userRepository.existsByTelephone(telephone)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Ce numéro de téléphone est déjà associé à un compte");
         }
-        if (dto.email() != null && !dto.email().isBlank() && userRepository.existsByEmail(dto.email())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Cette adresse email est déjà associée à un compte");
-        }
-
-        FirebasePhoneTokenService.VerifiedPhoneIdentity phoneIdentity =
-                firebasePhoneTokenService.verifierTelephone(dto.firebaseIdToken(), telephone);
+        otpService.verifierOtp(telephone, dto.otpCode());
 
         Role role = (dto.role() != null) ? dto.role() : Role.CLIENT;
         if (role == Role.ADMIN) role = Role.CLIENT;
 
         User utilisateur = User.builder()
-                .telephone(phoneIdentity.telephoneLocal())
-                .email(dto.email())
-                .password(passwordEncoder.encode(dto.password()))
+                .telephone(telephone)
+                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                 .nom(dto.nom())
                 .roles(Set.of(role))
-                .firebaseUid(phoneIdentity.firebaseUid())
                 .telephoneVerifie(true)
                 .actif(true)
                 .createdAt(LocalDateTime.now())
@@ -72,7 +66,7 @@ public class AuthService {
     }
 
     public AuthResponseDTO login(LoginDTO dto) {
-        String telephone = firebasePhoneTokenService.normaliserTelephoneLocal(dto.telephone());
+        String telephone = phoneNumberService.normaliserTelephoneLocal(dto.telephone());
 
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(telephone, dto.password())
@@ -84,6 +78,24 @@ public class AuthService {
         return construireReponse(utilisateur);
     }
 
+    public AuthResponseDTO loginParOtp(OtpLoginDTO dto) {
+        String telephone = phoneNumberService.normaliserTelephoneLocal(dto.telephone());
+
+        otpService.verifierOtp(telephone, dto.code());
+
+        User utilisateur = userRepository.findByTelephone(telephone)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Aucun compte n'existe pour ce numéro"));
+
+        if (!utilisateur.isTelephoneVerifie()) {
+            utilisateur.setTelephoneVerifie(true);
+            userRepository.save(utilisateur);
+        }
+
+        log.info("Connexion OTP réussie : {}", utilisateur.getTelephone());
+        return construireReponse(utilisateur);
+    }
+
     // ── OTP ──────────────────────────────────────────────────────────────────
 
     /**
@@ -91,7 +103,7 @@ public class AuthService {
      * Peut être appelé avant ou après l'inscription.
      */
     public void envoyerOtp(String telephone) {
-        otpService.envoyerOtp(telephone);
+        otpService.envoyerOtp(phoneNumberService.normaliserTelephoneLocal(telephone));
     }
 
     /**
@@ -100,13 +112,15 @@ public class AuthService {
      * @throws ResponseStatusException 404 si l'utilisateur n'existe pas encore
      */
     public void verifierOtp(String telephone, String code) {
-        otpService.verifierOtp(telephone, code);
+        String telephoneLocal = phoneNumberService.normaliserTelephoneLocal(telephone);
+
+        otpService.verifierOtp(telephoneLocal, code);
 
         // Marquer le téléphone comme vérifié si l'utilisateur existe
-        userRepository.findByTelephone(telephone).ifPresent(u -> {
+        userRepository.findByTelephone(telephoneLocal).ifPresent(u -> {
             u.setTelephoneVerifie(true);
             userRepository.save(u);
-            log.info("[OTP] Téléphone {} marqué vérifié", telephone);
+            log.info("[OTP] Téléphone {} marqué vérifié", telephoneLocal);
         });
     }
 

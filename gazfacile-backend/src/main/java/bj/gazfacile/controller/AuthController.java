@@ -33,6 +33,11 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(dto));
     }
 
+    @PostMapping("/login/otp")
+    public ResponseEntity<AuthResponseDTO> loginParOtp(@Valid @RequestBody OtpLoginDTO dto) {
+        return ResponseEntity.ok(authService.loginParOtp(dto));
+    }
+
     // ── OTP ──────────────────────────────────────────────────────────────────
 
     /** Envoie un code OTP par SMS au numéro donné. */

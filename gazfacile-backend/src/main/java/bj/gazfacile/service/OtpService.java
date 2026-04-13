@@ -21,6 +21,7 @@ public class OtpService {
 
     private final OtpRepository otpRepository;
     private final SmsService smsService;
+    private final PhoneNumberService phoneNumberService;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -29,21 +30,23 @@ public class OtpService {
      * Supprime les anciens OTP du même numéro pour éviter les doublons.
      */
     public void envoyerOtp(String telephone) {
+        String telephoneLocal = phoneNumberService.normaliserTelephoneLocal(telephone);
+
         // Nettoyer les anciens OTP
-        otpRepository.deleteAllByTelephone(telephone);
+        otpRepository.deleteAllByTelephone(telephoneLocal);
 
         String code = String.format("%06d", RANDOM.nextInt(1_000_000));
 
         OtpRecord record = OtpRecord.builder()
-                .telephone(telephone)
+                .telephone(telephoneLocal)
                 .code(code)
                 .expiresAt(LocalDateTime.now().plusMinutes(OtpRecord.EXPIRATION_MINUTES))
                 .utilise(false)
                 .build();
 
         otpRepository.save(record);
-        smsService.envoyerOtp(telephone, code);
-        log.info("[OTP] Code généré pour {}", telephone);
+        smsService.envoyerOtp(phoneNumberService.normaliserTelephoneInternational(telephoneLocal), code);
+        log.info("[OTP] Code généré pour {}", telephoneLocal);
     }
 
     /**
@@ -52,8 +55,10 @@ public class OtpService {
      * @throws ResponseStatusException 400 si le code est invalide ou expiré
      */
     public void verifierOtp(String telephone, String code) {
+        String telephoneLocal = phoneNumberService.normaliserTelephoneLocal(telephone);
+
         OtpRecord record = otpRepository
-                .findTopByTelephoneAndUtiliseFalseOrderByExpiresAtDesc(telephone)
+                .findTopByTelephoneAndUtiliseFalseOrderByExpiresAtDesc(telephoneLocal)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Aucun code OTP en attente pour ce numéro"));
 
@@ -67,6 +72,6 @@ public class OtpService {
 
         record.setUtilise(true);
         otpRepository.save(record);
-        log.info("[OTP] Numéro {} vérifié avec succès", telephone);
+        log.info("[OTP] Numéro {} vérifié avec succès", telephoneLocal);
     }
 }

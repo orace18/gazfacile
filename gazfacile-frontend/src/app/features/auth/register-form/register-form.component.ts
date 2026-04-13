@@ -1,35 +1,18 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject, OnInit } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  ReactiveFormsModule,
-  FormBuilder,
-  Validators,
-  AbstractControl,
-  ValidationErrors
-} from '@angular/forms';
-import { Router, RouterLink, ActivatedRoute } from '@angular/router';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../core/services/auth.service';
-import { FirebasePhoneAuthService } from '../../../core/services/firebase-phone-auth.service';
-import { GoogleAuthService } from '../../../core/services/google-auth.service';
+import { OtpService } from '../../../core/services/otp.service';
 import { InscriptionStateService } from '../../../core/services/inscription-state.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import { PaiementService } from '../../../core/services/paiement.service';
 import { Role } from '../../../core/models/revendeur.model';
-
-function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null {
-  const password = control.get('password');
-  const confirm = control.get('confirmPassword');
-  if (password && confirm && password.value !== confirm.value) {
-    confirm.setErrors({ mismatch: true });
-    return { mismatch: true };
-  }
-  return null;
-}
 
 @Component({
   selector: 'app-register-form',
@@ -49,11 +32,10 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
       <div class="carte-auth">
         <div class="entete-auth">
           <img src="assets/logo.svg" alt="GazFacile" class="logo-auth">
-          <h1>{{ titrePage }}</h1>
-          <p class="sous-titre">{{ sousTitrePage }}</p>
+          <h1>Créer mon compte</h1>
+          <p class="sous-titre">Inscription rapide en deux étapes avant le paiement.</p>
         </div>
 
-        <!-- Résumé du choix -->
         @if (inscriptionState.resumeLabel()) {
           <div class="resume-choix">
             <mat-icon>info</mat-icon>
@@ -62,161 +44,127 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
           </div>
         }
 
-        <!-- ÉTAPE 1 : Formulaire -->
+        <div class="etapes-header">
+          <div class="etape-badge" [class.active]="etape === 1">1. Nom</div>
+          <div class="etape-badge" [class.active]="etape === 2">2. Téléphone</div>
+        </div>
+
         @if (etape === 1) {
-          @if (!modeGoogle) {
-            <div class="bloc-google">
-              <div #googleBtn class="google-btn-container"></div>
-              @if (googleErreur) {
-                <p class="erreur-google">{{ googleErreur }}</p>
-              }
-            </div>
-
-            <div class="separateur">
-              <span class="separateur-texte">ou</span>
-            </div>
-          }
-
-          <form [formGroup]="formulaire" (ngSubmit)="continuerEtape1()" class="formulaire">
-
-            @if (!modeGoogle) {
-              <mat-form-field appearance="outline" class="champ-pleine-largeur">
-                <mat-label>Nom complet</mat-label>
-                <input matInput formControlName="nom" placeholder="Ex: Koffi Djossou">
-                <mat-icon matPrefix>person</mat-icon>
-                @if (formulaire.get('nom')?.invalid && formulaire.get('nom')?.touched) {
-                  <mat-error>Le nom est obligatoire</mat-error>
-                }
-              </mat-form-field>
-            }
-
+          <form [formGroup]="nomForm" class="formulaire" (ngSubmit)="continuerVersTelephone()">
             <mat-form-field appearance="outline" class="champ-pleine-largeur">
-              <mat-label>Numéro de téléphone</mat-label>
-              <input matInput formControlName="telephone" placeholder="97000000" type="tel"
-                [readonly]="googleSessionActive">
-              <div matPrefix class="prefixe-tel">+229</div>
-              @if (formulaire.get('telephone')?.invalid && formulaire.get('telephone')?.touched) {
-                <mat-error>Le numéro de téléphone est obligatoire</mat-error>
+              <mat-label>Nom complet</mat-label>
+              <input matInput formControlName="nom" placeholder="Ex: Koffi Djossou">
+              <mat-icon matPrefix>person</mat-icon>
+              @if (nomForm.get('nom')?.invalid && nomForm.get('nom')?.touched) {
+                <mat-error>Le nom est obligatoire</mat-error>
               }
             </mat-form-field>
 
-            <mat-form-field appearance="outline" class="champ-pleine-largeur">
-              <mat-label>Numéro Mobile Money pour le paiement</mat-label>
-              <input matInput formControlName="telephonePaiement" placeholder="97000000" type="tel">
-              <div matPrefix class="prefixe-tel">+229</div>
-              <mat-hint>Utilisez le numéro à débiter pour le paiement. Il peut être différent du numéro du compte.</mat-hint>
-              @if (formulaire.get('telephonePaiement')?.hasError('pattern') && formulaire.get('telephonePaiement')?.touched) {
-                <mat-error>Format invalide (ex: 97000000)</mat-error>
-              }
-            </mat-form-field>
-
-            @if (!modeGoogle) {
-              <mat-form-field appearance="outline" class="champ-pleine-largeur">
-                <mat-label>Email (optionnel)</mat-label>
-                <input matInput type="email" formControlName="email" placeholder="vous@exemple.com">
-                <mat-icon matPrefix>email</mat-icon>
-                @if (formulaire.get('email')?.hasError('email')) {
-                  <mat-error>Format d'email invalide</mat-error>
-                }
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="champ-pleine-largeur">
-                <mat-label>Mot de passe</mat-label>
-                <input matInput formControlName="password"
-                  [type]="mdpVisible ? 'text' : 'password'"
-                  placeholder="Minimum 8 caractères">
-                <button matSuffix mat-icon-button type="button" (click)="mdpVisible = !mdpVisible">
-                  <mat-icon>{{ mdpVisible ? 'visibility_off' : 'visibility' }}</mat-icon>
-                </button>
-                @if (formulaire.get('password')?.hasError('minlength') && formulaire.get('password')?.touched) {
-                  <mat-error>Minimum 8 caractères</mat-error>
-                }
-                @if (formulaire.get('password')?.hasError('required') && formulaire.get('password')?.touched) {
-                  <mat-error>Le mot de passe est obligatoire</mat-error>
-                }
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="champ-pleine-largeur">
-                <mat-label>Confirmer le mot de passe</mat-label>
-                <input matInput formControlName="confirmPassword"
-                  [type]="mdpVisible ? 'text' : 'password'"
-                  placeholder="Répétez votre mot de passe">
-                @if (formulaire.get('confirmPassword')?.hasError('mismatch')) {
-                  <mat-error>Les mots de passe ne correspondent pas</mat-error>
-                }
-              </mat-form-field>
-            }
-
-            @if (erreur) {
-              <div class="erreur-globale">
-                <mat-icon>error_outline</mat-icon> {{ erreur }}
-              </div>
-            }
-
-            <button mat-raised-button type="submit" class="btn-inscription"
-              [disabled]="envoiOtp || envoi || (!googleSessionActive && !firebasePhoneConfigured) || formulaire.get('telephone')?.invalid || formulaire.get('telephonePaiement')?.invalid">
-              @if (envoiOtp || envoi) { <mat-spinner diameter="20"></mat-spinner> }
-              @else if (googleSessionActive) { <mat-icon>payments</mat-icon> }
-              @else { <mat-icon>sms</mat-icon> }
-              {{ googleSessionActive ? 'Continuer vers le paiement' : 'Recevoir le code SMS' }}
+            <button mat-raised-button type="submit" class="btn-principal" [disabled]="nomForm.invalid">
+              <mat-icon>arrow_forward</mat-icon>
+              Continuer
             </button>
           </form>
         }
 
-        <!-- ÉTAPE 2 : Vérification OTP -->
         @if (etape === 2) {
-          <div class="bloc-otp">
-            <div class="otp-info">
-              <mat-icon>phone_android</mat-icon>
-              <p>Code envoyé au <strong>+229 {{ formulaire.get('telephone')?.value }}</strong></p>
-            </div>
+          <div class="bloc-verification">
+            <p class="instruction">
+              Saisissez votre numéro, recevez un code SMS, puis confirmez votre inscription.
+            </p>
 
-            <mat-form-field appearance="outline" class="champ-pleine-largeur">
-              <mat-label>Code de vérification (6 chiffres)</mat-label>
-              <input matInput [formControl]="otpControl"
-                placeholder="123456" maxlength="6" type="tel"
-                inputmode="numeric" autocomplete="one-time-code">
-              <mat-icon matPrefix>lock</mat-icon>
-              @if (otpControl.hasError('pattern') && otpControl.touched) {
-                <mat-error>Le code doit comporter 6 chiffres</mat-error>
+            <form [formGroup]="telephoneForm" class="formulaire">
+              <mat-form-field appearance="outline" class="champ-pleine-largeur">
+                <mat-label>Numéro de téléphone</mat-label>
+                <input
+                  matInput
+                  formControlName="telephone"
+                  placeholder="97000000"
+                  type="tel"
+                  [readonly]="otpEnvoye"
+                >
+                <div matPrefix class="prefixe-tel">+229</div>
+                @if (telephoneForm.get('telephone')?.hasError('required') && telephoneForm.get('telephone')?.touched) {
+                  <mat-error>Le numéro de téléphone est obligatoire</mat-error>
+                }
+                @if (telephoneForm.get('telephone')?.hasError('pattern') && telephoneForm.get('telephone')?.touched) {
+                  <mat-error>Format invalide. Exemple: 97000000</mat-error>
+                }
+              </mat-form-field>
+
+              @if (otpEnvoye) {
+                <div class="otp-info">
+                  <mat-icon>phone_android</mat-icon>
+                  <p>Code envoyé au <strong>+229 {{ telephoneLocalAffiche }}</strong></p>
+                </div>
+
+                <mat-form-field appearance="outline" class="champ-pleine-largeur">
+                  <mat-label>Code de vérification</mat-label>
+                  <input
+                    matInput
+                    [formControl]="otpControl"
+                    placeholder="123456"
+                    maxlength="6"
+                    type="tel"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                  >
+                  <mat-icon matPrefix>lock</mat-icon>
+                  @if (otpControl.invalid && otpControl.touched) {
+                    <mat-error>Le code doit comporter 6 chiffres</mat-error>
+                  }
+                </mat-form-field>
               }
-            </mat-form-field>
 
-            @if (erreur) {
-              <div class="erreur-globale">
-                <mat-icon>error_outline</mat-icon> {{ erreur }}
-              </div>
-            }
+              @if (erreur) {
+                <div class="erreur-globale">
+                  <mat-icon>error_outline</mat-icon> {{ erreur }}
+                </div>
+              }
 
-            <button mat-raised-button class="btn-inscription"
-              [disabled]="otpControl.invalid || envoi"
-              (click)="verifierEtInscrire()">
-              @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
-              @else { <mat-icon>check_circle</mat-icon> }
-              {{ modeGoogle ? 'Lier mon compte' : 'Créer mon compte' }}
-            </button>
+              @if (!otpEnvoye) {
+                <button
+                  mat-raised-button
+                  type="button"
+                  class="btn-principal"
+                  [disabled]="telephoneForm.invalid || envoiOtp"
+                  (click)="demanderOtp()"
+                >
+                  @if (envoiOtp) { <mat-spinner diameter="20"></mat-spinner> }
+                  @else { <mat-icon>sms</mat-icon> }
+                  Recevoir le code SMS
+                </button>
+              }
 
-            <button mat-button class="btn-renvoyer" [disabled]="envoiOtp"
-              (click)="demanderOtp()">
-              @if (envoiOtp) { <mat-spinner diameter="14"></mat-spinner> }
-              Renvoyer le code
-            </button>
+              @if (otpEnvoye) {
+                <button
+                  mat-raised-button
+                  type="button"
+                  class="btn-principal"
+                  [disabled]="otpControl.invalid || envoi"
+                  (click)="verifierEtInscrire()"
+                >
+                  @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
+                  @else { <mat-icon>check_circle</mat-icon> }
+                  Vérifier et continuer
+                </button>
 
-            <button mat-button (click)="modifierNumero()">
-              <mat-icon>arrow_back</mat-icon> Modifier le numéro
-            </button>
-          </div>
-        }
+                <button mat-button type="button" class="btn-secondaire" [disabled]="envoiOtp" (click)="demanderOtp()">
+                  @if (envoiOtp) { <mat-spinner diameter="14"></mat-spinner> }
+                  Renvoyer le code
+                </button>
 
-        @if (!googleSessionActive && !firebasePhoneConfigured) {
-          <div class="erreur-globale">
-            <mat-icon>error_outline</mat-icon> La vérification SMS Firebase n’est pas configurée.
-          </div>
-        }
+                <button mat-button type="button" class="btn-secondaire" (click)="modifierNumero()">
+                  <mat-icon>edit</mat-icon>
+                  Modifier le numéro
+                </button>
+              }
 
-        @if (!googleSessionActive && firebasePhoneConfigured) {
-          <div class="recaptcha-bloc">
-            <div [attr.id]="recaptchaContainerId" class="recaptcha-container"></div>
+              <button mat-button type="button" class="btn-secondaire" (click)="retourEtape1()">
+                <mat-icon>arrow_back</mat-icon>
+                Retour
+              </button>
+            </form>
           </div>
         }
 
@@ -258,93 +206,70 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
 
       h1 {
         font-family: 'Montserrat', sans-serif;
-        font-size: 1.5rem;
+        font-size: 1.7rem;
         font-weight: 700;
         color: var(--color-text);
         margin-bottom: 6px;
       }
 
-      .sous-titre { color: var(--color-text-muted); font-size: 0.88rem; }
+      .sous-titre {
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+      }
     }
 
     .resume-choix {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
+      gap: 10px;
       background: color-mix(in srgb, var(--color-primary) 8%, transparent);
       border-left: 3px solid var(--color-primary);
+      padding: 12px 14px;
       margin-bottom: 20px;
-      font-size: 0.85rem;
-      color: var(--color-text);
+      font-size: 0.88rem;
 
       mat-icon {
         color: var(--color-primary);
-        font-size: 1.1rem;
-        width: 1.1rem;
-        height: 1.1rem;
-        flex-shrink: 0;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
       }
-
-      span { flex: 1; }
 
       .modifier-lien {
+        margin-left: auto;
         color: var(--color-primary);
-        font-weight: 700;
-        font-size: 0.78rem;
-        text-transform: uppercase;
-        white-space: nowrap;
+        font-weight: 600;
+        text-decoration: none;
       }
     }
 
-    .formulaire, .bloc-otp {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    .etapes-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 22px;
     }
 
-    .bloc-google {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 16px;
-    }
-
-    .google-btn-container {
-      width: 100%;
-      min-height: 44px;
-      display: flex;
-      justify-content: center;
-
-      ::ng-deep > div,
-      ::ng-deep iframe {
-        max-width: 100% !important;
-      }
-    }
-
-    .erreur-google {
-      font-size: 0.8rem;
-      color: var(--color-danger);
-      margin: 0;
+    .etape-badge {
+      border: 1px solid var(--color-border);
+      padding: 10px 12px;
       text-align: center;
-    }
-
-    .separateur {
-      position: relative;
-      margin: 16px 0 20px;
-      border-top: 1px solid var(--color-border);
-    }
-
-    .separateur-texte {
-      position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--color-surface);
-      padding: 0 12px;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 600;
       color: var(--color-text-muted);
+      background: var(--color-bg);
+
+      &.active {
+        background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+        color: var(--color-primary);
+        border-color: color-mix(in srgb, var(--color-primary) 35%, white);
+      }
+    }
+
+    .formulaire, .bloc-verification {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
     .champ-pleine-largeur {
@@ -352,121 +277,124 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
     }
 
     .prefixe-tel {
-      font-size: 0.85rem;
-      color: var(--color-primary);
+      display: flex;
+      align-items: center;
+      font-weight: 600;
+      color: var(--color-text);
       margin-right: 8px;
-      font-weight: 700;
+    }
+
+    .instruction {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--color-text-muted);
     }
 
     .otp-info {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 12px 16px;
-      background: color-mix(in srgb, var(--color-primary) 8%, transparent);
-      border-left: 3px solid var(--color-primary);
-      margin-bottom: 4px;
+      padding: 12px 14px;
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
+      color: var(--color-text);
 
-      mat-icon { color: var(--color-primary); }
+      mat-icon {
+        color: var(--color-primary);
+      }
 
-      p { margin: 0; font-size: 0.88rem; color: var(--color-text); }
-    }
-
-    .recaptcha-bloc {
-      display: flex;
-      justify-content: center;
-      margin-top: 12px;
-    }
-
-    .recaptcha-container {
-      min-height: 78px;
+      p {
+        margin: 0;
+        font-size: 0.9rem;
+      }
     }
 
     .erreur-globale {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 14px;
-      background: var(--color-danger-bg);
-      color: var(--color-danger);
-      border-left: 3px solid var(--color-danger);
+      padding: 12px 14px;
+      background: rgba(244, 67, 54, 0.08);
+      color: #c62828;
       font-size: 0.88rem;
-    }
 
-    .btn-inscription {
-      background-color: var(--color-accent) !important;
-      color: #1a1a00 !important;
-      height: 50px;
-      font-size: 1rem !important;
-      font-weight: 700 !important;
-      margin-top: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-
-      &:disabled {
-        background-color: var(--color-surface-3) !important;
-        color: var(--color-text-muted) !important;
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
       }
-
-      mat-spinner { margin-right: 8px; }
     }
 
-    .btn-renvoyer {
+    .btn-principal {
+      width: 100%;
+      height: 48px;
+      background: var(--color-accent) !important;
+      color: #fff !important;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-secondaire {
+      align-self: center;
       color: var(--color-primary) !important;
-      font-size: 0.82rem !important;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .lien-connexion {
       text-align: center;
-      margin-top: 20px;
-      border-top: 1px solid var(--color-border);
-      padding-top: 16px;
+      margin-top: 24px;
 
-      p { font-size: 0.88rem; color: var(--color-text-muted); }
+      p {
+        margin: 0;
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+      }
 
       a {
         color: var(--color-primary);
-        font-weight: 700;
-        &:hover { color: var(--color-accent); }
+        font-weight: 600;
+        text-decoration: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .carte-auth {
+        padding: 32px 22px;
+      }
+
+      .etapes-header {
+        grid-template-columns: 1fr;
       }
     }
   `]
 })
-export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('googleBtn') googleBtnRef?: ElementRef<HTMLDivElement>;
-
+export class RegisterFormComponent implements OnDestroy {
   private readonly authService = inject(AuthService);
-  private readonly googleAuthService = inject(GoogleAuthService);
-  readonly phoneAuthService = inject(FirebasePhoneAuthService);
+  private readonly otpService = inject(OtpService);
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly paiementService = inject(PaiementService);
   private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
+
   readonly inscriptionState = inject(InscriptionStateService);
 
   etape: 1 | 2 = 1;
-  modeGoogle = false;
-  googleSessionActive = false;
-  googleToken = '';
-
-  mdpVisible = false;
   envoi = false;
   envoiOtp = false;
+  otpEnvoye = false;
   erreur: string | null = null;
-  googleErreur: string | null = null;
-  googleBtnRendu = false;
-  readonly recaptchaContainerId = 'register-phone-recaptcha';
-  private firebaseIdToken = '';
 
-  readonly formulaire = this.fb.group({
-    nom: ['', Validators.required],
-    telephone: ['', Validators.required],
-    telephonePaiement: ['', Validators.pattern(/^\d{8}$/)],
-    email: ['', Validators.email],
-    password: ['', [Validators.required, Validators.minLength(8)]],
-    confirmPassword: ['', Validators.required]
-  }, { validators: confirmerMotDePasse });
+  readonly nomForm = this.fb.group({
+    nom: ['', Validators.required]
+  });
+
+  readonly telephoneForm = this.fb.group({
+    telephone: ['', [Validators.required, Validators.pattern(/^(\+229|00229)?\s*\d{8}$/)]]
+  });
 
   readonly otpControl = this.fb.control('', [
     Validators.required,
@@ -477,66 +405,33 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.inscriptionState.role() ?? Role.CLIENT;
   }
 
-  get firebasePhoneConfigured(): boolean {
-    return this.phoneAuthService.estConfigure();
+  get telephoneLocalAffiche(): string {
+    return this.normaliserTelephoneLocal(this.telephoneForm.value.telephone || '');
   }
 
-  ngOnInit(): void {
-    const token = this.route.snapshot.queryParamMap.get('googleToken');
-    if (token) {
-      this.activerModeGoogle(token);
-    }
-  }
-
-  ngAfterViewInit(): void {
-    if (!this.modeGoogle) {
-      this.initialiserBoutonGoogle();
-    }
-  }
-
-  get titrePage(): string {
-    if (this.googleSessionActive) {
-      return 'Finaliser votre paiement';
-    }
-    return this.modeGoogle ? "Finaliser l'inscription" : 'Créer mon compte';
-  }
-
-  get sousTitrePage(): string {
-    if (this.googleSessionActive) {
-      return 'Confirmez le numéro à débiter pour votre abonnement';
-    }
-    return this.modeGoogle
-      ? 'Liez un numéro de téléphone à votre compte Google'
-      : 'Remplissez vos informations pour rejoindre GazFacile';
-  }
-
-  continuerEtape1(): void {
-    if (this.googleSessionActive) {
-      this.envoi = true;
-      this.erreur = null;
-      this.lancerSouscription();
+  continuerVersTelephone(): void {
+    if (this.nomForm.invalid) {
+      this.nomForm.markAllAsTouched();
       return;
     }
 
-    this.demanderOtp();
+    this.etape = 2;
+    this.erreur = null;
   }
 
   demanderOtp(): void {
-    const telephone = this.formulaire.get('telephone')?.value?.trim();
-    if (!telephone) return;
-    if (!this.firebasePhoneConfigured) {
-      this.erreur = 'La vérification SMS Firebase n’est pas configurée.';
+    if (this.telephoneForm.invalid) {
+      this.telephoneForm.markAllAsTouched();
       return;
     }
 
     this.envoiOtp = true;
     this.erreur = null;
-    this.firebaseIdToken = '';
 
-    this.phoneAuthService.envoyerCode(telephone, this.recaptchaContainerId).subscribe({
+    this.otpService.envoyer(this.normaliserTelephoneLocal(this.telephoneForm.value.telephone!)).subscribe({
       next: () => {
         this.envoiOtp = false;
-        this.etape = 2;
+        this.otpEnvoye = true;
         this.otpControl.reset();
       },
       error: err => {
@@ -547,52 +442,26 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   verifierEtInscrire(): void {
-    if (this.otpControl.invalid) return;
+    if (this.otpControl.invalid) {
+      this.otpControl.markAsTouched();
+      return;
+    }
 
     this.envoi = true;
     this.erreur = null;
 
-    const telephone = this.formulaire.get('telephone')!.value!.trim();
-
-    this.phoneAuthService.verifierCode(this.otpControl.value!).subscribe({
-      next: (verification) => {
-        this.firebaseIdToken = verification.firebaseIdToken;
-        if (this.modeGoogle) {
-          this.lierGoogle(telephone);
-        } else {
-          this.inscrire();
-        }
-      },
-      error: err => {
-        this.envoi = false;
-        this.erreur = err.message;
-      }
-    });
-  }
-
-  private inscrire(): void {
-    if (this.formulaire.invalid) {
-      this.envoi = false;
-      return;
-    }
-
-    const state = this.inscriptionState;
     this.authService.register({
-      nom: this.formulaire.value.nom!,
-      telephone: this.formulaire.value.telephone!,
-      email: this.formulaire.value.email || undefined,
-      password: this.formulaire.value.password!,
+      nom: this.nomForm.value.nom!.trim(),
+      telephone: this.normaliserTelephoneLocal(this.telephoneForm.value.telephone!),
       role: this.role,
-      accountType: state.role() ?? undefined,
-      clientNeed: state.clientNeed() ?? undefined,
-      firebaseIdToken: this.firebaseIdToken
+      accountType: this.inscriptionState.role() ?? undefined,
+      clientNeed: this.inscriptionState.clientNeed() ?? undefined,
+      otpCode: this.otpControl.value!
     }).subscribe({
-      next: () => {
-        this.lancerSouscription();
-      },
+      next: () => this.lancerSouscription(),
       error: err => {
         this.envoi = false;
-        this.erreur = err.message || 'Erreur lors de l\'inscription';
+        this.erreur = err.message || 'Erreur lors de l’inscription';
       }
     });
   }
@@ -606,102 +475,42 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    const telephonePaiement = this.formulaire.get('telephonePaiement')?.value?.trim() || undefined;
+    const telephonePaiement = this.normaliserTelephoneLocal(this.telephoneForm.value.telephone!);
 
     this.subscriptionService.subscribe(plan.id, telephonePaiement).subscribe({
       next: (response) => {
-        this.phoneAuthService.reinitialiser();
         this.inscriptionState.reset();
         this.paiementService.redirectVersCheckout(response.checkoutUrl);
       },
       error: err => {
-        this.phoneAuthService.reinitialiser();
         this.envoi = false;
-        this.erreur = err.message || 'Inscription réussie mais erreur lors du paiement. Vous pouvez souscrire depuis votre profil.';
+        this.erreur = err.message || 'Compte créé, mais impossible d’initier le paiement.';
       }
     });
   }
 
-  private lierGoogle(telephone: string): void {
-    this.googleAuthService.loginAvecGoogle(this.googleToken, telephone, this.role, this.firebaseIdToken).subscribe({
-      next: (auth) => {
-        this.authService.sauvegarderSession(auth);
-        this.lancerSouscription();
-      },
-      error: err => {
-        this.envoi = false;
-        this.erreur = err.message || 'Impossible de lier le compte Google';
-      }
-    });
-  }
-
-  private initialiserBoutonGoogle(): void {
-    if (!this.googleBtnRef) {
-      this.googleBtnRendu = false;
-      this.googleErreur = 'Connexion Google indisponible pour le moment.';
-      return;
-    }
-
-    this.googleErreur = null;
-    this.googleAuthService.initialiser(this.googleBtnRef.nativeElement, (idToken) => {
-      this.onGoogleToken(idToken);
-    }).subscribe({
-      next: (rendu) => {
-        this.googleBtnRendu = rendu;
-        if (!rendu) {
-          this.googleErreur = 'Connexion Google indisponible pour le moment.';
-        }
-      },
-      error: () => {
-        this.googleBtnRendu = false;
-        this.googleErreur = 'Connexion Google indisponible pour le moment.';
-      }
-    });
-  }
-
-  private onGoogleToken(idToken: string): void {
-    this.googleErreur = null;
-    this.googleAuthService.loginAvecGoogle(idToken, undefined, this.role).subscribe({
-      next: (auth) => {
-        this.authService.sauvegarderSession(auth);
-        this.activerModeGoogle('');
-        this.googleSessionActive = true;
-        this.formulaire.patchValue({ telephone: auth.telephone || '' });
-        this.etape = 1;
-        this.erreur = null;
-      },
-      error: (err) => {
-        if (err?.telephoneRequis) {
-          this.phoneAuthService.reinitialiser();
-          this.activerModeGoogle(idToken);
-          this.etape = 1;
-          this.erreur = null;
-        } else {
-          this.googleErreur = err.message || 'Connexion Google échouée';
-        }
-      }
-    });
-  }
-
-  private activerModeGoogle(token: string): void {
-    this.modeGoogle = true;
-    this.googleSessionActive = false;
-    this.googleToken = token;
-    this.googleErreur = null;
-    this.formulaire.get('nom')?.clearValidators();
-    this.formulaire.get('password')?.clearValidators();
-    this.formulaire.get('confirmPassword')?.clearValidators();
-    this.formulaire.updateValueAndValidity();
+  retourEtape1(): void {
+    this.etape = 1;
+    this.erreur = null;
+    this.reinitialiserOtp();
   }
 
   modifierNumero(): void {
-    this.etape = 1;
     this.erreur = null;
-    this.firebaseIdToken = '';
-    this.phoneAuthService.reinitialiser();
+    this.reinitialiserOtp();
+    this.telephoneForm.get('telephone')?.markAsUntouched();
   }
 
   ngOnDestroy(): void {
-    this.phoneAuthService.reinitialiser();
+    this.reinitialiserOtp();
+  }
+
+  private reinitialiserOtp(): void {
+    this.otpEnvoye = false;
+    this.otpControl.reset();
+  }
+
+  private normaliserTelephoneLocal(telephone: string): string {
+    return telephone.replace(/^\+229/, '').replace(/^00229/, '').replace(/\s/g, '').trim();
   }
 }
