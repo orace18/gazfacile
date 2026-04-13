@@ -315,7 +315,8 @@ import { Revendeur } from '../../core/models/revendeur.model';
               <div class="footer-col">
                 <h4>Contact</h4>
                 <p>Cotonou, Bénin</p>
-                <p>contact&#64;gazfacile.bj</p>
+                <a href="tel:+2290163492848">+229 016 349 2848</a>
+                <a href="mailto:facile.gaz&#64;gmail.com">facile.gaz&#64;gmail.com</a>
               </div>
             </div>
             <div class="footer-bottom">
@@ -966,7 +967,7 @@ import { Revendeur } from '../../core/models/revendeur.model';
 
     /* ── Footer ── */
     .landing-footer {
-      background: #111;
+      background: var(--color-primary);
       color: rgba(255,255,255,0.7);
       padding: 48px 24px 24px;
     }
