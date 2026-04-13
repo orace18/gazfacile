@@ -14,7 +14,8 @@ public record SubscriptionPlanDTO(
         int dureeJours,
         int quota,
         String description,
-        List<String> features
+        List<String> features,
+        boolean recommande
 ) {
     public static SubscriptionPlanDTO from(SubscriptionPlan plan) {
         return new SubscriptionPlanDTO(
@@ -26,7 +27,8 @@ public record SubscriptionPlanDTO(
                 plan.getDureeJours(),
                 plan.getQuota(),
                 plan.getDescription(),
-                plan.getFeatures()
+                plan.getFeatures(),
+                plan.isRecommande()
         );
     }
 }

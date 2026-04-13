@@ -32,8 +32,8 @@ export class SubscriptionService {
   }
 
   /** Souscrit à un plan. Retourne le PaiementResponseDTO avec l'URL checkout FedaPay. */
-  subscribe(planCode: string): Observable<PaiementResponseDTO> {
-    return this.http.post<PaiementResponseDTO>(`${this.subscriptionsUrl}/subscribe`, { planCode }).pipe(
+  subscribe(planCode: string, telephonePaiement?: string): Observable<PaiementResponseDTO> {
+    return this.http.post<PaiementResponseDTO>(`${this.subscriptionsUrl}/subscribe`, { planCode, telephonePaiement }).pipe(
       catchError(err => {
         const message = err.error?.message || 'Impossible d\'initier l\'abonnement';
         return throwError(() => new Error(message));

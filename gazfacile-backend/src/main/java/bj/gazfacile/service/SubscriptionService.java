@@ -67,8 +67,9 @@ public class SubscriptionService {
 
     /**
      * Crée une subscription PENDING et retourne le PaiementInitDTO prêt pour FedaPay.
+     * @param telephonePaiement numéro mobile money pour FedaPay (peut différer du numéro de compte)
      */
-    public PaiementInitDTO subscribe(String telephone, String planCode) {
+    public PaiementInitDTO subscribe(String telephone, String planCode, String telephonePaiement) {
         User user = userRepository.findByTelephone(telephone)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Utilisateur introuvable"));
@@ -115,7 +116,14 @@ public class SubscriptionService {
         dto.setType(TypeTransaction.ABONNEMENT);
         dto.setMontant(plan.getPrix());
         dto.setDescription("Abonnement " + plan.getNom() + " — " + plan.getDescription());
-        dto.setClientTelephone(user.getTelephone());
+        String telPaiement = user.getTelephone();
+        if (telephonePaiement != null) {
+            String telephonePaiementNettoye = telephonePaiement.trim();
+            if (!telephonePaiementNettoye.isBlank()) {
+                telPaiement = telephonePaiementNettoye;
+            }
+        }
+        dto.setClientTelephone(telPaiement);
         dto.setClientEmail(user.getEmail());
         dto.setClientNom(user.getNom());
         dto.setSubscriptionId(subscription.getId());

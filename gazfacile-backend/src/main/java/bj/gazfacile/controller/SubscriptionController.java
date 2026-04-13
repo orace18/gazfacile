@@ -32,7 +32,7 @@ public class SubscriptionController {
             Authentication auth,
             @Valid @RequestBody SubscribeRequestDTO dto) {
         String telephone = auth.getName();
-        var paiementInit = subscriptionService.subscribe(telephone, dto.planCode());
+        var paiementInit = subscriptionService.subscribe(telephone, dto.planCode(), dto.telephonePaiement());
         var response = paiementService.initierPaiement(paiementInit);
         return ResponseEntity.ok(response);
     }

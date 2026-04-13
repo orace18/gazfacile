@@ -44,5 +44,8 @@ public class SubscriptionPlan {
     private boolean actif = true;
 
     @Builder.Default
+    private boolean recommande = false;
+
+    @Builder.Default
     private int ordre = 0;
 }

@@ -40,72 +40,6 @@ export interface PlanInscription {
   recommande?: boolean;
 }
 
-export const REVENDEUR_PLANS: PlanInscription[] = [
-  {
-    id: 'STANDARD', nom: 'Standard', type: PlanType.REVENDEUR,
-    prix: 1000, duree: '1 mois', quota: 0, quotaLabel: '',
-    features: ['Visibilité complète', 'Profil vérifié', 'Catalogue illimité']
-  },
-  {
-    id: 'GOLD', nom: 'Gold', type: PlanType.REVENDEUR,
-    prix: 2500, duree: '3 mois', quota: 0, quotaLabel: '',
-    features: ['Visibilité complète', 'Profil vérifié', 'Catalogue illimité', 'Économisez 17%']
-  },
-  {
-    id: 'DIAMOND', nom: 'Diamond', type: PlanType.REVENDEUR,
-    prix: 5000, duree: '6 mois', quota: 0, quotaLabel: '',
-    features: ['Visibilité complète', 'Profil vérifié', 'Catalogue illimité', 'Économisez 17%'],
-    recommande: true
-  },
-  {
-    id: 'PRO', nom: 'Pro', type: PlanType.REVENDEUR,
-    prix: 7500, duree: '9 mois', quota: 0, quotaLabel: '',
-    features: ['Visibilité complète', 'Profil vérifié', 'Catalogue illimité', 'Économisez 17%']
-  },
-  {
-    id: 'MAX', nom: 'Max', type: PlanType.REVENDEUR,
-    prix: 10000, duree: '12 mois', quota: 0, quotaLabel: '',
-    features: ['Visibilité complète', 'Profil vérifié', 'Catalogue illimité', 'Meilleur rapport qualité/prix']
-  }
-];
-
-export const CLIENT_CONSULT_PLANS: PlanInscription[] = [
-  {
-    id: 'STD_CONSULT', nom: 'Standard', type: PlanType.CLIENT_CONSULT,
-    prix: 100, duree: '1 mois', quota: 3, quotaLabel: '3 consultations/mois',
-    features: ['Voir les revendeurs proches', 'Comparer les prix', '3 consultations par mois']
-  },
-  {
-    id: 'GOLD_CONSULT', nom: 'Gold', type: PlanType.CLIENT_CONSULT,
-    prix: 500, duree: '1 mois', quota: 10, quotaLabel: '10 consultations/mois',
-    features: ['Voir les revendeurs proches', 'Comparer les prix', '10 consultations par mois'],
-    recommande: true
-  },
-  {
-    id: 'DIAMOND_CONSULT', nom: 'Diamond', type: PlanType.CLIENT_CONSULT,
-    prix: 1000, duree: '1 mois', quota: 50, quotaLabel: '50 consultations/mois',
-    features: ['Voir les revendeurs proches', 'Comparer les prix', '50 consultations par mois', 'Accès prioritaire']
-  }
-];
-
-export const CLIENT_LIVRAISON_PLANS: PlanInscription[] = [
-  {
-    id: 'STD_LIVRAISON', nom: 'Standard', type: PlanType.CLIENT_LIVRAISON,
-    prix: 2000, duree: '1 mois', quota: 2, quotaLabel: '2 livraisons/mois',
-    features: ['Livraison dans un rayon de 5km', '2 livraisons par mois', 'Suivi de commande']
-  },
-  {
-    id: 'GOLD_LIVRAISON', nom: 'Gold', type: PlanType.CLIENT_LIVRAISON,
-    prix: 4500, duree: '1 mois', quota: 5, quotaLabel: '5 livraisons/mois',
-    features: ['Livraison dans un rayon de 5km', '5 livraisons par mois', 'Suivi de commande'],
-    recommande: true
-  },
-  {
-    id: 'DIAMOND_LIVRAISON', nom: 'Diamond', type: PlanType.CLIENT_LIVRAISON,
-    prix: 8000, duree: '1 mois', quota: 10, quotaLabel: '10 livraisons/mois',
-    features: ['Livraison dans un rayon de 5km', '10 livraisons par mois', 'Suivi de commande', 'Priorité de livraison']
-  }
-];
 
 // ── Paiement FedaPay ────────────────────────────────────────────────────────
 
@@ -182,57 +116,6 @@ export interface AbonnementStatut {
   maxProduits: number;
 }
 
-export const ABONNEMENT_PLANS: { plan: Abonnement; libelle: string; prix: number; duree: string; description: string; features: string[]; recommande?: boolean }[] = [
-  {
-    plan: Abonnement.GRATUIT,
-    libelle: 'Gratuit',
-    prix: 0,
-    duree: '',
-    description: 'Pour démarrer',
-    features: ['Profil basique visible', 'Max 3 produits au catalogue', 'Visibilité limitée']
-  },
-  {
-    plan: Abonnement.TEST,
-    libelle: 'Test',
-    prix: 100,
-    duree: '1 jour',
-    description: 'Pour tester le paiement',
-    features: ['Catalogue illimité', 'Visibilité complète', '1 jour d\'accès']
-  },
-  {
-    plan: Abonnement.MENSUEL,
-    libelle: 'Mensuel',
-    prix: 1000,
-    duree: '1 mois',
-    description: 'Sans engagement',
-    features: ['Catalogue illimité', 'Visibilité complète', 'Profil vérifié']
-  },
-  {
-    plan: Abonnement.TRIMESTRIEL,
-    libelle: 'Trimestriel',
-    prix: 2500,
-    duree: '3 mois',
-    description: 'Économisez 17%',
-    features: ['Catalogue illimité', 'Visibilité complète', 'Profil vérifié', '3 mois d\'accès']
-  },
-  {
-    plan: Abonnement.SEMESTRIEL,
-    libelle: 'Semestriel',
-    prix: 5000,
-    duree: '6 mois',
-    description: 'Économisez 17%',
-    recommande: true,
-    features: ['Catalogue illimité', 'Visibilité complète', 'Profil vérifié', '6 mois d\'accès']
-  },
-  {
-    plan: Abonnement.ANNUEL,
-    libelle: 'Annuel',
-    prix: 10000,
-    duree: '12 mois',
-    description: 'Meilleur rapport qualité/prix',
-    features: ['Catalogue illimité', 'Visibilité complète', 'Profil vérifié', '12 mois d\'accès']
-  }
-];
 
 // ── Catalogue produits ──────────────────────────────────────────────────────
 
@@ -426,6 +309,7 @@ export interface SubscriptionPlanDTO {
   quota: number;
   description: string;
   features: string[];
+  recommande: boolean;
 }
 
 /** DTO subscription active (depuis le backend). */

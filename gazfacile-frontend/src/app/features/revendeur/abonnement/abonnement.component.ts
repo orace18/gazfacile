@@ -1,11 +1,14 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import { PaiementService } from '../../../core/services/paiement.service';
 import { SubscriptionPlanDTO, SubscriptionDTO } from '../../../core/models/revendeur.model';
@@ -15,12 +18,15 @@ import { SubscriptionPlanDTO, SubscriptionDTO } from '../../../core/models/reven
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatChipsModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatFormFieldModule,
+    MatInputModule
   ],
   template: `
     <div class="page-abonnement">
@@ -129,6 +135,17 @@ import { SubscriptionPlanDTO, SubscriptionDTO } from '../../../core/models/reven
             <mat-icon>error</mat-icon> {{ erreur() }}
           </div>
         }
+
+        <!-- Numéro de paiement -->
+        <div class="bloc-tel-paiement">
+          <mat-form-field appearance="outline" class="champ-tel">
+            <mat-label>Numéro Mobile Money pour le paiement</mat-label>
+            <input matInput [(ngModel)]="telephonePaiement" type="tel"
+              placeholder="Ex: 97000000">
+            <div matPrefix class="prefixe-tel">+229</div>
+            <mat-hint>Utilisez le numéro à débiter pour le paiement. Il peut être différent du numéro du compte.</mat-hint>
+          </mat-form-field>
+        </div>
 
         <!-- Note FedaPay -->
         <p class="note-paiement">
@@ -386,6 +403,7 @@ export class AbonnementComponent implements OnInit {
   chargement = signal(true);
   enCoursCode = signal<string | null>(null);
   erreur = signal<string | null>(null);
+  telephonePaiement = '';
 
   ngOnInit(): void {
     this.charger();
@@ -419,9 +437,15 @@ export class AbonnementComponent implements OnInit {
   }
 
   souscrire(planCode: string): void {
+    const telephonePaiement = this.telephonePaiement.trim();
+    if (telephonePaiement && !/^\d{8}$/.test(telephonePaiement)) {
+      this.erreur.set('Le numéro de paiement doit comporter 8 chiffres.');
+      return;
+    }
+
     this.enCoursCode.set(planCode);
     this.erreur.set(null);
-    this.subscriptionService.subscribe(planCode).subscribe({
+    this.subscriptionService.subscribe(planCode, telephonePaiement || undefined).subscribe({
       next: response => {
         this.enCoursCode.set(null);
         this.paiementService.redirectVersCheckout(response.checkoutUrl);

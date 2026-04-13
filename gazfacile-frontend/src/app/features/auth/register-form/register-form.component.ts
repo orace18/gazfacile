@@ -77,7 +77,7 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
             </div>
           }
 
-          <form [formGroup]="formulaire" (ngSubmit)="demanderOtp()" class="formulaire">
+          <form [formGroup]="formulaire" (ngSubmit)="continuerEtape1()" class="formulaire">
 
             @if (!modeGoogle) {
               <mat-form-field appearance="outline" class="champ-pleine-largeur">
@@ -92,10 +92,21 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
 
             <mat-form-field appearance="outline" class="champ-pleine-largeur">
               <mat-label>Numéro de téléphone</mat-label>
-              <input matInput formControlName="telephone" placeholder="97000000" type="tel">
+              <input matInput formControlName="telephone" placeholder="97000000" type="tel"
+                [readonly]="googleSessionActive">
               <div matPrefix class="prefixe-tel">+229</div>
               @if (formulaire.get('telephone')?.invalid && formulaire.get('telephone')?.touched) {
                 <mat-error>Le numéro de téléphone est obligatoire</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="champ-pleine-largeur">
+              <mat-label>Numéro Mobile Money pour le paiement</mat-label>
+              <input matInput formControlName="telephonePaiement" placeholder="97000000" type="tel">
+              <div matPrefix class="prefixe-tel">+229</div>
+              <mat-hint>Utilisez le numéro à débiter pour le paiement. Il peut être différent du numéro du compte.</mat-hint>
+              @if (formulaire.get('telephonePaiement')?.hasError('pattern') && formulaire.get('telephonePaiement')?.touched) {
+                <mat-error>Format invalide (ex: 97000000)</mat-error>
               }
             </mat-form-field>
 
@@ -143,10 +154,11 @@ function confirmerMotDePasse(control: AbstractControl): ValidationErrors | null 
             }
 
             <button mat-raised-button type="submit" class="btn-inscription"
-              [disabled]="envoiOtp || formulaire.get('telephone')?.invalid">
-              @if (envoiOtp) { <mat-spinner diameter="20"></mat-spinner> }
+              [disabled]="envoiOtp || envoi || formulaire.get('telephone')?.invalid || formulaire.get('telephonePaiement')?.invalid">
+              @if (envoiOtp || envoi) { <mat-spinner diameter="20"></mat-spinner> }
+              @else if (googleSessionActive) { <mat-icon>payments</mat-icon> }
               @else { <mat-icon>sms</mat-icon> }
-              Recevoir le code SMS
+              {{ googleSessionActive ? 'Continuer vers le paiement' : 'Recevoir le code SMS' }}
             </button>
           </form>
         }
@@ -413,6 +425,7 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
 
   etape: 1 | 2 = 1;
   modeGoogle = false;
+  googleSessionActive = false;
   googleToken = '';
 
   mdpVisible = false;
@@ -425,6 +438,7 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
   readonly formulaire = this.fb.group({
     nom: ['', Validators.required],
     telephone: ['', Validators.required],
+    telephonePaiement: ['', Validators.pattern(/^\d{8}$/)],
     email: ['', Validators.email],
     password: ['', [Validators.required, Validators.minLength(8)]],
     confirmPassword: ['', Validators.required]
@@ -453,13 +467,30 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
   }
 
   get titrePage(): string {
+    if (this.googleSessionActive) {
+      return 'Finaliser votre paiement';
+    }
     return this.modeGoogle ? "Finaliser l'inscription" : 'Créer mon compte';
   }
 
   get sousTitrePage(): string {
+    if (this.googleSessionActive) {
+      return 'Confirmez le numéro à débiter pour votre abonnement';
+    }
     return this.modeGoogle
       ? 'Liez un numéro de téléphone à votre compte Google'
       : 'Remplissez vos informations pour rejoindre GazFacile';
+  }
+
+  continuerEtape1(): void {
+    if (this.googleSessionActive) {
+      this.envoi = true;
+      this.erreur = null;
+      this.lancerSouscription();
+      return;
+    }
+
+    this.demanderOtp();
   }
 
   demanderOtp(): void {
@@ -541,7 +572,9 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    this.subscriptionService.subscribe(plan.id).subscribe({
+    const telephonePaiement = this.formulaire.get('telephonePaiement')?.value?.trim() || undefined;
+
+    this.subscriptionService.subscribe(plan.id, telephonePaiement).subscribe({
       next: (response) => {
         this.inscriptionState.reset();
         this.paiementService.redirectVersCheckout(response.checkoutUrl);
@@ -595,7 +628,11 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
     this.googleAuthService.loginAvecGoogle(idToken).subscribe({
       next: (auth) => {
         this.authService.sauvegarderSession(auth);
-        this.lancerSouscription();
+        this.activerModeGoogle('');
+        this.googleSessionActive = true;
+        this.formulaire.patchValue({ telephone: auth.telephone || '' });
+        this.etape = 1;
+        this.erreur = null;
       },
       error: (err) => {
         if (err?.telephoneRequis) {
@@ -611,6 +648,7 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
 
   private activerModeGoogle(token: string): void {
     this.modeGoogle = true;
+    this.googleSessionActive = false;
     this.googleToken = token;
     this.googleErreur = null;
     this.formulaire.get('nom')?.clearValidators();

@@ -1,20 +1,22 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { InscriptionStateService } from '../../../core/services/inscription-state.service';
+import { SubscriptionService } from '../../../core/services/subscription.service';
 import {
   ClientNeed,
   PlanInscription,
-  CLIENT_CONSULT_PLANS,
-  CLIENT_LIVRAISON_PLANS
+  PlanType,
+  SubscriptionPlanDTO
 } from '../../../core/models/revendeur.model';
 
 @Component({
   selector: 'app-client-plan',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatIconModule, MatButtonModule],
+  imports: [CommonModule, RouterLink, MatIconModule, MatButtonModule, MatProgressSpinnerModule],
   template: `
     <div class="page-plans">
       <div class="conteneur">
@@ -24,42 +26,52 @@ import {
           <p class="sous-titre">{{ sousTitre() }}</p>
         </div>
 
-        <div class="grille-plans">
-          @for (plan of plans(); track plan.id) {
-            <div class="carte-plan" [class.plan-recommande]="plan.recommande">
-              @if (plan.recommande) {
-                <div class="badge-recommande">Recommandé</div>
-              }
+        @if (chargement()) {
+          <div class="chargement">
+            <mat-spinner diameter="40"></mat-spinner>
+          </div>
+        } @else if (erreur()) {
+          <div class="erreur-msg">
+            <mat-icon>error_outline</mat-icon> {{ erreur() }}
+          </div>
+        } @else {
+          <div class="grille-plans">
+            @for (plan of plans(); track plan.id) {
+              <div class="carte-plan" [class.plan-recommande]="plan.recommande">
+                @if (plan.recommande) {
+                  <div class="badge-recommande">Recommandé</div>
+                }
 
-              <div class="plan-entete">
-                <mat-icon class="plan-icone">{{ iconePlan(plan) }}</mat-icon>
-                <h2 class="plan-nom">{{ plan.nom }}</h2>
-                <span class="plan-duree">{{ plan.duree }}</span>
-                <p class="plan-quota">{{ plan.quotaLabel }}</p>
-                <div class="plan-prix">
-                  <span class="prix-valeur">{{ plan.prix | number:'1.0-0' }}</span>
-                  <span class="prix-unite"> FCFA</span>
+                <div class="plan-entete">
+                  <mat-icon class="plan-icone">{{ iconePlan(plan) }}</mat-icon>
+                  <h2 class="plan-nom">{{ plan.nom }}</h2>
+                  <span class="plan-duree">{{ plan.duree }}</span>
+                  <p class="plan-quota">{{ plan.quotaLabel }}</p>
+                  <div class="plan-prix">
+                    <span class="prix-valeur">{{ plan.prix | number:'1.0-0' }}</span>
+                    <span class="prix-unite"> FCFA</span>
+                  </div>
+                </div>
+
+                <ul class="liste-features">
+                  @for (f of plan.features; track f) {
+                    <li>
+                      <mat-icon class="icone-check">check</mat-icon>
+                      {{ f }}
+                    </li>
+                  }
+                </ul>
+
+                <div class="plan-action">
+                  <button class="btn-choisir" [class.btn-recommande]="plan.recommande"
+                    (click)="choisirPlan(plan)">
+                    Choisir ce plan <mat-icon>arrow_forward</mat-icon>
+                  </button>
                 </div>
               </div>
-
-              <ul class="liste-features">
-                @for (f of plan.features; track f) {
-                  <li>
-                    <mat-icon class="icone-check">check</mat-icon>
-                    {{ f }}
-                  </li>
-                }
-              </ul>
-
-              <div class="plan-action">
-                <button class="btn-choisir" [class.btn-recommande]="plan.recommande"
-                  (click)="choisirPlan(plan)">
-                  Choisir ce plan <mat-icon>arrow_forward</mat-icon>
-                </button>
-              </div>
-            </div>
-          }
-        </div>
+            }
+          </div>
+        }
 
         <div class="navigation-bas">
           <button mat-button class="btn-retour" routerLink="/auth/register/client">
@@ -112,6 +124,23 @@ import {
         font-size: 0.92rem;
         margin: 0;
       }
+    }
+
+    .chargement {
+      display: flex;
+      justify-content: center;
+      padding: 60px 0;
+    }
+
+    .erreur-msg {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px;
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border-radius: 4px;
+      margin-bottom: 24px;
     }
 
     .grille-plans {
@@ -300,15 +329,14 @@ import {
     }
   `]
 })
-export class ClientPlanComponent {
+export class ClientPlanComponent implements OnInit {
   private readonly state = inject(InscriptionStateService);
+  private readonly subscriptionService = inject(SubscriptionService);
   private readonly router = inject(Router);
 
-  readonly plans = computed(() => {
-    return this.state.clientNeed() === ClientNeed.LIVRAISON
-      ? CLIENT_LIVRAISON_PLANS
-      : CLIENT_CONSULT_PLANS;
-  });
+  plans = signal<PlanInscription[]>([]);
+  chargement = signal(true);
+  erreur = signal<string | null>(null);
 
   readonly titre = computed(() => {
     return this.state.clientNeed() === ClientNeed.LIVRAISON
@@ -322,14 +350,55 @@ export class ClientPlanComponent {
       : 'Choisissez votre formule de consultation mensuelle';
   });
 
+  ngOnInit(): void {
+    const type = this.state.clientNeed() === ClientNeed.LIVRAISON
+      ? 'CLIENT_LIVRAISON'
+      : 'CLIENT_CONSULT';
+
+    this.subscriptionService.getPlans(type).subscribe({
+      next: dtos => {
+        this.plans.set(dtos.map(d => this.toPlanInscription(d)));
+        this.chargement.set(false);
+      },
+      error: () => {
+        this.erreur.set('Impossible de charger les formules. Veuillez réessayer.');
+        this.chargement.set(false);
+      }
+    });
+  }
+
   iconePlan(plan: PlanInscription): string {
-    if (plan.id.includes('DIAMOND')) return 'diamond';
-    if (plan.id.includes('GOLD')) return 'star';
+    const id = plan.id.toUpperCase();
+    if (id.includes('DIAMOND')) return 'diamond';
+    if (id.includes('GOLD')) return 'star';
     return 'verified';
   }
 
   choisirPlan(plan: PlanInscription): void {
     this.state.selectPlan(plan);
     this.router.navigate(['/auth/register/form']);
+  }
+
+  private toPlanInscription(dto: SubscriptionPlanDTO): PlanInscription {
+    const quotaLabel = dto.quota > 0
+      ? `${dto.quota} ${dto.type === 'CLIENT_LIVRAISON' ? 'livraisons' : 'consultations'}/mois`
+      : '';
+    return {
+      id: dto.code,
+      nom: dto.nom,
+      type: dto.type as unknown as PlanType,
+      prix: dto.prix,
+      duree: this.formatDuree(dto.dureeJours),
+      quota: dto.quota,
+      quotaLabel,
+      features: dto.features,
+      recommande: dto.recommande,
+    };
+  }
+
+  private formatDuree(jours: number): string {
+    if (jours >= 365) return `${Math.round(jours / 365)} an${jours >= 730 ? 's' : ''}`;
+    if (jours >= 30) return `${Math.round(jours / 30)} mois`;
+    return `${jours} jour${jours > 1 ? 's' : ''}`;
   }
 }
