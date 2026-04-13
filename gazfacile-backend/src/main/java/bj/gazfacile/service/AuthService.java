@@ -121,6 +121,9 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, e.getMessage());
         }
 
+        Role role = (dto.role() != null) ? dto.role() : Role.CLIENT;
+        if (role == Role.ADMIN) role = Role.CLIENT;
+
         // Chercher par googleId
         User utilisateur = userRepository.findByGoogleId(info.googleId())
                 .orElseGet(() -> userRepository.findByEmail(info.email()).orElse(null));
@@ -160,14 +163,14 @@ public class AuthService {
                 .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                 .nom(info.nom())
                 .googleId(info.googleId())
-                .roles(Set.of(Role.CLIENT))
+                .roles(Set.of(role))
                 .telephoneVerifie(false)
                 .actif(true)
                 .createdAt(LocalDateTime.now())
                 .build();
 
         userRepository.save(utilisateur);
-        log.info("[Google] Nouveau compte créé : {}", utilisateur.getTelephone());
+        log.info("[Google] Nouveau compte créé : {} avec rôle {}", utilisateur.getTelephone(), role);
         return construireReponse(utilisateur);
     }
 

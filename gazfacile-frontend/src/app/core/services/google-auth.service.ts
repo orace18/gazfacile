@@ -14,7 +14,7 @@ import {
   timer
 } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthResponse } from '../models/revendeur.model';
+import { AuthResponse, Role } from '../models/revendeur.model';
 
 // Déclaration de l'objet global Google Identity Services
 declare const google: {
@@ -116,8 +116,8 @@ export class GoogleAuthService {
    * Envoie l'ID token au backend pour validation et authentification.
    * Si le compte est nouveau, `telephone` est requis.
    */
-  loginAvecGoogle(idToken: string, telephone?: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(this.apiUrl, { idToken, telephone }).pipe(
+  loginAvecGoogle(idToken: string, telephone?: string, role?: Role): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(this.apiUrl, { idToken, telephone, role }).pipe(
       catchError(err => {
         if (err.status === 428) {
           // Backend indique que le téléphone est requis

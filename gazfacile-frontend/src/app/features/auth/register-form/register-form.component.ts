@@ -587,7 +587,7 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
   }
 
   private lierGoogle(telephone: string): void {
-    this.googleAuthService.loginAvecGoogle(this.googleToken, telephone).subscribe({
+    this.googleAuthService.loginAvecGoogle(this.googleToken, telephone, this.role).subscribe({
       next: (auth) => {
         this.authService.sauvegarderSession(auth);
         this.lancerSouscription();
@@ -625,7 +625,7 @@ export class RegisterFormComponent implements OnInit, AfterViewInit {
 
   private onGoogleToken(idToken: string): void {
     this.googleErreur = null;
-    this.googleAuthService.loginAvecGoogle(idToken).subscribe({
+    this.googleAuthService.loginAvecGoogle(idToken, undefined, this.role).subscribe({
       next: (auth) => {
         this.authService.sauvegarderSession(auth);
         this.activerModeGoogle('');
