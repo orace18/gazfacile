@@ -38,6 +38,7 @@ bj/gazfacile/controller/CommandeController.class
 bj/gazfacile/controller/AuthController.class
 bj/gazfacile/controller/SubscriptionPlanController.class
 bj/gazfacile/dto/SubscriptionPlanDTO.class
+bj/gazfacile/service/FirebasePhoneTokenService.class
 bj/gazfacile/model/enums/StatutCommande.class
 bj/gazfacile/model/ConsultationSession$ConsultationSessionBuilder.class
 bj/gazfacile/dto/SubscribeRequestDTO.class
@@ -79,6 +80,7 @@ bj/gazfacile/config/AbonnementReadConverter.class
 bj/gazfacile/security/JwtService.class
 bj/gazfacile/model/enums/StockStatus.class
 bj/gazfacile/model/enums/TypeTransaction.class
+bj/gazfacile/service/FirebasePhoneTokenService$VerifiedPhoneIdentity.class
 bj/gazfacile/dto/AbonnementInitDTO.class
 bj/gazfacile/controller/ProduitRevendeurController.class
 bj/gazfacile/model/enums/ClientNeed.class

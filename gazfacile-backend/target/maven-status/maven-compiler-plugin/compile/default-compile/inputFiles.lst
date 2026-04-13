@@ -92,6 +92,7 @@
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/CommandeService.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/ConsultationService.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/FedaPayService.java
+/home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/FirebasePhoneTokenService.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/GoogleTokenService.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/NotificationService.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/service/OtpService.java

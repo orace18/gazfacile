@@ -14,19 +14,13 @@ import java.util.List;
 @Configuration
 public class MongoConfig {
 
-    private final MongoTemplate mongoTemplate;
-
-    public MongoConfig(MongoTemplate mongoTemplate) {
-        this.mongoTemplate = mongoTemplate;
-    }
-
     @Bean
     public MongoCustomConversions mongoCustomConversions() {
         return new MongoCustomConversions(List.of(new AbonnementReadConverter()));
     }
 
     @Bean
-    public ApplicationRunner ensureMongoIndexes() {
+    public ApplicationRunner ensureMongoIndexes(MongoTemplate mongoTemplate) {
         return args -> mongoTemplate.indexOps(Revendeur.class)
                 .ensureIndex(new GeospatialIndex("location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
     }
