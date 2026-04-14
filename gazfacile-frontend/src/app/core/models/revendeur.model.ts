@@ -240,7 +240,7 @@ export interface Commande {
   clientAdresseLivraison: string;
   clientLocation?: [number, number];
   marque: string;
-  taille: '6kg' | '12kg';
+  taille: string;
   quantite: number;
   prixUnitaire: number;
   total: number;
@@ -259,7 +259,7 @@ export interface CommandeDTO {
   clientAdresseLivraison: string;
   clientLocation?: [number, number];
   marque: string;
-  taille: '6kg' | '12kg';
+  taille: string;
   quantite: number;
   modePaiement: ModePaiement;
 }

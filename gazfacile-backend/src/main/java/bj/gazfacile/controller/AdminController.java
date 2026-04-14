@@ -1,9 +1,10 @@
 package bj.gazfacile.controller;
 
+import bj.gazfacile.dto.AdminCatalogueItemDTO;
 import bj.gazfacile.dto.AdminPlanRequest;
+import bj.gazfacile.dto.AdminSubscriptionDTO;
 import bj.gazfacile.dto.AdminSubscriptionPlanDTO;
 import bj.gazfacile.dto.DashboardStatsDTO;
-import bj.gazfacile.dto.SubscriptionDTO;
 import bj.gazfacile.model.Commande;
 import bj.gazfacile.model.Revendeur;
 import bj.gazfacile.model.Transaction;
@@ -123,6 +124,13 @@ public class AdminController {
         return ResponseEntity.ok(transactionRepository.findAllByOrderByCreatedAtDesc());
     }
 
+    // ── Catalogue global ──────────────────────────────────────────────────────
+
+    @GetMapping("/catalogue")
+    public ResponseEntity<List<AdminCatalogueItemDTO>> getCatalogueGlobal() {
+        return ResponseEntity.ok(adminService.getCatalogueGlobal());
+    }
+
     // ── Plans d'abonnement ───────────────────────────────────────────────────
 
     /** Liste tous les plans (y compris inactifs). */
@@ -156,7 +164,7 @@ public class AdminController {
 
     /** Liste toutes les subscriptions. */
     @GetMapping("/subscriptions")
-    public ResponseEntity<List<SubscriptionDTO>> getToutesSubscriptions() {
-        return ResponseEntity.ok(subscriptionService.getAllSubscriptions());
+    public ResponseEntity<List<AdminSubscriptionDTO>> getToutesSubscriptions() {
+        return ResponseEntity.ok(adminService.getSubscriptionsAdmin());
     }
 }

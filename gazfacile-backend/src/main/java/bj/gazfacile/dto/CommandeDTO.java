@@ -15,7 +15,7 @@ public record CommandeDTO(
         String revendeurId,
 
         @NotBlank(message = "Le numéro de téléphone du client est obligatoire")
-        @Pattern(regexp = "^(\\+229|00229)?[0-9]{8}$",
+        @Pattern(regexp = "^(\\+229|00229)?\\s*[0-9]{10}$",
                 message = "Le numéro de téléphone doit être un numéro béninois valide")
         String clientTelephone,
 
@@ -28,8 +28,7 @@ public record CommandeDTO(
         @NotBlank(message = "La marque est obligatoire")
         String marque,
 
-        @NotBlank(message = "La taille est obligatoire (6kg ou 12kg)")
-        @Pattern(regexp = "^(6kg|12kg)$", message = "La taille doit être 6kg ou 12kg")
+        @NotBlank(message = "Le format de bouteille est obligatoire")
         String taille,
 
         @Min(value = 1, message = "La quantité minimum est 1")

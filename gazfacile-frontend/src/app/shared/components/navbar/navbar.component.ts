@@ -42,7 +42,7 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
           Accueil
         </a>
 
-        @if (authService.hasRole(Role.REVENDEUR) || authService.hasRole(Role.ADMIN)) {
+        @if (authService.hasRole(Role.REVENDEUR)) {
           <a mat-button routerLink="/revendeur/inscription">
             <mat-icon>store</mat-icon>
             Mon dépôt

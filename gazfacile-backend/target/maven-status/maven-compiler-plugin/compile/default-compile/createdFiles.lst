@@ -15,6 +15,7 @@ bj/gazfacile/dto/ConsultationDTO.class
 bj/gazfacile/model/CpassOtpRef.class
 bj/gazfacile/dto/RevendeurDTO.class
 bj/gazfacile/model/Commande$CommandeBuilder.class
+bj/gazfacile/dto/AdminSubscriptionDTO.class
 bj/gazfacile/controller/AdminController.class
 bj/gazfacile/model/enums/PlanType.class
 bj/gazfacile/repository/TransactionRepository.class
@@ -105,6 +106,7 @@ bj/gazfacile/controller/ProduitRevendeurController.class
 bj/gazfacile/model/enums/ClientNeed.class
 bj/gazfacile/dto/AdminPlanRequest.class
 bj/gazfacile/exception/GlobalExceptionHandler.class
+bj/gazfacile/dto/AdminCatalogueItemDTO.class
 bj/gazfacile/dto/LoginDTO.class
 bj/gazfacile/service/AbonnementService.class
 bj/gazfacile/model/Notification.class

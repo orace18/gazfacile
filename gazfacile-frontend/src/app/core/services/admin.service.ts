@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { DashboardStats } from '../models/notification.model';
-import { Revendeur, Abonnement, Transaction, PlanType, SubscriptionDTO } from '../models/revendeur.model';
+import { Revendeur, Abonnement, Transaction, PlanType } from '../models/revendeur.model';
 
 export interface AdminUser {
   id: string;
@@ -61,6 +61,36 @@ export interface AdminPlanRequest {
   ordre: number;
 }
 
+export interface AdminCatalogueItem {
+  id: string;
+  revendeurId: string;
+  revendeurNom: string;
+  revendeurTelephone?: string;
+  quartier?: string;
+  marque: string;
+  marqueLibelle: string;
+  format: string;
+  formatLibelle: string;
+  prixUnitaire: number;
+  quantiteDisponible: number;
+  disponible: boolean;
+  updatedAt: string;
+}
+
+export interface AdminSubscription {
+  id: string;
+  userId: string;
+  userNom: string;
+  userTelephone?: string;
+  planCode: string;
+  planType: PlanType;
+  createdAt?: string;
+  dateDebut?: string;
+  dateFin?: string;
+  quotaRestant: number;
+  statut: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly apiUrl = `${environment.apiUrl}/admin`;
@@ -104,6 +134,10 @@ export class AdminService {
     return this.http.get<Transaction[]>(`${this.apiUrl}/transactions`);
   }
 
+  getCatalogue(): Observable<AdminCatalogueItem[]> {
+    return this.http.get<AdminCatalogueItem[]>(`${this.apiUrl}/catalogue`);
+  }
+
   // ── Plans d'abonnement ───────────────────────────────────────────────────
 
   getPlans(): Observable<AdminPlan[]> {
@@ -124,7 +158,7 @@ export class AdminService {
 
   // ── Subscriptions ────────────────────────────────────────────────────────
 
-  getSubscriptions(): Observable<SubscriptionDTO[]> {
-    return this.http.get<SubscriptionDTO[]>(`${this.apiUrl}/subscriptions`);
+  getSubscriptions(): Observable<AdminSubscription[]> {
+    return this.http.get<AdminSubscription[]>(`${this.apiUrl}/subscriptions`);
   }
 }

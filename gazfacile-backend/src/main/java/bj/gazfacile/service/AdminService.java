@@ -1,14 +1,21 @@
 package bj.gazfacile.service;
 
+import bj.gazfacile.dto.AdminCatalogueItemDTO;
+import bj.gazfacile.dto.AdminSubscriptionDTO;
 import bj.gazfacile.dto.DashboardStatsDTO;
 import bj.gazfacile.model.Commande;
+import bj.gazfacile.model.ProduitRevendeur;
 import bj.gazfacile.model.Revendeur;
+import bj.gazfacile.model.Subscription;
+import bj.gazfacile.model.User;
 import bj.gazfacile.model.enums.Abonnement;
 import bj.gazfacile.model.enums.Role;
 import bj.gazfacile.model.enums.StockStatus;
 import bj.gazfacile.repository.AvisRepository;
 import bj.gazfacile.repository.CommandeRepository;
+import bj.gazfacile.repository.ProduitRevendeurRepository;
 import bj.gazfacile.repository.RevendeurRepository;
+import bj.gazfacile.repository.SubscriptionRepository;
 import bj.gazfacile.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +23,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -33,6 +42,8 @@ public class AdminService {
     private final CommandeRepository commandeRepository;
     private final UserRepository userRepository;
     private final AvisRepository avisRepository;
+    private final ProduitRevendeurRepository produitRevendeurRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
     /**
      * Calcule et retourne toutes les statistiques pour le dashboard admin.
@@ -109,5 +120,27 @@ public class AdminService {
             totalAvis,
             Math.round(noteMoyenneGlobale * 10.0) / 10.0
         );
+    }
+
+    public List<AdminCatalogueItemDTO> getCatalogueGlobal() {
+        Map<String, Revendeur> revendeurs = revendeurRepository.findAll().stream()
+                .collect(Collectors.toMap(Revendeur::getId, Function.identity()));
+
+        return produitRevendeurRepository.findAll().stream()
+                .sorted(Comparator.comparing(ProduitRevendeur::getUpdatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(produit -> AdminCatalogueItemDTO.from(produit, revendeurs.get(produit.getRevendeurId())))
+                .toList();
+    }
+
+    public List<AdminSubscriptionDTO> getSubscriptionsAdmin() {
+        Map<String, User> users = userRepository.findAll().stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
+        return subscriptionRepository.findAll().stream()
+                .sorted(Comparator.comparing(Subscription::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(subscription -> AdminSubscriptionDTO.from(subscription, users.get(subscription.getUserId())))
+                .toList();
     }
 }

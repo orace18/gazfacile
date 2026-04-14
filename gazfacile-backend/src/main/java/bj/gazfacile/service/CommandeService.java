@@ -3,13 +3,17 @@ package bj.gazfacile.service;
 import bj.gazfacile.dto.CommandeDTO;
 import bj.gazfacile.exception.ResourceNotFoundException;
 import bj.gazfacile.model.Commande;
+import bj.gazfacile.model.ProduitRevendeur;
 import bj.gazfacile.model.Revendeur;
 import bj.gazfacile.model.Subscription;
 import bj.gazfacile.model.User;
+import bj.gazfacile.model.enums.FormatBouteille;
+import bj.gazfacile.model.enums.MarqueGaz;
 import bj.gazfacile.model.enums.PlanType;
 import bj.gazfacile.model.enums.StatutCommande;
 import bj.gazfacile.model.enums.StatutPaiement;
 import bj.gazfacile.repository.CommandeRepository;
+import bj.gazfacile.repository.ProduitRevendeurRepository;
 import bj.gazfacile.repository.RevendeurRepository;
 import bj.gazfacile.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,12 +35,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class CommandeService {
-
-    /** Prix unitaire d'une bouteille de 6kg en FCFA. */
-    private static final double PRIX_6KG = 5500.0;
-
-    /** Prix unitaire d'une bouteille de 12kg en FCFA. */
-    private static final double PRIX_12KG = 10000.0;
 
     /** Rayon gratuit de livraison en km. */
     private static final double RAYON_GRATUIT_KM = 5.0;
@@ -48,8 +47,10 @@ public class CommandeService {
 
     private final CommandeRepository commandeRepository;
     private final RevendeurRepository revendeurRepository;
+    private final ProduitRevendeurRepository produitRevendeurRepository;
     private final SubscriptionService subscriptionService;
     private final UserRepository userRepository;
+    private final PhoneNumberService phoneNumberService;
 
     /**
      * Crée une nouvelle commande de gaz.
@@ -63,8 +64,29 @@ public class CommandeService {
         Revendeur revendeur = revendeurRepository.findById(dto.revendeurId())
                 .orElseThrow(() -> new ResourceNotFoundException("Revendeur", dto.revendeurId()));
 
+        String clientTelephone = phoneNumberService.normaliserTelephoneLocal(dto.clientTelephone());
+        MarqueGaz marque = parseMarque(dto.marque());
+        FormatBouteille format = parseFormat(dto.taille());
+
+        ProduitRevendeur produit = produitRevendeurRepository
+                .findByRevendeurIdAndMarqueAndFormat(dto.revendeurId(), marque, format)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Le produit demandé n'existe pas dans le catalogue du revendeur"
+                ));
+
+        if (!produit.isDisponible() || produit.getQuantiteDisponible() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Le produit demandé n'est pas disponible actuellement");
+        }
+
+        if (dto.quantite() > produit.getQuantiteDisponible()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Quantité indisponible pour ce produit");
+        }
+
         // Vérifier que le client a un abonnement LIVRAISON actif avec quota restant
-        User client = userRepository.findByTelephone(dto.clientTelephone()).orElse(null);
+        User client = userRepository.findByTelephone(clientTelephone).orElse(null);
         if (client != null) {
             Optional<Subscription> subOpt = subscriptionService.getActiveSubscription(
                     client.getId(), PlanType.CLIENT_LIVRAISON);
@@ -79,8 +101,8 @@ public class CommandeService {
             }
         }
 
-        // Calculer le prix unitaire selon la taille
-        double prixUnitaire = "6kg".equals(dto.taille()) ? PRIX_6KG : PRIX_12KG;
+        // Calculer le prix unitaire selon le catalogue réel du revendeur
+        double prixUnitaire = produit.getPrixUnitaire();
         double total = prixUnitaire * dto.quantite();
 
         // Calculer la distance et le surcoût éventuel
@@ -101,11 +123,11 @@ public class CommandeService {
         Commande commande = Commande.builder()
                 .revendeurId(dto.revendeurId())
                 .revendeurNom(revendeur.getNom())
-                .clientTelephone(dto.clientTelephone())
+                .clientTelephone(clientTelephone)
                 .clientAdresseLivraison(dto.clientAdresseLivraison())
                 .clientLocation(dto.clientLocation())
-                .marque(dto.marque())
-                .taille(dto.taille())
+                .marque(marque.getLibelle())
+                .taille(format.getLibelle())
                 .quantite(dto.quantite())
                 .prixUnitaire(prixUnitaire)
                 .total(total)
@@ -127,6 +149,30 @@ public class CommandeService {
         log.info("Commande créée : {} pour {} FCFA (distance: {}km, frais: {} FCFA)",
                 commande.getId(), total, String.format("%.1f", distanceKm), fraisSupplementaires);
         return commande;
+    }
+
+    private MarqueGaz parseMarque(String value) {
+        for (MarqueGaz marque : MarqueGaz.values()) {
+            if (marque.name().equalsIgnoreCase(value) || marque.getLibelle().equalsIgnoreCase(value)) {
+                return marque;
+            }
+        }
+
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Marque de gaz invalide");
+    }
+
+    private FormatBouteille parseFormat(String value) {
+        String normalized = value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
+
+        return switch (normalized) {
+            case "KG_3", "3KG", "3 KG" -> FormatBouteille.KG_3;
+            case "KG_6", "6KG", "6 KG" -> FormatBouteille.KG_6;
+            case "KG_12", "12KG", "12 KG" -> FormatBouteille.KG_12;
+            case "KG_25", "25KG", "25 KG" -> FormatBouteille.KG_25;
+            case "KG_38", "38KG", "38 KG" -> FormatBouteille.KG_38;
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Format de bouteille invalide");
+        };
     }
 
     /**

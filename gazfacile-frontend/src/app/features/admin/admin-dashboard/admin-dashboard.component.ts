@@ -14,9 +14,17 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
-import { AdminService, AdminUser, AdminCommande, AdminPlan, AdminPlanRequest } from '../../../core/services/admin.service';
+import {
+  AdminService,
+  AdminUser,
+  AdminCommande,
+  AdminPlan,
+  AdminPlanRequest,
+  AdminCatalogueItem,
+  AdminSubscription
+} from '../../../core/services/admin.service';
 import { DashboardStats } from '../../../core/models/notification.model';
-import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType, SubscriptionDTO } from '../../../core/models/revendeur.model';
+import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType } from '../../../core/models/revendeur.model';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -129,7 +137,7 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType, Subscripti
                   <mat-card-content>
                     @for (e of objectEntries(stats()!.revendeurParAbonnement); track e[0]) {
                       <div class="stat-ligne">
-                        <span class="abo-badge" [class]="'abo-' + e[0].toLowerCase()">{{ e[0] }}</span>
+                        <span class="abo-badge" [class]="'abo-' + e[0].toLowerCase()">{{ libelleAbonnement(e[0]) }}</span>
                         <span class="stat-val">{{ e[1] }}</span>
                       </div>
                       <div class="barre-bg">
@@ -209,8 +217,11 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType, Subscripti
                         class="select-abo"
                         (ngModelChange)="changerAbonnement(r, $event)">
                         <mat-option value="GRATUIT">Gratuit</mat-option>
-                        <mat-option value="STANDARD">Standard</mat-option>
-                        <mat-option value="PREMIUM">Premium</mat-option>
+                        <mat-option value="TEST">Test</mat-option>
+                        <mat-option value="MENSUEL">Mensuel</mat-option>
+                        <mat-option value="TRIMESTRIEL">Trimestriel</mat-option>
+                        <mat-option value="SEMESTRIEL">Semestriel</mat-option>
+                        <mat-option value="ANNUEL">Annuel</mat-option>
                       </mat-select>
                     </td>
                   </ng-container>
@@ -240,7 +251,54 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType, Subscripti
             }
           </mat-tab>
 
-          <!-- ── Onglet 3 : Utilisateurs ── -->
+          <!-- ── Onglet 3 : Catalogue ── -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>inventory_2</mat-icon>&nbsp;Catalogue
+            </ng-template>
+
+            @if (chargementCatalogue()) {
+              <div class="chargement-centre"><mat-spinner diameter="40"></mat-spinner></div>
+            } @else {
+              <div class="table-wrapper">
+                <table mat-table [dataSource]="catalogue()" class="table-admin">
+                  <ng-container matColumnDef="revendeur">
+                    <th mat-header-cell *matHeaderCellDef>Revendeur</th>
+                    <td mat-cell *matCellDef="let item">
+                      <strong>{{ item.revendeurNom }}</strong>
+                      <span class="sous-ligne">{{ item.quartier || '—' }} · {{ item.revendeurTelephone || '—' }}</span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="produit">
+                    <th mat-header-cell *matHeaderCellDef>Produit</th>
+                    <td mat-cell *matCellDef="let item">
+                      <strong>{{ item.marqueLibelle }}</strong>
+                      <span class="sous-ligne">{{ item.formatLibelle }}</span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="prix">
+                    <th mat-header-cell *matHeaderCellDef>Prix</th>
+                    <td mat-cell *matCellDef="let item">{{ item.prixUnitaire | number:'1.0-0' }} FCFA</td>
+                  </ng-container>
+                  <ng-container matColumnDef="stock">
+                    <th mat-header-cell *matHeaderCellDef>Disponibilité</th>
+                    <td mat-cell *matCellDef="let item">
+                      <strong>{{ item.quantiteDisponible }}</strong>
+                      <span class="sous-ligne">{{ item.disponible ? 'Disponible' : 'Masqué' }}</span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="maj">
+                    <th mat-header-cell *matHeaderCellDef>Dernière mise à jour</th>
+                    <td mat-cell *matCellDef="let item">{{ item.updatedAt | date:'dd/MM/yy HH:mm' }}</td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="colonnesCatalogue"></tr>
+                  <tr mat-row *matRowDef="let row; columns: colonnesCatalogue;"></tr>
+                </table>
+              </div>
+            }
+          </mat-tab>
+
+          <!-- ── Onglet 4 : Utilisateurs ── -->
           <mat-tab>
             <ng-template mat-tab-label>
               <mat-icon>people</mat-icon>&nbsp;Utilisateurs
@@ -549,7 +607,7 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType, Subscripti
             }
           </mat-tab>
 
-          <!-- ── Onglet 7 : Subscriptions ── -->
+          <!-- ── Onglet 8 : Subscriptions ── -->
           <mat-tab>
             <ng-template mat-tab-label>
               <mat-icon>card_membership</mat-icon>&nbsp;Abonnements
@@ -560,10 +618,11 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType, Subscripti
             } @else {
               <div class="table-wrapper">
                 <table mat-table [dataSource]="subscriptions()" class="table-admin">
-                  <ng-container matColumnDef="userId">
-                    <th mat-header-cell *matHeaderCellDef>User ID</th>
+                  <ng-container matColumnDef="abonne">
+                    <th mat-header-cell *matHeaderCellDef>Abonné</th>
                     <td mat-cell *matCellDef="let s">
-                      <code>{{ s.id.substring(0, 8) }}...</code>
+                      <strong>{{ s.userNom }}</strong>
+                      <span class="sous-ligne">{{ s.userTelephone || '—' }}</span>
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="planCode">
@@ -573,13 +632,17 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType, Subscripti
                       <span class="sous-ligne">{{ s.planType }}</span>
                     </td>
                   </ng-container>
+                  <ng-container matColumnDef="createdAt">
+                    <th mat-header-cell *matHeaderCellDef>Souscrit le</th>
+                    <td mat-cell *matCellDef="let s">{{ s.createdAt | date:'dd/MM/yy HH:mm' }}</td>
+                  </ng-container>
                   <ng-container matColumnDef="dateDebut">
-                    <th mat-header-cell *matHeaderCellDef>Début</th>
-                    <td mat-cell *matCellDef="let s">{{ s.dateDebut | date:'dd/MM/yy' }}</td>
+                    <th mat-header-cell *matHeaderCellDef>Activé le</th>
+                    <td mat-cell *matCellDef="let s">{{ s.dateDebut | date:'dd/MM/yy HH:mm' }}</td>
                   </ng-container>
                   <ng-container matColumnDef="dateFin">
-                    <th mat-header-cell *matHeaderCellDef>Fin</th>
-                    <td mat-cell *matCellDef="let s">{{ s.dateFin | date:'dd/MM/yy' }}</td>
+                    <th mat-header-cell *matHeaderCellDef>Expire le</th>
+                    <td mat-cell *matCellDef="let s">{{ s.dateFin | date:'dd/MM/yy HH:mm' }}</td>
                   </ng-container>
                   <ng-container matColumnDef="quota">
                     <th mat-header-cell *matHeaderCellDef>Quota restant</th>
@@ -733,8 +796,11 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType, Subscripti
     .abo-badge {
       font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;
       &.abo-gratuit  { background: var(--color-surface-2); color: var(--color-text-muted); }
-      &.abo-standard { background: rgba(59,130,246,0.15); color: #3B82F6; }
-      &.abo-premium  { background: color-mix(in srgb, var(--color-accent) 20%, transparent); color: #8a6200; }
+      &.abo-test { background: rgba(245,158,11,0.15); color: #92400e; }
+      &.abo-mensuel { background: rgba(59,130,246,0.15); color: #3B82F6; }
+      &.abo-trimestriel { background: rgba(16,185,129,0.15); color: #047857; }
+      &.abo-semestriel { background: rgba(139,92,246,0.15); color: #7c3aed; }
+      &.abo-annuel  { background: color-mix(in srgb, var(--color-accent) 20%, transparent); color: #8a6200; }
     }
 
     .carte-ca {
@@ -886,14 +952,16 @@ export class AdminDashboardComponent implements OnInit {
 
   readonly stats           = signal<DashboardStats | null>(null);
   readonly revendeurs      = signal<Revendeur[]>([]);
+  readonly catalogue       = signal<AdminCatalogueItem[]>([]);
   readonly utilisateurs    = signal<AdminUser[]>([]);
   readonly commandes       = signal<AdminCommande[]>([]);
   readonly transactions    = signal<Transaction[]>([]);
   readonly plans           = signal<AdminPlan[]>([]);
-  readonly subscriptions   = signal<SubscriptionDTO[]>([]);
+  readonly subscriptions   = signal<AdminSubscription[]>([]);
 
   readonly chargementStats        = signal(false);
   readonly chargementRevendeurs   = signal(false);
+  readonly chargementCatalogue    = signal(false);
   readonly chargementUsers        = signal(false);
   readonly chargementCommandes    = signal(false);
   readonly chargementTransactions = signal(false);
@@ -903,11 +971,12 @@ export class AdminDashboardComponent implements OnInit {
   readonly planEnEdition   = signal<AdminPlan | null>(null);
 
   readonly colonnesRevendeurs   = ['nom', 'telephone', 'abonnement', 'stock', 'actif'];
+  readonly colonnesCatalogue    = ['revendeur', 'produit', 'prix', 'stock', 'maj'];
   readonly colonnesUsers        = ['nom', 'telephone', 'roles', 'inscription', 'actif'];
   readonly colonnesCommandes    = ['date', 'client', 'revendeur', 'total', 'paiement', 'statut'];
   readonly colonnesTransactions = ['date', 'reference', 'type', 'montant', 'client', 'statut'];
   readonly colonnesPlans        = ['type', 'nom', 'prix', 'duree', 'quota', 'actif', 'actions'];
-  readonly colonnesSubscriptions = ['userId', 'planCode', 'dateDebut', 'dateFin', 'quota', 'statut'];
+  readonly colonnesSubscriptions = ['abonne', 'planCode', 'createdAt', 'dateDebut', 'dateFin', 'quota', 'statut'];
 
   readonly objectEntries = Object.entries;
 
@@ -930,6 +999,7 @@ export class AdminDashboardComponent implements OnInit {
   chargerTout(): void {
     this.chargerStats();
     this.chargerRevendeurs();
+    this.chargerCatalogue();
     this.chargerUsers();
     this.chargerCommandes();
     this.chargerTransactions();
@@ -950,6 +1020,17 @@ export class AdminDashboardComponent implements OnInit {
     this.adminService.getRevendeurs().subscribe({
       next: r => { this.revendeurs.set(r); this.chargementRevendeurs.set(false); },
       error: () => this.chargementRevendeurs.set(false)
+    });
+  }
+
+  chargerCatalogue(): void {
+    this.chargementCatalogue.set(true);
+    this.adminService.getCatalogue().subscribe({
+      next: items => {
+        this.catalogue.set(items);
+        this.chargementCatalogue.set(false);
+      },
+      error: () => this.chargementCatalogue.set(false)
     });
   }
 
@@ -1027,6 +1108,17 @@ export class AdminDashboardComponent implements OnInit {
 
   libelleStatutFeda(s: string): string {
     return ({ PENDING: 'En attente', APPROVED: 'Approuvé', DECLINED: 'Refusé', CANCELLED: 'Annulé', REFUNDED: 'Remboursé', TRANSFERRED: 'Transféré' } as Record<string,string>)[s] ?? s;
+  }
+
+  libelleAbonnement(a: string): string {
+    return ({
+      GRATUIT: 'Gratuit',
+      TEST: 'Test',
+      MENSUEL: 'Mensuel',
+      TRIMESTRIEL: 'Trimestriel',
+      SEMESTRIEL: 'Semestriel',
+      ANNUEL: 'Annuel'
+    } as Record<string, string>)[a] ?? a;
   }
 
   // ── Plans d'abonnement ───────────────────────────────────────────────────
