@@ -8,8 +8,8 @@ public record SubscribeRequestDTO(
         String planCode,
 
         @Pattern(
-                regexp = "^$|^\\d{8}$",
-                message = "Le numéro de paiement doit comporter 8 chiffres"
+                regexp = "^$|^\\d{10}$",
+                message = "Le numéro de paiement doit comporter 10 chiffres"
         )
         String telephonePaiement
 ) {}

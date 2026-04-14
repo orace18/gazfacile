@@ -138,10 +138,10 @@ import { SubscriptionPlanDTO, SubscriptionDTO } from '../../../core/models/reven
 
         <!-- Numéro de paiement -->
         <div class="bloc-tel-paiement">
-          <mat-form-field appearance="outline" class="champ-tel">
-            <mat-label>Numéro Mobile Money pour le paiement</mat-label>
-            <input matInput [(ngModel)]="telephonePaiement" type="tel"
-              placeholder="Ex: 97000000">
+            <mat-form-field appearance="outline" class="champ-tel">
+              <mat-label>Numéro Mobile Money pour le paiement</mat-label>
+              <input matInput [(ngModel)]="telephonePaiement" type="tel"
+              placeholder="Ex: 0197000000">
             <div matPrefix class="prefixe-tel">+229</div>
             <mat-hint>Utilisez le numéro à débiter pour le paiement. Il peut être différent du numéro du compte.</mat-hint>
           </mat-form-field>
@@ -438,8 +438,8 @@ export class AbonnementComponent implements OnInit {
 
   souscrire(planCode: string): void {
     const telephonePaiement = this.telephonePaiement.trim();
-    if (telephonePaiement && !/^\d{8}$/.test(telephonePaiement)) {
-      this.erreur.set('Le numéro de paiement doit comporter 8 chiffres.');
+    if (telephonePaiement && !/^\d{10}$/.test(telephonePaiement)) {
+      this.erreur.set('Le numéro de paiement doit comporter 10 chiffres.');
       return;
     }
 
