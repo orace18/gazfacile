@@ -45,10 +45,13 @@ import { OtpService } from '../../../core/services/otp.service';
 
             <mat-form-field appearance="outline" class="champ-pleine-largeur">
               <mat-label>Numéro de téléphone</mat-label>
-              <input matInput [formControl]="telephoneGoogleControl" placeholder="97000000" type="tel">
+              <input matInput [formControl]="telephoneGoogleControl" placeholder="0197000000" type="tel">
               <div matPrefix class="prefixe-tel">+229</div>
-              @if (telephoneGoogleControl.invalid && telephoneGoogleControl.touched) {
+              @if (telephoneGoogleControl.hasError('required') && telephoneGoogleControl.touched) {
                 <mat-error>Le numéro de téléphone est obligatoire</mat-error>
+              }
+              @if (telephoneGoogleControl.hasError('pattern') && telephoneGoogleControl.touched) {
+                <mat-error>Format invalide. Exemple: 0197000000</mat-error>
               }
             </mat-form-field>
 
@@ -151,13 +154,13 @@ import { OtpService } from '../../../core/services/otp.service';
               <input
                 matInput
                 [formControl]="telephoneControl"
-                placeholder="97000000"
+                placeholder="0197000000"
                 type="tel"
                 [readonly]="otpEnvoye"
               >
               <div matPrefix class="prefixe-tel">+229</div>
               @if (telephoneControl.invalid && telephoneControl.touched) {
-                <mat-error>Entrez un numéro valide</mat-error>
+                <mat-error>Entrez un numéro valide. Exemple: 0197000000</mat-error>
               }
             </mat-form-field>
 
@@ -435,7 +438,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
 
   readonly telephoneControl = this.fb.control('', [
     Validators.required,
-    Validators.pattern(/^(\+229|00229)?\s*\d{8}$/)
+    Validators.pattern(/^(\+229|00229)?\s*\d{10}$/)
   ]);
 
   readonly otpControl = this.fb.control('', [
@@ -443,7 +446,10 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     Validators.pattern(/^\d{6}$/)
   ]);
 
-  readonly telephoneGoogleControl = this.fb.control('', Validators.required);
+  readonly telephoneGoogleControl = this.fb.control('', [
+    Validators.required,
+    Validators.pattern(/^(\+229|00229)?\s*\d{10}$/)
+  ]);
   readonly otpGoogleControl = this.fb.control('', [
     Validators.required,
     Validators.pattern(/^\d{6}$/)

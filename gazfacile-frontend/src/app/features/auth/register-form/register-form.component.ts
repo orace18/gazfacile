@@ -79,7 +79,7 @@ import { Role } from '../../../core/models/revendeur.model';
                 <input
                   matInput
                   formControlName="telephone"
-                  placeholder="97000000"
+                  placeholder="0197000000"
                   type="tel"
                   [readonly]="otpEnvoye"
                 >
@@ -88,7 +88,7 @@ import { Role } from '../../../core/models/revendeur.model';
                   <mat-error>Le numéro de téléphone est obligatoire</mat-error>
                 }
                 @if (telephoneForm.get('telephone')?.hasError('pattern') && telephoneForm.get('telephone')?.touched) {
-                  <mat-error>Format invalide. Exemple: 97000000</mat-error>
+                  <mat-error>Format invalide. Exemple: 0197000000</mat-error>
                 }
               </mat-form-field>
 
@@ -393,7 +393,7 @@ export class RegisterFormComponent implements OnDestroy {
   });
 
   readonly telephoneForm = this.fb.group({
-    telephone: ['', [Validators.required, Validators.pattern(/^(\+229|00229)?\s*\d{8}$/)]]
+    telephone: ['', [Validators.required, Validators.pattern(/^(\+229|00229)?\s*\d{10}$/)]]
   });
 
   readonly otpControl = this.fb.control('', [

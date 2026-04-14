@@ -12,11 +12,20 @@ public class PhoneNumberService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le numéro de téléphone est obligatoire");
         }
 
-        return telephone
+        String telephoneLocal = telephone
                 .replaceFirst("^\\+229", "")
                 .replaceFirst("^00229", "")
                 .replaceAll("\\s+", "")
                 .trim();
+
+        if (!telephoneLocal.matches("\\d{10}")) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Le numéro de téléphone doit comporter 10 chiffres"
+            );
+        }
+
+        return telephoneLocal;
     }
 
     public String normaliserTelephoneInternational(String telephone) {
