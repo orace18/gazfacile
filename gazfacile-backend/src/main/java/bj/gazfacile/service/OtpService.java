@@ -1,52 +1,29 @@
 package bj.gazfacile.service;
 
-import bj.gazfacile.model.OtpRecord;
-import bj.gazfacile.repository.OtpRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.security.SecureRandom;
-import java.time.LocalDateTime;
-
 /**
- * Génère, stocke et vérifie les codes OTP pour la confirmation de numéro de téléphone.
+ * Adaptateur pour conserver les flux d'authentification existants avec le nouveau provider CPass.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class OtpService {
 
-    private final OtpRepository otpRepository;
-    private final SmsService smsService;
+    private final OtpFacade otpFacade;
     private final PhoneNumberService phoneNumberService;
 
-    private static final SecureRandom RANDOM = new SecureRandom();
-
     /**
-     * Génère un OTP à 6 chiffres, l'enregistre et l'envoie par SMS.
-     * Supprime les anciens OTP du même numéro pour éviter les doublons.
+     * Initialise une session OTP via CPass.
      */
     public void envoyerOtp(String telephone) {
         String telephoneLocal = phoneNumberService.normaliserTelephoneLocal(telephone);
-
-        // Nettoyer les anciens OTP
-        otpRepository.deleteAllByTelephone(telephoneLocal);
-
-        String code = String.format("%06d", RANDOM.nextInt(1_000_000));
-
-        OtpRecord record = OtpRecord.builder()
-                .telephone(telephoneLocal)
-                .code(code)
-                .expiresAt(LocalDateTime.now().plusMinutes(OtpRecord.EXPIRATION_MINUTES))
-                .utilise(false)
-                .build();
-
-        otpRepository.save(record);
-        smsService.envoyerOtp(phoneNumberService.normaliserTelephoneInternational(telephoneLocal), code);
-        log.info("[OTP] Code généré pour {}", telephoneLocal);
+        otpFacade.initOtp(telephoneLocal);
+        log.info("[OTP] Session OTP initialisée pour {}", telephoneLocal);
     }
 
     /**
@@ -57,21 +34,11 @@ public class OtpService {
     public void verifierOtp(String telephone, String code) {
         String telephoneLocal = phoneNumberService.normaliserTelephoneLocal(telephone);
 
-        OtpRecord record = otpRepository
-                .findTopByTelephoneAndUtiliseFalseOrderByExpiresAtDesc(telephoneLocal)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Aucun code OTP en attente pour ce numéro"));
-
-        if (!record.estValide(code)) {
-            if (record.estExpire()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Code OTP expiré — veuillez en demander un nouveau");
-            }
+        boolean verified = otpFacade.confirmOtp(telephoneLocal, code);
+        if (!verified) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code OTP incorrect");
         }
 
-        record.setUtilise(true);
-        otpRepository.save(record);
         log.info("[OTP] Numéro {} vérifié avec succès", telephoneLocal);
     }
 }

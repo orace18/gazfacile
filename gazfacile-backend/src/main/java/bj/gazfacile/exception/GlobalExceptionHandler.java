@@ -94,6 +94,27 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(OtpExpiredException.class)
+    public ResponseEntity<ErreurResponse> handleOtpExpiredException(OtpExpiredException ex) {
+        return json(HttpStatus.BAD_REQUEST,
+                new ErreurResponse(ex.getMessage(), 400, "OTP expiré", LocalDateTime.now())
+        );
+    }
+
+    @ExceptionHandler(OtpInvalidException.class)
+    public ResponseEntity<ErreurResponse> handleOtpInvalidException(OtpInvalidException ex) {
+        return json(HttpStatus.BAD_REQUEST,
+                new ErreurResponse(ex.getMessage(), 400, "OTP invalide", LocalDateTime.now())
+        );
+    }
+
+    @ExceptionHandler(OtpProviderException.class)
+    public ResponseEntity<ErreurResponse> handleOtpProviderException(OtpProviderException ex) {
+        return json(HttpStatus.BAD_GATEWAY,
+                new ErreurResponse(ex.getMessage(), 502, "Erreur fournisseur OTP", LocalDateTime.now())
+        );
+    }
+
     /** Erreurs métier avec statut HTTP explicite (ex : UNAUTHORIZED, PRECONDITION_REQUIRED). */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErreurResponse> handleResponseStatusException(ResponseStatusException ex) {
