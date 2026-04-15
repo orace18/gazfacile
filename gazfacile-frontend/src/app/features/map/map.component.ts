@@ -114,6 +114,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     };
   }
 
+  @ViewChild(GoogleMap) private googleMapRef!: GoogleMap;
   @ViewChild(MapInfoWindow) infoWindow!: MapInfoWindow;
 
   marqueurs: { revendeurId: string; position: google.maps.LatLngLiteral; options: google.maps.MarkerOptions; revendeur: Revendeur }[] = [];
@@ -121,7 +122,6 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   contenuInfo = '';
   infoWindowOptions: google.maps.InfoWindowOptions = {};
 
-  private mapInstance: google.maps.Map | null = null;
   private revendeursSnapshot: Revendeur[] = [];
 
   constructor(private ngZone: NgZone) {
@@ -246,17 +246,19 @@ export class MapComponent implements AfterViewInit, OnDestroy {
 
   focusRevendeur(id: string): void {
     const marqueur = this.marqueurs.find(m => m.revendeurId === id);
-    if (marqueur && this.mapInstance) {
-      this.mapInstance.panTo(marqueur.position);
-      this.mapInstance.setZoom(16);
+    const map = this.googleMapRef?.googleMap;
+    if (marqueur && map) {
+      map.panTo(marqueur.position);
+      map.setZoom(16);
     }
   }
 
   setUserLocation(lat: number, lng: number): void {
     this.positionUtilisateur = { lat, lng };
-    if (this.mapInstance) {
-      this.mapInstance.panTo({ lat, lng });
-      this.mapInstance.setZoom(14);
+    const map = this.googleMapRef?.googleMap;
+    if (map) {
+      map.panTo({ lat, lng });
+      map.setZoom(14);
     }
   }
 

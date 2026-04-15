@@ -254,6 +254,7 @@ import { OtpService } from '../../../core/services/otp.service';
       max-width: 420px;
       background: var(--color-surface);
       padding: 44px 40px;
+      border-radius: var(--radius-lg, 16px);
       box-shadow: 0 16px 48px rgba(0,0,0,0.25);
     }
 

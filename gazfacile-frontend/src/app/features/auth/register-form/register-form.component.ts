@@ -190,6 +190,7 @@ import { Role } from '../../../core/models/revendeur.model';
       max-width: 460px;
       background: var(--color-surface);
       padding: 40px 36px;
+      border-radius: var(--radius-lg, 16px);
       box-shadow: 0 16px 48px rgba(0,0,0,0.25);
     }
 

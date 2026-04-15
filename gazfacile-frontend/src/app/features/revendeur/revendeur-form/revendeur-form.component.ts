@@ -116,33 +116,6 @@ import { Revendeur, RevendeurDTO } from '../../../core/models/revendeur.model';
                     }
                   </mat-form-field>
 
-                  <!-- Marques de gaz -->
-                  <div class="section-marques">
-                    <label class="label-section">Marques de gaz distribuées</label>
-                    <div class="ajout-marque">
-                      <mat-form-field appearance="outline" class="champ-marque">
-                        <mat-label>Ajouter une marque</mat-label>
-                        <input matInput #champMarque placeholder="Ex: Sodigaz, SONACOP...">
-                      </mat-form-field>
-                      <button mat-icon-button type="button" (click)="ajouterMarque(champMarque.value); champMarque.value = ''">
-                        <mat-icon>add_circle</mat-icon>
-                      </button>
-                    </div>
-                    <div class="liste-marques">
-                      @for (marque of marques; track $index) {
-                        <mat-chip class="chip-marque" (removed)="supprimerMarque($index)">
-                          {{ marque }}
-                          <button matChipRemove>
-                            <mat-icon>cancel</mat-icon>
-                          </button>
-                        </mat-chip>
-                      }
-                      @if (marques.length === 0) {
-                        <p class="aide-marques">Ajoutez les marques de gaz que vous distribuez</p>
-                      }
-                    </div>
-                  </div>
-
                   <!-- Livraison -->
                   <mat-checkbox formControlName="livraison" class="checkbox-livraison">
                     <span>Je propose la livraison à domicile</span>
