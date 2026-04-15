@@ -76,6 +76,7 @@ bj/gazfacile/model/Avis.class
 bj/gazfacile/dto/OtpLoginDTO.class
 bj/gazfacile/service/ProduitRevendeurService.class
 bj/gazfacile/controller/SubscriptionController.class
+bj/gazfacile/exception/RateLimitOtpException.class
 bj/gazfacile/service/CPassOtpService$AuthorizedCall.class
 bj/gazfacile/dto/SubscriptionDTO.class
 bj/gazfacile/service/CPassTokenService$UnauthorizedCpassException.class

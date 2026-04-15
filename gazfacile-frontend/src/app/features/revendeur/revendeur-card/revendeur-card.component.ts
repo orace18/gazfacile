@@ -355,21 +355,16 @@ export class RevendeurCardComponent {
         && !this.consultationService.statut().autorise;
   }
 
-  /** Clic sur "Commander" : vérifier le quota avant d'émettre. */
+  /** Clic sur "Commander" : vérifier le quota avant d'émettre (connecté ou anonyme). */
   onCommander(): void {
-    if (this.authService.estConnecte()) {
-      this.commander.emit(this.revendeur);
-      return;
-    }
-
-    // Visiteur anonyme : consommer une consultation
     this.consultationService.consulter().subscribe(statut => {
       if (statut.autorise) {
         this.commander.emit(this.revendeur);
       } else {
         this.dialog.open(ConsultationPaywallComponent, {
           maxWidth: '440px',
-          width: '100%'
+          width: '100%',
+          data: { estConnecte: this.authService.estConnecte() }
         });
       }
     });

@@ -146,6 +146,8 @@ public class PaiementService {
     private Transaction appliquerStatut(Transaction transaction, StatutFedaPay nouveauStatut, String source) {
         StatutFedaPay ancienStatut = transaction.getStatut();
         if (ancienStatut == nouveauStatut) {
+            log.debug("[Paiement] Webhook idempotent ignoré — Transaction {} déjà en statut {}",
+                    transaction.getReference(), ancienStatut);
             return transaction;
         }
 

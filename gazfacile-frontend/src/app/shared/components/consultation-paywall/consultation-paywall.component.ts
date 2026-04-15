@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
@@ -17,47 +17,77 @@ import { MatIconModule } from '@angular/material/icon';
         <mat-icon>lock</mat-icon>
       </div>
 
-      <h2 class="titre">Quota gratuit atteint</h2>
-
-      <p class="description">
-        Vous avez consulté les détails de <strong>3 revendeurs</strong> gratuitement.
-        Créez un compte pour continuer à trouver du gaz près de chez vous.
-      </p>
-
-      <div class="avantages">
-        <div class="avantage">
-          <mat-icon>check_circle</mat-icon>
-          Consultations illimitées
+      @if (data.estConnecte) {
+        <h2 class="titre">Quota épuisé</h2>
+        <p class="description">
+          Vous avez utilisé toutes vos consultations disponibles.
+          Renouvelez votre abonnement pour continuer.
+        </p>
+        <div class="avantages">
+          <div class="avantage">
+            <mat-icon>check_circle</mat-icon>
+            Accès illimité aux revendeurs
+          </div>
+          <div class="avantage">
+            <mat-icon>check_circle</mat-icon>
+            Suivi de vos commandes
+          </div>
+          <div class="avantage">
+            <mat-icon>check_circle</mat-icon>
+            Notifications de stock en temps réel
+          </div>
         </div>
-        <div class="avantage">
-          <mat-icon>check_circle</mat-icon>
-          Suivi de vos commandes
+        <div class="actions">
+          <button
+            mat-raised-button
+            class="btn-inscription"
+            routerLink="/auth/register/client/plans"
+            (click)="dialogRef.close()"
+          >
+            <mat-icon>refresh</mat-icon>
+            Renouveler mon abonnement
+          </button>
         </div>
-        <div class="avantage">
-          <mat-icon>check_circle</mat-icon>
-          Notifications de stock en temps réel
+      } @else {
+        <h2 class="titre">Quota gratuit atteint</h2>
+        <p class="description">
+          Vous avez consulté les détails de <strong>3 revendeurs</strong> gratuitement.
+          Créez un compte pour continuer à trouver du gaz près de chez vous.
+        </p>
+        <div class="avantages">
+          <div class="avantage">
+            <mat-icon>check_circle</mat-icon>
+            Consultations illimitées
+          </div>
+          <div class="avantage">
+            <mat-icon>check_circle</mat-icon>
+            Suivi de vos commandes
+          </div>
+          <div class="avantage">
+            <mat-icon>check_circle</mat-icon>
+            Notifications de stock en temps réel
+          </div>
         </div>
-      </div>
-
-      <div class="actions">
-        <button
-          mat-raised-button
-          class="btn-inscription"
-          routerLink="/auth/register"
-          (click)="dialogRef.close()"
-        >
-          <mat-icon>person_add</mat-icon>
-          Créer un compte gratuit
-        </button>
-        <button
-          mat-button
-          class="btn-connexion"
-          routerLink="/auth/login"
-          (click)="dialogRef.close()"
-        >
-          J'ai déjà un compte
-        </button>
-      </div>
+        <div class="actions">
+          <button
+            mat-raised-button
+            class="btn-inscription"
+            routerLink="/auth/register"
+            (click)="dialogRef.close()"
+          >
+            <mat-icon>person_add</mat-icon>
+            Créer un compte gratuit
+          </button>
+          <button
+            mat-button
+            class="btn-connexion"
+            routerLink="/auth/login"
+            (click)="dialogRef.close()"
+          >
+            J'ai déjà un compte
+          </button>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -151,4 +181,6 @@ import { MatIconModule } from '@angular/material/icon';
 })
 export class ConsultationPaywallComponent {
   readonly dialogRef = inject(MatDialogRef<ConsultationPaywallComponent>);
+  readonly data: { estConnecte?: boolean } =
+    inject<{ estConnecte?: boolean }>(MAT_DIALOG_DATA, { optional: true }) ?? {};
 }

@@ -4,6 +4,7 @@ import bj.gazfacile.dto.SendOtpResponse;
 import bj.gazfacile.dto.VerifyOtpResponse;
 import bj.gazfacile.exception.OtpExpiredException;
 import bj.gazfacile.exception.OtpInvalidException;
+import bj.gazfacile.exception.RateLimitOtpException;
 import bj.gazfacile.model.CpassOtpRef;
 import bj.gazfacile.repository.CpassOtpRefRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,10 +24,17 @@ public class OtpFacade {
     private final CpassOtpRefRepository cpassOtpRefRepository;
     private final PhoneNumberService phoneNumberService;
 
+    static final long RATE_LIMIT_SECONDS = 60L;
+
     public String initOtp(String phoneNumber) {
         String phoneNumberLocal = phoneNumberService.normaliserTelephoneLocal(phoneNumber);
-        String phoneNumberInternational = phoneNumberService.normaliserTelephoneInternational(phoneNumberLocal);
 
+        Instant threshold = Instant.now().minusSeconds(RATE_LIMIT_SECONDS);
+        if (cpassOtpRefRepository.existsByPhoneNumberAndUsedFalseAndCreatedAtAfter(phoneNumberLocal, threshold)) {
+            throw new RateLimitOtpException("Veuillez attendre avant de renvoyer un code");
+        }
+
+        String phoneNumberInternational = phoneNumberService.normaliserTelephoneInternational(phoneNumberLocal);
         SendOtpResponse response = cPassOtpService.sendOtp(phoneNumberInternational);
         cpassOtpRefRepository.deleteAllByPhoneNumberAndUsedFalse(phoneNumberLocal);
 

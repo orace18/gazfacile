@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
@@ -7,10 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../../core/services/auth.service';
-import { GoogleAuthService } from '../../../core/services/google-auth.service';
-import { FirebasePhoneAuthService } from '../../../core/services/firebase-phone-auth.service';
 import { OtpService } from '../../../core/services/otp.service';
 
 @Component({
@@ -24,8 +21,7 @@ import { OtpService } from '../../../core/services/otp.service';
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule,
-    MatDividerModule
+    MatProgressSpinnerModule
   ],
   template: `
     <div class="page-auth">
@@ -36,57 +32,33 @@ import { OtpService } from '../../../core/services/otp.service';
           <p class="sous-titre">Connectez-vous avec votre numéro de téléphone</p>
         </div>
 
-        @if (modeGoogle && etapeGoogle === 1) {
-          <div class="bloc-completion-google">
-            <div class="info-google">
-              <mat-icon>account_circle</mat-icon>
-              <p>Dernière étape. Vérifiez votre numéro pour finaliser votre compte Google.</p>
-            </div>
-
-            <mat-form-field appearance="outline" class="champ-pleine-largeur">
-              <mat-label>Numéro de téléphone</mat-label>
-              <input matInput [formControl]="telephoneGoogleControl" placeholder="0197000000" type="tel">
-              <div matPrefix class="prefixe-tel">+229</div>
-              @if (telephoneGoogleControl.hasError('required') && telephoneGoogleControl.touched) {
-                <mat-error>Le numéro de téléphone est obligatoire</mat-error>
-              }
-              @if (telephoneGoogleControl.hasError('pattern') && telephoneGoogleControl.touched) {
-                <mat-error>Format invalide. Exemple: 0197000000</mat-error>
-              }
-            </mat-form-field>
-
-            @if (googleErreur) {
-              <div class="erreur-globale">
-                <mat-icon>error_outline</mat-icon> {{ googleErreur }}
-              </div>
+        <div class="bloc-otp">
+          <mat-form-field appearance="outline" class="champ-pleine-largeur">
+            <mat-label>Numéro de téléphone</mat-label>
+            <input
+              matInput
+              [formControl]="telephoneControl"
+              placeholder="0197000000"
+              type="tel"
+              [readonly]="otpEnvoye"
+            >
+            <div matPrefix class="prefixe-tel">+229</div>
+            @if (telephoneControl.invalid && telephoneControl.touched) {
+              <mat-error>Entrez un numéro valide. Exemple: 0197000000</mat-error>
             }
+          </mat-form-field>
 
-            <button mat-raised-button class="btn-connexion"
-              [disabled]="telephoneGoogleControl.invalid || envoiOtp || !firebasePhoneConfigured"
-              (click)="demanderOtpGoogle()">
-              @if (envoiOtp) { <mat-spinner diameter="20"></mat-spinner> }
-              @else { <mat-icon>sms</mat-icon> }
-              Recevoir le code SMS
-            </button>
-
-            <button mat-button class="btn-secondaire" (click)="annulerModeGoogle()">
-              <mat-icon>arrow_back</mat-icon> Retour
-            </button>
-          </div>
-        }
-
-        @if (modeGoogle && etapeGoogle === 2) {
-          <div class="bloc-completion-google">
-            <div class="info-google">
+          @if (otpEnvoye) {
+            <div class="otp-info">
               <mat-icon>phone_android</mat-icon>
-              <p>Code envoyé au <strong>+229 {{ telephoneGoogleControl.value }}</strong></p>
+              <p>Code envoyé au <strong>+229 {{ telephoneLocalAffiche }}</strong></p>
             </div>
 
             <mat-form-field appearance="outline" class="champ-pleine-largeur">
-              <mat-label>Code de vérification</mat-label>
+              <mat-label>Code OTP</mat-label>
               <input
                 matInput
-                [formControl]="otpGoogleControl"
+                [formControl]="otpControl"
                 placeholder="123456"
                 maxlength="6"
                 type="tel"
@@ -94,147 +66,58 @@ import { OtpService } from '../../../core/services/otp.service';
                 autocomplete="one-time-code"
               >
               <mat-icon matPrefix>lock</mat-icon>
-              @if (otpGoogleControl.invalid && otpGoogleControl.touched) {
+              @if (otpControl.invalid && otpControl.touched) {
                 <mat-error>Le code doit comporter 6 chiffres</mat-error>
               }
             </mat-form-field>
+          }
 
-            @if (googleErreur) {
-              <div class="erreur-globale">
-                <mat-icon>error_outline</mat-icon> {{ googleErreur }}
-              </div>
-            }
+          @if (erreur) {
+            <div class="erreur-globale">
+              <mat-icon>error_outline</mat-icon>
+              {{ erreur }}
+            </div>
+          }
 
-            <button mat-raised-button class="btn-connexion"
-              [disabled]="otpGoogleControl.invalid || envoi"
-              (click)="verifierEtLierGoogle()">
+          @if (!otpEnvoye) {
+            <button mat-raised-button type="button" class="btn-connexion"
+              [disabled]="telephoneControl.invalid || envoiOtp"
+              (click)="demanderOtpConnexion()">
+              @if (envoiOtp) { <mat-spinner diameter="20"></mat-spinner> }
+              @else { <mat-icon>sms</mat-icon> }
+              Recevoir le code SMS
+            </button>
+          }
+
+          @if (otpEnvoye) {
+            <button mat-raised-button type="button" class="btn-connexion"
+              [disabled]="otpControl.invalid || envoi"
+              (click)="connecterAvecOtp()">
               @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
-              @else { <mat-icon>check_circle</mat-icon> }
-              Confirmer et se connecter
+              @else { <mat-icon>login</mat-icon> }
+              Se connecter
             </button>
 
-            <button mat-button class="btn-secondaire" [disabled]="envoiOtp" (click)="demanderOtpGoogle()">
+            <button mat-button type="button" class="btn-secondaire" [disabled]="envoiOtp" (click)="demanderOtpConnexion()">
               @if (envoiOtp) { <mat-spinner diameter="14"></mat-spinner> }
               Renvoyer le code
             </button>
 
-            <button mat-button class="btn-secondaire" (click)="revenirEtapeGoogle()">
-              <mat-icon>arrow_back</mat-icon> Modifier le numéro
+            <button mat-button type="button" class="btn-secondaire" (click)="modifierNumeroConnexion()">
+              <mat-icon>edit</mat-icon>
+              Modifier le numéro
             </button>
-          </div>
-        }
+          }
+        </div>
 
-        @if (modeGoogle && !firebasePhoneConfigured) {
-          <div class="erreur-globale">
-            <mat-icon>error_outline</mat-icon> La vérification SMS Firebase n’est pas configurée.
-          </div>
-        }
-
-        @if (modeGoogle && firebasePhoneConfigured) {
-          <div class="recaptcha-bloc">
-            <div [attr.id]="recaptchaContainerId" class="recaptcha-container"></div>
-          </div>
-        }
-
-        @if (!modeGoogle) {
-          <div class="bloc-google">
-            <div #googleBtn class="google-btn-container"></div>
-            @if (googleErreur) {
-              <p class="erreur-google">{{ googleErreur }}</p>
-            }
-          </div>
-
-          <mat-divider class="separateur">
-            <span class="separateur-texte">ou</span>
-          </mat-divider>
-
-          <div class="bloc-otp">
-            <mat-form-field appearance="outline" class="champ-pleine-largeur">
-              <mat-label>Numéro de téléphone</mat-label>
-              <input
-                matInput
-                [formControl]="telephoneControl"
-                placeholder="0197000000"
-                type="tel"
-                [readonly]="otpEnvoye"
-              >
-              <div matPrefix class="prefixe-tel">+229</div>
-              @if (telephoneControl.invalid && telephoneControl.touched) {
-                <mat-error>Entrez un numéro valide. Exemple: 0197000000</mat-error>
-              }
-            </mat-form-field>
-
-            @if (otpEnvoye) {
-              <div class="otp-info">
-                <mat-icon>phone_android</mat-icon>
-                <p>Code envoyé au <strong>+229 {{ telephoneLocalAffiche }}</strong></p>
-              </div>
-
-              <mat-form-field appearance="outline" class="champ-pleine-largeur">
-                <mat-label>Code OTP</mat-label>
-                <input
-                  matInput
-                  [formControl]="otpControl"
-                  placeholder="123456"
-                  maxlength="6"
-                  type="tel"
-                  inputmode="numeric"
-                  autocomplete="one-time-code"
-                >
-                <mat-icon matPrefix>lock</mat-icon>
-                @if (otpControl.invalid && otpControl.touched) {
-                  <mat-error>Le code doit comporter 6 chiffres</mat-error>
-                }
-              </mat-form-field>
-            }
-
-            @if (erreur) {
-              <div class="erreur-globale">
-                <mat-icon>error_outline</mat-icon>
-                {{ erreur }}
-              </div>
-            }
-
-            @if (!otpEnvoye) {
-              <button mat-raised-button type="button" class="btn-connexion"
-                [disabled]="telephoneControl.invalid || envoiOtp"
-                (click)="demanderOtpConnexion()">
-                @if (envoiOtp) { <mat-spinner diameter="20"></mat-spinner> }
-                @else { <mat-icon>sms</mat-icon> }
-                Recevoir le code SMS
-              </button>
-            }
-
-            @if (otpEnvoye) {
-              <button mat-raised-button type="button" class="btn-connexion"
-                [disabled]="otpControl.invalid || envoi"
-                (click)="connecterAvecOtp()">
-                @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
-                @else { <mat-icon>login</mat-icon> }
-                Se connecter
-              </button>
-
-              <button mat-button type="button" class="btn-secondaire" [disabled]="envoiOtp" (click)="demanderOtpConnexion()">
-                @if (envoiOtp) { <mat-spinner diameter="14"></mat-spinner> }
-                Renvoyer le code
-              </button>
-
-              <button mat-button type="button" class="btn-secondaire" (click)="modifierNumeroConnexion()">
-                <mat-icon>edit</mat-icon>
-                Modifier le numéro
-              </button>
-            }
-          </div>
-
-          <div class="lien-inscription">
-            <p>Pas encore de compte ?
-              <a routerLink="/auth/register">Créer un compte</a>
-            </p>
-            <p class="lien-revendeur">
-              Vous êtes administrateur ? Utilisez la page <a routerLink="/admin/login">admin</a>.
-            </p>
-          </div>
-        }
+        <div class="lien-inscription">
+          <p>Pas encore de compte ?
+            <a routerLink="/auth/register">Créer un compte</a>
+          </p>
+          <p class="lien-revendeur">
+            Vous êtes administrateur ? Utilisez la page <a routerLink="/admin/login">admin</a>.
+          </p>
+        </div>
       </div>
     </div>
   `,
@@ -283,35 +166,10 @@ import { OtpService } from '../../../core/services/otp.service';
       }
     }
 
-    .bloc-google, .bloc-otp, .bloc-completion-google {
+    .bloc-otp {
       display: flex;
       flex-direction: column;
       gap: 16px;
-    }
-
-    .google-btn-container {
-      display: flex;
-      justify-content: center;
-      min-height: 42px;
-    }
-
-    .erreur-google {
-      margin: 0;
-      text-align: center;
-      font-size: 0.85rem;
-      color: #c62828;
-    }
-
-    .separateur {
-      margin: 24px 0 20px;
-      color: var(--color-text-muted);
-    }
-
-    .separateur-texte {
-      padding: 0 10px;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
     }
 
     .champ-pleine-largeur {
@@ -326,7 +184,7 @@ import { OtpService } from '../../../core/services/otp.service';
       margin-right: 8px;
     }
 
-    .info-google, .otp-info {
+    .otp-info {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -380,16 +238,6 @@ import { OtpService } from '../../../core/services/otp.service';
       }
     }
 
-    .recaptcha-bloc {
-      margin-top: 18px;
-      display: flex;
-      justify-content: center;
-    }
-
-    .recaptcha-container {
-      min-height: 78px;
-    }
-
     .lien-inscription {
       text-align: center;
       margin-top: 24px;
@@ -414,12 +262,8 @@ import { OtpService } from '../../../core/services/otp.service';
     }
   `]
 })
-export class LoginComponent implements AfterViewInit, OnDestroy {
-  @ViewChild('googleBtn') googleBtnRef?: ElementRef<HTMLDivElement>;
-
+export class LoginComponent {
   private readonly authService = inject(AuthService);
-  private readonly googleAuthService = inject(GoogleAuthService);
-  readonly phoneAuthService = inject(FirebasePhoneAuthService);
   private readonly otpService = inject(OtpService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -429,13 +273,6 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
   envoiOtp = false;
   otpEnvoye = false;
   erreur: string | null = null;
-  googleErreur: string | null = null;
-  googleBtnRendu = false;
-
-  modeGoogle = false;
-  etapeGoogle: 1 | 2 = 1;
-  private googleIdToken = '';
-  readonly recaptchaContainerId = 'login-google-phone-recaptcha';
 
   readonly telephoneControl = this.fb.control('', [
     Validators.required,
@@ -447,47 +284,8 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     Validators.pattern(/^\d{6}$/)
   ]);
 
-  readonly telephoneGoogleControl = this.fb.control('', [
-    Validators.required,
-    Validators.pattern(/^(\+229|00229)?\s*\d{10}$/)
-  ]);
-  readonly otpGoogleControl = this.fb.control('', [
-    Validators.required,
-    Validators.pattern(/^\d{6}$/)
-  ]);
-
-  get firebasePhoneConfigured(): boolean {
-    return this.phoneAuthService.estConfigure();
-  }
-
   get telephoneLocalAffiche(): string {
     return this.normaliserTelephoneLocal(this.telephoneControl.value || '');
-  }
-
-  ngAfterViewInit(): void {
-    this.initialiserBoutonGoogle();
-  }
-
-  private onGoogleToken(idToken: string): void {
-    this.googleErreur = null;
-    this.googleAuthService.loginAvecGoogle(idToken).subscribe({
-      next: (auth) => {
-        this.authService.sauvegarderSession(auth);
-        this.naviguerRetour();
-      },
-      error: (err) => {
-        if (err?.telephoneRequis) {
-          this.phoneAuthService.reinitialiser();
-          this.googleIdToken = idToken;
-          this.modeGoogle = true;
-          this.etapeGoogle = 1;
-          this.telephoneGoogleControl.reset();
-          this.otpGoogleControl.reset();
-        } else {
-          this.googleErreur = err.message || 'Connexion Google échouée';
-        }
-      }
-    });
   }
 
   demanderOtpConnexion(): void {
@@ -507,7 +305,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       },
       error: err => {
         this.envoiOtp = false;
-        this.erreur = err.message || 'Impossible d’envoyer le code OTP';
+        this.erreur = err.message || 'Impossible d\'envoyer le code OTP';
       }
     });
   }
@@ -540,104 +338,6 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     this.otpEnvoye = false;
     this.erreur = null;
     this.otpControl.reset();
-  }
-
-  demanderOtpGoogle(): void {
-    const telephone = this.telephoneGoogleControl.value?.trim();
-    if (!telephone) return;
-    if (!this.firebasePhoneConfigured) {
-      this.googleErreur = 'La vérification SMS Firebase n’est pas configurée.';
-      return;
-    }
-
-    this.envoiOtp = true;
-    this.googleErreur = null;
-
-    this.phoneAuthService.envoyerCode(telephone, this.recaptchaContainerId).subscribe({
-      next: () => {
-        this.envoiOtp = false;
-        this.etapeGoogle = 2;
-        this.otpGoogleControl.reset();
-      },
-      error: err => {
-        this.envoiOtp = false;
-        this.googleErreur = err.message || 'Impossible d’envoyer le code SMS';
-      }
-    });
-  }
-
-  verifierEtLierGoogle(): void {
-    if (this.otpGoogleControl.invalid) return;
-
-    this.envoi = true;
-    this.googleErreur = null;
-
-    const telephone = this.telephoneGoogleControl.value!.trim();
-    this.phoneAuthService.verifierCode(this.otpGoogleControl.value!).subscribe({
-      next: (verification) => {
-        this.googleAuthService.loginAvecGoogle(this.googleIdToken, telephone, undefined, verification.firebaseIdToken).subscribe({
-          next: (auth) => {
-            this.envoi = false;
-            this.phoneAuthService.reinitialiser();
-            this.authService.sauvegarderSession(auth);
-            this.naviguerRetour();
-          },
-          error: err => {
-            this.envoi = false;
-            this.googleErreur = err.message || 'Impossible de finaliser l’inscription';
-          }
-        });
-      },
-      error: err => {
-        this.envoi = false;
-        this.googleErreur = err.message || 'Code incorrect';
-      }
-    });
-  }
-
-  annulerModeGoogle(): void {
-    this.modeGoogle = false;
-    this.etapeGoogle = 1;
-    this.googleIdToken = '';
-    this.googleErreur = null;
-    this.telephoneGoogleControl.reset();
-    this.otpGoogleControl.reset();
-    this.phoneAuthService.reinitialiser();
-  }
-
-  revenirEtapeGoogle(): void {
-    this.etapeGoogle = 1;
-    this.googleErreur = null;
-    this.otpGoogleControl.reset();
-    this.phoneAuthService.reinitialiser();
-  }
-
-  private initialiserBoutonGoogle(): void {
-    if (!this.googleBtnRef) {
-      this.googleBtnRendu = false;
-      this.googleErreur = 'Connexion Google indisponible pour le moment.';
-      return;
-    }
-
-    this.googleErreur = null;
-    this.googleAuthService.initialiser(this.googleBtnRef.nativeElement, (idToken) => {
-      this.onGoogleToken(idToken);
-    }).subscribe({
-      next: (rendu) => {
-        this.googleBtnRendu = rendu;
-        if (!rendu) {
-          this.googleErreur = 'Connexion Google indisponible pour le moment.';
-        }
-      },
-      error: () => {
-        this.googleBtnRendu = false;
-        this.googleErreur = 'Connexion Google indisponible pour le moment.';
-      }
-    });
-  }
-
-  ngOnDestroy(): void {
-    this.phoneAuthService.reinitialiser();
   }
 
   private naviguerRetour(): void {

@@ -3,6 +3,7 @@ package bj.gazfacile.repository;
 import bj.gazfacile.model.ConsultationSession;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface ConsultationRepository extends MongoRepository<ConsultationSession, String> {
@@ -11,5 +12,6 @@ public interface ConsultationRepository extends MongoRepository<ConsultationSess
 
     Optional<ConsultationSession> findByFingerprintAndIpAddress(String fingerprint, String ipAddress);
 
-    Optional<ConsultationSession> findByIpAddress(String ipAddress);
+    /** Retourne TOUTES les sessions associées à cette IP (plusieurs fingerprints possibles). */
+    List<ConsultationSession> findAllByIpAddress(String ipAddress);
 }

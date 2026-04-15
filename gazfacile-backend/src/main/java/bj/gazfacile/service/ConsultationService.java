@@ -157,9 +157,8 @@ public class ConsultationService {
     }
 
     private boolean ipAtteintLimite(String ip, String fingerprintExclu) {
-        return consultationRepository.findByIpAddress(ip)
-                .map(s -> !s.getFingerprint().equals(fingerprintExclu)
-                        && s.getNombreConsultations() >= ConsultationSession.LIMITE_GRATUITE)
-                .orElse(false);
+        return consultationRepository.findAllByIpAddress(ip).stream()
+                .anyMatch(s -> !s.getFingerprint().equals(fingerprintExclu)
+                        && s.getNombreConsultations() >= ConsultationSession.LIMITE_GRATUITE);
     }
 }

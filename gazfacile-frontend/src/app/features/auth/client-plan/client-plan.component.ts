@@ -154,6 +154,7 @@ import {
       position: relative;
       background: var(--color-surface);
       border: 2px solid var(--color-border, #e0e0e0);
+      border-radius: var(--radius-lg, 16px);
       padding: 28px 20px;
       display: flex;
       flex-direction: column;

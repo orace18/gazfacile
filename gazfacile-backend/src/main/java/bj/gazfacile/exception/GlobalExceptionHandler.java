@@ -94,6 +94,13 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(RateLimitOtpException.class)
+    public ResponseEntity<ErreurResponse> handleRateLimitOtpException(RateLimitOtpException ex) {
+        return json(HttpStatus.TOO_MANY_REQUESTS,
+                new ErreurResponse(ex.getMessage(), 429, "Trop de requêtes", LocalDateTime.now())
+        );
+    }
+
     @ExceptionHandler(OtpExpiredException.class)
     public ResponseEntity<ErreurResponse> handleOtpExpiredException(OtpExpiredException ex) {
         return json(HttpStatus.BAD_REQUEST,

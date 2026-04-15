@@ -108,6 +108,7 @@ import { ClientNeed } from '../../../core/models/revendeur.model';
     .carte-besoin {
       background: var(--color-surface);
       border: 2px solid transparent;
+      border-radius: var(--radius-lg, 16px);
       padding: 36px 24px;
       cursor: pointer;
       display: flex;
