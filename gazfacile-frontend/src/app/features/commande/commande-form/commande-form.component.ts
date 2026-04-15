@@ -10,15 +10,22 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
 import { CommandeService } from '../../../core/services/commande.service';
 import { PaiementService } from '../../../core/services/paiement.service';
 import { RevendeurService } from '../../../core/services/revendeur.service';
 import { GeolocationService } from '../../../core/services/geolocation.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { SubscriptionService } from '../../../core/services/subscription.service';
+import { InscriptionStateService } from '../../../core/services/inscription-state.service';
 import {
+  ClientNeed,
   Revendeur,
   CommandeDTO,
   ModePaiement,
+  Role,
+  SubscriptionDTO,
+  SubscriptionPlanDTO,
   TypeTransaction,
   ProduitRevendeur
 } from '../../../core/models/revendeur.model';
@@ -26,6 +33,8 @@ import {
 export interface DialogCommandeData {
   revendeur: Revendeur;
 }
+
+type EtapeCommande = 'choix-abonnement' | 'plans-abonnement' | 'formulaire';
 
 @Component({
   selector: 'app-commande-form',
@@ -62,13 +71,134 @@ export interface DialogCommandeData {
           </p>
         </div>
 
-        @if (chargementCatalogue) {
+        @if (chargementAbonnement) {
+          <div class="chargement-centre">
+            <mat-spinner diameter="36"></mat-spinner>
+            <span>Vérification de votre abonnement livraison...</span>
+          </div>
+        } @else if (etape === 'choix-abonnement') {
+          <div class="bloc-etape">
+            <div class="bloc-question">
+              <span class="badge-etape">Avant de commander</span>
+              <h3>Voulez-vous prendre un abonnement livraison ?</h3>
+              <p>
+                Si vous prenez un abonnement, vous passez par le parcours d'abonnement livraison.
+                Sinon, vous continuez directement vers le paiement de la commande.
+              </p>
+            </div>
+
+            @if (subscriptionCourante?.planType === 'CLIENT_LIVRAISON' && subscriptionCourante?.statut === 'ACTIVE' && (subscriptionCourante?.quotaRestant ?? 0) === 0) {
+              <div class="info-abonnement info-abonnement-warning">
+                <mat-icon>info</mat-icon>
+                Votre abonnement livraison est actif, mais son quota est épuisé. Vous pouvez le renouveler ou continuer sans abonnement.
+              </div>
+            }
+
+            @if (subscriptionCourante?.planType === 'CLIENT_CONSULT' && subscriptionCourante?.statut === 'ACTIVE') {
+              <div class="info-abonnement">
+                <mat-icon>info</mat-icon>
+                Votre compte a déjà un abonnement consultation actif. Le système actuel ne permet pas d'ajouter un abonnement livraison tant qu'il est actif.
+              </div>
+            }
+
+            <div class="actions-choix">
+              <button
+                mat-raised-button
+                type="button"
+                class="btn-abonnement"
+                (click)="choisirAvecAbonnement()"
+              >
+                <mat-icon>workspace_premium</mat-icon>
+                Oui, prendre un abonnement
+              </button>
+
+              <button
+                mat-stroked-button
+                type="button"
+                class="btn-sans-abonnement"
+                (click)="continuerSansAbonnement()"
+              >
+                <mat-icon>payment</mat-icon>
+                Non, passer au paiement
+              </button>
+            </div>
+          </div>
+        } @else if (etape === 'plans-abonnement') {
+          <div class="bloc-etape">
+            <div class="bloc-question">
+              <span class="badge-etape">Abonnement livraison</span>
+              <h3>Choisissez une formule</h3>
+              <p>Sélectionnez un plan, puis nous lancerons le paiement de l'abonnement.</p>
+            </div>
+
+            @if (chargementPlans) {
+              <div class="chargement-centre">
+                <mat-spinner diameter="36"></mat-spinner>
+                <span>Chargement des plans de livraison...</span>
+              </div>
+            } @else {
+              <div class="grille-plans">
+                @for (plan of plansLivraison; track plan.id) {
+                  <div class="carte-plan" [class.plan-recommande]="plan.recommande">
+                    @if (plan.recommande) {
+                      <span class="badge-recommande">Recommandé</span>
+                    }
+
+                    <div class="plan-entete">
+                      <h3>{{ plan.nom }}</h3>
+                      <p class="plan-description">{{ plan.description }}</p>
+                      <div class="plan-prix">
+                        {{ plan.prix | number:'1.0-0' }} FCFA
+                        <span>/ {{ formatDureePlan(plan.dureeJours) }}</span>
+                      </div>
+                      @if (plan.quota > 0) {
+                        <p class="plan-quota">{{ plan.quota }} livraison(s) incluse(s)</p>
+                      }
+                    </div>
+
+                    @if (plan.features.length > 0) {
+                      <ul class="plan-features">
+                        @for (feature of plan.features; track feature) {
+                          <li>
+                            <mat-icon>check</mat-icon>
+                            {{ feature }}
+                          </li>
+                        }
+                      </ul>
+                    }
+
+                    <button
+                      mat-raised-button
+                      type="button"
+                      class="btn-plan"
+                      (click)="souscrirePlan(plan)"
+                      [disabled]="envoi"
+                    >
+                      @if (envoi) {
+                        <mat-spinner diameter="18"></mat-spinner>
+                      } @else {
+                        <mat-icon>open_in_new</mat-icon>
+                      }
+                      Souscrire
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        } @else if (chargementCatalogue) {
           <div class="chargement-centre">
             <mat-spinner diameter="36"></mat-spinner>
             <span>Chargement du catalogue du revendeur...</span>
           </div>
         } @else {
           <form [formGroup]="formulaire" class="formulaire">
+            @if (subscriptionCourante?.planType === 'CLIENT_LIVRAISON' && subscriptionCourante?.statut === 'ACTIVE' && (subscriptionCourante?.quotaRestant ?? 0) > 0) {
+              <div class="info-abonnement info-abonnement-success">
+                <mat-icon>verified</mat-icon>
+                Abonnement livraison actif : {{ subscriptionCourante?.quotaRestant }} livraison(s) restante(s).
+              </div>
+            }
 
             <mat-form-field appearance="outline" class="champ-pleine-largeur">
               <mat-label>Marque de gaz</mat-label>
@@ -227,22 +357,29 @@ export interface DialogCommandeData {
       </mat-dialog-content>
 
       <mat-dialog-actions class="actions-dialog">
+        @if (etape === 'plans-abonnement') {
+          <button mat-button type="button" (click)="retourAuChoixAbonnement()" [disabled]="envoi">
+            Retour
+          </button>
+        }
         <button mat-button (click)="dialogRef.close()" [disabled]="envoi">
           Annuler
         </button>
-        <button
-          mat-raised-button
-          class="btn-confirmer"
-          (click)="soumettre()"
-          [disabled]="formulaire.invalid || envoi || chargementCatalogue"
-        >
-          @if (envoi) {
-            <mat-spinner diameter="18"></mat-spinner>
-          } @else {
-            <mat-icon>{{ formulaire.get('modePaiement')?.value === ModePaiement.ESPECES ? 'check_circle' : 'open_in_new' }}</mat-icon>
-          }
-          {{ formulaire.get('modePaiement')?.value === ModePaiement.ESPECES ? 'Confirmer la commande' : 'Confirmer et payer' }}
-        </button>
+        @if (etape === 'formulaire') {
+          <button
+            mat-raised-button
+            class="btn-confirmer"
+            (click)="soumettre()"
+            [disabled]="formulaire.invalid || envoi || chargementCatalogue"
+          >
+            @if (envoi) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>{{ formulaire.get('modePaiement')?.value === ModePaiement.ESPECES ? 'check_circle' : 'open_in_new' }}</mat-icon>
+            }
+            {{ formulaire.get('modePaiement')?.value === ModePaiement.ESPECES ? 'Confirmer la commande' : 'Confirmer et payer' }}
+          </button>
+        }
       </mat-dialog-actions>
     </div>
   `,
@@ -293,6 +430,208 @@ export interface DialogCommandeData {
       padding: 28px 0;
       color: var(--color-text-muted);
       font-size: 0.9rem;
+    }
+
+    .bloc-etape {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .bloc-question {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+
+      h3 {
+        margin: 8px 0 6px;
+        font-size: 1.05rem;
+        color: var(--color-text);
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        color: var(--color-text-muted);
+      }
+    }
+
+    .badge-etape {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+      color: var(--color-primary);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .actions-choix {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+
+      @media (max-width: 560px) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .btn-abonnement,
+    .btn-sans-abonnement {
+      min-height: 48px;
+      font-weight: 700 !important;
+    }
+
+    .btn-abonnement {
+      background: var(--color-accent) !important;
+      color: #1a1a00 !important;
+    }
+
+    .btn-sans-abonnement {
+      border-color: var(--color-primary) !important;
+      color: var(--color-primary) !important;
+    }
+
+    .info-abonnement {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+      color: var(--color-primary);
+      font-size: 0.82rem;
+      line-height: 1.45;
+
+      mat-icon {
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+        margin-top: 1px;
+      }
+    }
+
+    .info-abonnement-warning {
+      background: color-mix(in srgb, #f59e0b 14%, transparent);
+      color: #9a6500;
+    }
+
+    .info-abonnement-success {
+      background: color-mix(in srgb, #16a34a 12%, transparent);
+      color: #1f7a37;
+      margin-bottom: 4px;
+    }
+
+    .grille-plans {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .carte-plan {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 18px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+
+      &.plan-recommande {
+        border-color: var(--color-accent);
+      }
+    }
+
+    .badge-recommande {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--color-accent);
+      color: #1a1a00;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .plan-entete {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      h3 {
+        margin: 0;
+        font-size: 1rem;
+        color: var(--color-text);
+      }
+    }
+
+    .plan-description {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+    }
+
+    .plan-prix {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--color-primary);
+
+      span {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--color-text-muted);
+      }
+    }
+
+    .plan-quota {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--color-text);
+      font-weight: 600;
+    }
+
+    .plan-features {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+
+      li {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+      }
+
+      mat-icon {
+        color: var(--color-success, #16a34a);
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+      }
+    }
+
+    .btn-plan {
+      background: var(--color-primary) !important;
+      color: white !important;
+      align-self: flex-start;
+
+      mat-spinner {
+        margin-right: 6px;
+      }
     }
 
     .formulaire {
@@ -553,6 +892,9 @@ export class CommandeFormComponent implements OnInit {
   private readonly revendeurService = inject(RevendeurService);
   private readonly geolocationService = inject(GeolocationService);
   private readonly authService = inject(AuthService);
+  private readonly subscriptionService = inject(SubscriptionService);
+  private readonly inscriptionState = inject(InscriptionStateService);
+  private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
   private readonly ngZone = inject(NgZone);
@@ -561,11 +903,16 @@ export class CommandeFormComponent implements OnInit {
 
   formulaire!: FormGroup;
   catalogue: ProduitRevendeur[] = [];
+  plansLivraison: SubscriptionPlanDTO[] = [];
+  etape: EtapeCommande = 'choix-abonnement';
   chargementCatalogue = true;
+  chargementAbonnement = false;
+  chargementPlans = false;
   geolocalisationEnCours = false;
   envoi = false;
   erreur: string | null = null;
   clientLocation: [number, number] | null = null;
+  subscriptionCourante: SubscriptionDTO | null = null;
 
   get marquesDisponibles(): string[] {
     return [...new Set(this.catalogue.map(produit => produit.marque))];
@@ -634,6 +981,7 @@ export class CommandeFormComponent implements OnInit {
 
     this.chargerCatalogue();
     this.utiliserPositionGps();
+    this.initialiserEtape();
   }
 
   chargerCatalogue(): void {
@@ -770,6 +1118,62 @@ export class CommandeFormComponent implements OnInit {
     return this.catalogue.find(produit => produit.marque === marque)?.marqueLibelle ?? marque;
   }
 
+  continuerSansAbonnement(): void {
+    this.erreur = null;
+    this.etape = 'formulaire';
+  }
+
+  choisirAvecAbonnement(): void {
+    this.erreur = null;
+
+    if (!this.authService.estConnecte()) {
+      this.inscriptionState.setRole(Role.CLIENT);
+      this.inscriptionState.setClientNeed(ClientNeed.LIVRAISON);
+      this.dialogRef.close();
+      this.router.navigate(['/auth/register/client/plans']);
+      return;
+    }
+
+    if (this.subscriptionCourante?.planType === 'CLIENT_CONSULT' && this.subscriptionCourante?.statut === 'ACTIVE') {
+      this.erreur = 'Un abonnement consultation est déjà actif sur ce compte. Continuez sans abonnement ou attendez son expiration.';
+      return;
+    }
+
+    this.chargerPlansLivraison();
+  }
+
+  retourAuChoixAbonnement(): void {
+    this.erreur = null;
+    this.envoi = false;
+    this.etape = 'choix-abonnement';
+  }
+
+  souscrirePlan(plan: SubscriptionPlanDTO): void {
+    this.envoi = true;
+    this.erreur = null;
+
+    this.subscriptionService.subscribe(plan.code).subscribe({
+      next: response => {
+        this.dialogRef.close();
+        this.paiementService.redirectVersCheckout(response.checkoutUrl);
+      },
+      error: err => {
+        this.envoi = false;
+        this.erreur = err.message || 'Impossible d’initier le paiement de l’abonnement.';
+      }
+    });
+  }
+
+  formatDureePlan(jours: number): string {
+    if (jours >= 365) {
+      return `${Math.round(jours / 365)} an${jours >= 730 ? 's' : ''}`;
+    }
+    if (jours >= 30) {
+      return `${Math.round(jours / 30)} mois`;
+    }
+    return `${jours} jour${jours > 1 ? 's' : ''}`;
+  }
+
   private getFormatOrder(format: string): number {
     return ({
       KG_3: 3,
@@ -805,6 +1209,58 @@ export class CommandeFormComponent implements OnInit {
 
   private formatAdresseGps(latitude: number, longitude: number): string {
     return `Position GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+  }
+
+  private initialiserEtape(): void {
+    if (!this.authService.estConnecte()) {
+      this.etape = 'choix-abonnement';
+      return;
+    }
+
+    this.chargementAbonnement = true;
+    this.subscriptionService.getCurrent().subscribe({
+      next: subscription => {
+        this.subscriptionCourante = subscription ?? null;
+        this.etape = this.aAbonnementLivraisonDisponible(subscription ?? null)
+          ? 'formulaire'
+          : 'choix-abonnement';
+        this.chargementAbonnement = false;
+      },
+      error: () => {
+        this.subscriptionCourante = null;
+        this.etape = 'choix-abonnement';
+        this.chargementAbonnement = false;
+      }
+    });
+  }
+
+  private chargerPlansLivraison(): void {
+    if (this.plansLivraison.length > 0) {
+      this.etape = 'plans-abonnement';
+      return;
+    }
+
+    this.chargementPlans = true;
+    this.subscriptionService.getPlans('CLIENT_LIVRAISON').subscribe({
+      next: plans => {
+        this.plansLivraison = plans;
+        this.chargementPlans = false;
+        this.etape = 'plans-abonnement';
+      },
+      error: err => {
+        this.chargementPlans = false;
+        this.erreur = err.message || 'Impossible de charger les plans de livraison.';
+      }
+    });
+  }
+
+  private aAbonnementLivraisonDisponible(subscription: SubscriptionDTO | null): boolean {
+    return Boolean(
+      subscription
+      && subscription.planType === 'CLIENT_LIVRAISON'
+      && subscription.statut === 'ACTIVE'
+      && subscription.quotaRestant > 0
+    );
   }
 
   private calculerDistanceKm(point1: [number, number], point2: [number, number]): number {

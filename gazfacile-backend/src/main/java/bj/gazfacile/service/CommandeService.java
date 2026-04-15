@@ -85,20 +85,13 @@ public class CommandeService {
                     "Quantité indisponible pour ce produit");
         }
 
-        // Vérifier que le client a un abonnement LIVRAISON actif avec quota restant
+        // Un abonnement livraison n'est pas obligatoire pour commander.
+        // S'il existe et qu'il reste du quota, la commande consomme une livraison.
         User client = userRepository.findByTelephone(clientTelephone).orElse(null);
+        Optional<Subscription> livraisonSubscription = Optional.empty();
         if (client != null) {
-            Optional<Subscription> subOpt = subscriptionService.getActiveSubscription(
+            livraisonSubscription = subscriptionService.getActiveSubscription(
                     client.getId(), PlanType.CLIENT_LIVRAISON);
-
-            if (subOpt.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Abonnement livraison requis pour passer une commande.");
-            }
-            if (subOpt.get().getQuotaRestant() <= 0) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Quota de livraisons épuisé. Renouvelez votre abonnement.");
-            }
         }
 
         // Calculer le prix unitaire selon le catalogue réel du revendeur
@@ -141,13 +134,14 @@ public class CommandeService {
 
         commande = commandeRepository.save(commande);
 
-        // Décrémenter le quota livraison après sauvegarde
-        if (client != null) {
+        // Décrémenter le quota livraison uniquement si un abonnement actif avec quota existe.
+        if (client != null && livraisonSubscription.map(sub -> sub.getQuotaRestant() > 0).orElse(false)) {
             subscriptionService.decrementQuota(client.getId(), PlanType.CLIENT_LIVRAISON);
         }
 
-        log.info("Commande créée : {} pour {} FCFA (distance: {}km, frais: {} FCFA)",
-                commande.getId(), total, String.format("%.1f", distanceKm), fraisSupplementaires);
+        log.info("Commande créée : {} pour {} FCFA (distance: {}km, frais: {} FCFA, abonnementLivraisonUtilise: {})",
+                commande.getId(), total, String.format("%.1f", distanceKm), fraisSupplementaires,
+                livraisonSubscription.map(sub -> sub.getQuotaRestant() > 0).orElse(false));
         return commande;
     }
 
