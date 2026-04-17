@@ -23,6 +23,24 @@ import { MatIconModule } from '@angular/material/icon';
           Vous avez utilisé toutes vos consultations disponibles.
           Renouvelez votre abonnement pour continuer.
         </p>
+
+        @if (data.consultationsRestantes !== undefined || data.dateExpiration) {
+          <div class="quota-details">
+            @if (data.consultationsRestantes !== undefined) {
+              <div class="quota-ligne">
+                <mat-icon>visibility_off</mat-icon>
+                <span>{{ data.consultationsRestantes }} consultation{{ data.consultationsRestantes > 1 ? 's' : '' }} restante{{ data.consultationsRestantes > 1 ? 's' : '' }}</span>
+              </div>
+            }
+            @if (data.dateExpiration) {
+              <div class="quota-ligne">
+                <mat-icon>calendar_today</mat-icon>
+                <span>Expire le {{ formatDate(data.dateExpiration) }}</span>
+              </div>
+            }
+          </div>
+        }
+
         <div class="avantages">
           <div class="avantage">
             <mat-icon>check_circle</mat-icon>
@@ -41,7 +59,7 @@ import { MatIconModule } from '@angular/material/icon';
           <button
             mat-raised-button
             class="btn-inscription"
-            routerLink="/auth/register/client/plans"
+            routerLink="/abonnement/renouveler"
             (click)="dialogRef.close()"
           >
             <mat-icon>refresh</mat-icon>
@@ -174,6 +192,33 @@ import { MatIconModule } from '@angular/material/icon';
       letter-spacing: 0.04em;
     }
 
+    .quota-details {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--color-surface-2, #f5f7fa);
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--color-warning);
+    }
+
+    .quota-ligne {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.83rem;
+      color: var(--color-text);
+
+      mat-icon {
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+        color: var(--color-warning);
+        flex-shrink: 0;
+      }
+    }
+
     .btn-connexion {
       color: var(--color-primary) !important;
     }
@@ -181,6 +226,13 @@ import { MatIconModule } from '@angular/material/icon';
 })
 export class ConsultationPaywallComponent {
   readonly dialogRef = inject(MatDialogRef<ConsultationPaywallComponent>);
-  readonly data: { estConnecte?: boolean } =
-    inject<{ estConnecte?: boolean }>(MAT_DIALOG_DATA, { optional: true }) ?? {};
+  readonly data: { estConnecte?: boolean; consultationsRestantes?: number; dateExpiration?: string } =
+    inject<{ estConnecte?: boolean; consultationsRestantes?: number; dateExpiration?: string }>(
+      MAT_DIALOG_DATA, { optional: true }
+    ) ?? {};
+
+  formatDate(dateStr: string): string {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
 }

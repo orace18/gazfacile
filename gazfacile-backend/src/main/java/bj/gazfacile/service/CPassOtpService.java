@@ -44,7 +44,7 @@ public class CPassOtpService {
         SendOtpResponse response = executeAuthorized("/otp/send", token -> post(
                 "/otp/send",
                 token,
-                Map.of("to", phoneNumber),
+                Map.of("to", phoneNumber, "channel", "SMS"),
                 SendOtpResponse.class
         ));
         if (response.referenceId() == null || response.referenceId().isBlank()) {

@@ -86,6 +86,14 @@ export const routes: Routes = [
     canActivate: [inscriptionGuard, inscriptionPlanGuard]
   },
   {
+    path: 'abonnement/renouveler',
+    loadComponent: () =>
+      import('./features/auth/client-plan/client-plan.component').then(
+        m => m.ClientPlanComponent
+      ),
+    canActivate: [authGuard]
+  },
+  {
     path: 'admin/login',
     loadComponent: () =>
       import('./features/admin/admin-login/admin-login.component').then(

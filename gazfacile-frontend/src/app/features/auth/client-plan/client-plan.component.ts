@@ -6,6 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { InscriptionStateService } from '../../../core/services/inscription-state.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { PaiementService } from '../../../core/services/paiement.service';
 import {
   ClientNeed,
   PlanInscription,
@@ -333,6 +335,8 @@ import {
 export class ClientPlanComponent implements OnInit {
   private readonly state = inject(InscriptionStateService);
   private readonly subscriptionService = inject(SubscriptionService);
+  private readonly authService = inject(AuthService);
+  private readonly paiementService = inject(PaiementService);
   private readonly router = inject(Router);
 
   plans = signal<PlanInscription[]>([]);
@@ -352,9 +356,10 @@ export class ClientPlanComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const type = this.state.clientNeed() === ClientNeed.LIVRAISON
-      ? 'CLIENT_LIVRAISON'
-      : 'CLIENT_CONSULT';
+    // Pour un utilisateur déjà connecté (renouvellement), clientNeed peut être null.
+    // On utilise CLIENT_CONSULT par défaut.
+    const besoin = this.state.clientNeed() ?? ClientNeed.CONSULT;
+    const type = besoin === ClientNeed.LIVRAISON ? 'CLIENT_LIVRAISON' : 'CLIENT_CONSULT';
 
     this.subscriptionService.getPlans(type).subscribe({
       next: dtos => {
@@ -376,8 +381,22 @@ export class ClientPlanComponent implements OnInit {
   }
 
   choisirPlan(plan: PlanInscription): void {
-    this.state.selectPlan(plan);
-    this.router.navigate(['/auth/register/form']);
+    if (this.authService.estConnecte()) {
+      // Renouvellement direct pour un utilisateur déjà inscrit.
+      this.chargement.set(true);
+      const telephone = this.authService.currentUser()?.telephone ?? '';
+      this.subscriptionService.subscribe(plan.id, telephone).subscribe({
+        next: response => this.paiementService.redirectVersCheckout(response.checkoutUrl),
+        error: err => {
+          this.chargement.set(false);
+          this.erreur.set(err.message || 'Impossible d\'initier le renouvellement.');
+        }
+      });
+    } else {
+      // Flux inscription standard.
+      this.state.selectPlan(plan);
+      this.router.navigate(['/auth/register/form']);
+    }
   }
 
   private toPlanInscription(dto: SubscriptionPlanDTO): PlanInscription {

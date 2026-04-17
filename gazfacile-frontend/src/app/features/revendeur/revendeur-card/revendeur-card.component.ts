@@ -364,7 +364,11 @@ export class RevendeurCardComponent {
         this.dialog.open(ConsultationPaywallComponent, {
           maxWidth: '440px',
           width: '100%',
-          data: { estConnecte: this.authService.estConnecte() }
+          data: {
+            estConnecte: this.authService.estConnecte(),
+            consultationsRestantes: this.consultationService.statut().consultationsRestantes,
+            dateExpiration: this.consultationService.statut().dateExpiration
+          }
         });
       }
     });

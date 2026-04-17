@@ -58,6 +58,8 @@ export class FirebasePhoneAuthService {
     }
 
     const telephoneInternational = this.normaliserTelephone(telephone);
+    // TODO: retirer ce log après debug MTN
+    console.log('[FirebaseOTP] Envoi vers :', telephoneInternational);
     const verifier = this.obtenirRecaptchaVerifier(recaptchaContainerId);
 
     return from(signInWithPhoneNumber(this.auth, telephoneInternational, verifier)).pipe(
@@ -66,6 +68,9 @@ export class FirebasePhoneAuthService {
       }),
       map(() => void 0),
       catchError((error: unknown) => {
+        const code = typeof error === 'object' && error && 'code' in error ? String((error as { code: string }).code) : '';
+        // TODO: retirer ce log après debug MTN
+        console.error('[FirebaseOTP] Erreur code:', code, 'Message:', error);
         this.reinitialiserRecaptcha();
         return throwError(() => new Error(this.mapperErreurFirebase(error)));
       })

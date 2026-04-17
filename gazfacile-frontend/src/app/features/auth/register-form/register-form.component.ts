@@ -61,8 +61,10 @@ import { Role } from '../../../core/models/revendeur.model';
             </mat-form-field>
 
             <button mat-raised-button type="submit" class="btn-principal" [disabled]="nomForm.invalid">
-              <mat-icon>arrow_forward</mat-icon>
-              Continuer
+              <span class="btn-inner">
+                <mat-icon>arrow_forward</mat-icon>
+                Suivant
+              </span>
             </button>
           </form>
         }
@@ -130,9 +132,14 @@ import { Role } from '../../../core/models/revendeur.model';
                   [disabled]="telephoneForm.invalid || envoiOtp"
                   (click)="demanderOtp()"
                 >
-                  @if (envoiOtp) { <mat-spinner diameter="20"></mat-spinner> }
-                  @else { <mat-icon>sms</mat-icon> }
-                  Recevoir le code SMS
+                  <span class="btn-inner">
+                    @if (envoiOtp) {
+                      <mat-spinner diameter="20"></mat-spinner>
+                    } @else {
+                      <mat-icon>sms</mat-icon>
+                    }
+                    {{ envoiOtp ? 'Envoi...' : 'Envoyer le code' }}
+                  </span>
                 </button>
               }
 
@@ -144,14 +151,21 @@ import { Role } from '../../../core/models/revendeur.model';
                   [disabled]="otpControl.invalid || envoi"
                   (click)="verifierEtInscrire()"
                 >
-                  @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
-                  @else { <mat-icon>check_circle</mat-icon> }
-                  Vérifier et continuer
+                  <span class="btn-inner">
+                    @if (envoi) {
+                      <mat-spinner diameter="20"></mat-spinner>
+                    } @else {
+                      <mat-icon>check_circle</mat-icon>
+                    }
+                    {{ envoi ? 'Vérification...' : 'Vérifier et continuer' }}
+                  </span>
                 </button>
 
                 <button mat-button type="button" class="btn-secondaire" [disabled]="envoiOtp" (click)="demanderOtp()">
-                  @if (envoiOtp) { <mat-spinner diameter="14"></mat-spinner> }
-                  Renvoyer le code
+                  <span class="btn-inner">
+                    @if (envoiOtp) { <mat-spinner diameter="14"></mat-spinner> }
+                    {{ envoiOtp ? 'Envoi...' : 'Renvoyer le code' }}
+                  </span>
                 </button>
 
                 <button mat-button type="button" class="btn-secondaire" (click)="modifierNumero()">

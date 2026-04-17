@@ -335,6 +335,14 @@ a {
   }
 }
 
+// === Boutons avec spinner — alignement interne ===
+.btn-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 // === Responsive ===
 @media (max-width: 768px) {
   .container {

@@ -101,6 +101,7 @@ export interface ConsultationStatut {
   autorise: boolean;
   consultationsRestantes: number;
   limite: number;
+  dateExpiration?: string;
 }
 
 // ── Abonnements ─────────────────────────────────────────────────────────────

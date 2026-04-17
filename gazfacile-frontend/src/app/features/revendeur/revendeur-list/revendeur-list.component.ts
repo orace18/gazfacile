@@ -1,5 +1,6 @@
 import {
   Component,
+  Input,
   Output,
   EventEmitter,
   inject,
@@ -64,12 +65,25 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
           (click)="rechercherPresDeChezMoi()"
           [disabled]="chargementGeo()"
         >
-          @if (chargementGeo()) {
-            <mat-spinner diameter="18"></mat-spinner>
-          } @else {
-            <mat-icon>near_me</mat-icon>
-          }
-          Près de moi
+          <span class="btn-inner">
+            @if (chargementGeo()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>near_me</mat-icon>
+            }
+            Près de moi
+          </span>
+        </button>
+
+        <button
+          mat-stroked-button
+          class="btn-toggle-carte"
+          (click)="toggleCarte.emit()"
+        >
+          <span class="btn-inner">
+            <mat-icon>{{ carteVisible ? 'close' : 'map' }}</mat-icon>
+            {{ carteVisible ? 'Fermer' : 'Carte' }}
+          </span>
         </button>
       </div>
 
@@ -133,8 +147,17 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
     </div>
   `,
   styles: [`
+    :host {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
     .liste-container {
-      height: 100%;
+      flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -186,22 +209,32 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
       border: none !important;
       border-radius: var(--radius-sm) !important;
       white-space: nowrap;
-      /* Même hauteur que le champ sans le subscript */
       height: 44px;
       min-width: fit-content;
-      gap: 4px;
       font-family: 'Montserrat', sans-serif !important;
       font-weight: 600 !important;
       font-size: 0.8rem !important;
-      /* Aligner avec le bas du champ — compenser le label flottant */
       margin-bottom: 12px;
 
       &:hover {
         background-color: var(--color-primary-dark) !important;
       }
+    }
 
-      mat-spinner {
-        margin-right: 4px;
+    .btn-toggle-carte {
+      border-color: var(--color-primary) !important;
+      color: var(--color-primary) !important;
+      border-radius: var(--radius-sm) !important;
+      white-space: nowrap;
+      height: 44px;
+      min-width: fit-content;
+      font-family: 'Montserrat', sans-serif !important;
+      font-weight: 600 !important;
+      font-size: 0.8rem !important;
+      margin-bottom: 12px;
+
+      &:hover {
+        background-color: var(--color-primary-light) !important;
       }
     }
 
@@ -292,6 +325,8 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
   `]
 })
 export class RevendeurListComponent {
+  @Input() carteVisible: boolean = false;
+  @Output() toggleCarte = new EventEmitter<void>();
   @Output() revendeurSelectionne = new EventEmitter<string>();
   @Output() commanderRevendeur = new EventEmitter<Revendeur>();
 

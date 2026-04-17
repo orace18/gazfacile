@@ -2,7 +2,8 @@ import {
   Component,
   ViewChild,
   inject,
-  OnInit
+  OnInit,
+  signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -12,6 +13,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RevendeurService } from '../../core/services/revendeur.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ConsultationService } from '../../core/services/consultation.service';
 import { MapComponent } from '../map/map.component';
 import { RevendeurListComponent } from '../revendeur/revendeur-list/revendeur-list.component';
 import {
@@ -55,16 +57,34 @@ import { Revendeur } from '../../core/models/revendeur.model';
           </div>
         </section>
 
-        <div class="vue-principale">
-          <div class="panneau-carte">
-            <app-map
-              #carteRef
-              [revendeursSignal]="revendeurService.revendeurs"
-              (commanderClique)="ouvrirDialogCommande($event)"
-            ></app-map>
+        @if (consultationService.statut().limite > 0) {
+          <div class="quota-bande">
+            <mat-icon>visibility</mat-icon>
+            <span>
+              {{ consultationService.statut().consultationsRestantes }}
+              consultation{{ consultationService.statut().consultationsRestantes > 1 ? 's' : '' }}
+              restante{{ consultationService.statut().consultationsRestantes > 1 ? 's' : '' }}
+              @if (consultationService.statut().dateExpiration) {
+                &nbsp;·&nbsp;Expire le {{ consultationService.statut().dateExpiration | date:'dd/MM/yyyy' }}
+              }
+            </span>
           </div>
-          <div class="panneau-liste">
+        }
+
+        <div class="vue-principale">
+          @if (carteVisible()) {
+            <div class="panneau-carte">
+              <app-map
+                #carteRef
+                [revendeursSignal]="revendeurService.revendeurs"
+                (commanderClique)="ouvrirDialogCommande($event)"
+              ></app-map>
+            </div>
+          }
+          <div class="panneau-liste" [class.avec-carte]="carteVisible()">
             <app-revendeur-list
+              [carteVisible]="carteVisible()"
+              (toggleCarte)="togglerCarte()"
               (revendeurSelectionne)="onRevendeurSelectionne($event)"
               (commanderRevendeur)="ouvrirDialogCommande($event)"
             ></app-revendeur-list>
@@ -402,6 +422,26 @@ import { Revendeur } from '../../core/models/revendeur.model';
       overflow: hidden;
     }
 
+    .quota-bande {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 32px;
+      background: color-mix(in srgb, var(--color-accent) 20%, var(--color-primary));
+      color: rgba(255,255,255,0.95);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      flex-shrink: 0;
+
+      mat-icon {
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+        flex-shrink: 0;
+      }
+    }
+
     .panneau-carte {
       flex: 0 0 60%;
       max-width: 60%;
@@ -409,21 +449,25 @@ import { Revendeur } from '../../core/models/revendeur.model';
     }
 
     .panneau-liste {
-      flex: 0 0 40%;
-      max-width: 40%;
+      flex: 1;
+      min-width: 0;
       height: 100%;
       overflow: hidden;
-      border-left: 2px solid var(--color-border);
       display: flex;
       flex-direction: column;
       background-color: var(--color-surface);
+
+      &.avec-carte {
+        border-left: 2px solid var(--color-border);
+      }
     }
 
     @media (max-width: 900px) {
       .page-accueil { height: auto; }
       .vue-principale { flex-direction: column; }
       .panneau-carte { flex: 0 0 50vh; max-width: 100%; height: 50vh; }
-      .panneau-liste { flex: 1; max-width: 100%; height: auto; min-height: 400px; border-left: none; border-top: 2px solid var(--color-border); }
+      .panneau-liste { flex: 1; max-width: 100%; height: auto; min-height: 400px; }
+      .panneau-liste.avec-carte { border-top: 2px solid var(--color-border); }
       .heros-titre { font-size: 1.6rem; }
     }
 
@@ -1056,10 +1100,13 @@ import { Revendeur } from '../../core/models/revendeur.model';
 export class HomeComponent implements OnInit {
   readonly revendeurService = inject(RevendeurService);
   readonly authService = inject(AuthService);
+  readonly consultationService = inject(ConsultationService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
 
-  @ViewChild('carteRef') private carteRef!: MapComponent;
+  @ViewChild('carteRef') private carteRef: MapComponent | undefined;
+
+  readonly carteVisible = signal(false);
 
   ngOnInit(): void {
     if (this.authService.estConnecte()) {
@@ -1067,8 +1114,17 @@ export class HomeComponent implements OnInit {
     }
   }
 
+  togglerCarte(): void {
+    this.carteVisible.set(!this.carteVisible());
+  }
+
   onRevendeurSelectionne(revendeurId: string): void {
-    this.carteRef?.focusRevendeur(revendeurId);
+    if (!this.carteVisible()) {
+      this.carteVisible.set(true);
+      setTimeout(() => this.carteRef?.focusRevendeur(revendeurId), 300);
+    } else {
+      this.carteRef?.focusRevendeur(revendeurId);
+    }
   }
 
   ouvrirDialogCommande(revendeur: Revendeur): void {
