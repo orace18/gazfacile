@@ -33,7 +33,12 @@ public class SubscriptionController {
             @Valid @RequestBody SubscribeRequestDTO dto) {
         String telephone = auth.getName();
         var paiementInit = subscriptionService.subscribe(telephone, dto.planCode(), dto.telephonePaiement());
-        var response = paiementService.initierPaiement(paiementInit);
-        return ResponseEntity.ok(response);
+        try {
+            var response = paiementService.initierPaiement(paiementInit);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            subscriptionService.cancelPendingSubscription(paiementInit.getSubscriptionId());
+            throw e;
+        }
     }
 }

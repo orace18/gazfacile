@@ -1,6 +1,8 @@
 package bj.gazfacile.exception;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
@@ -11,6 +13,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,8 +26,11 @@ import java.util.Map;
  * Retourne des réponses d'erreur standardisées en JSON.
  */
 @RestControllerAdvice
+@RequiredArgsConstructor
 @Slf4j
 public class GlobalExceptionHandler {
+
+    private final ObjectMapper objectMapper;
 
     /** Structure de réponse d'erreur standardisée. */
     private record ErreurResponse(
@@ -127,6 +133,24 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErreurResponse> handleResponseStatusException(ResponseStatusException ex) {
         return json(HttpStatus.valueOf(ex.getStatusCode().value()),
                 new ErreurResponse(ex.getReason(), ex.getStatusCode().value(), "Erreur", LocalDateTime.now())
+        );
+    }
+
+    /** Erreur renvoyée par un service externe (ex : FedaPay rate-limit). */
+    @ExceptionHandler(HttpClientErrorException.class)
+    public ResponseEntity<ErreurResponse> handleHttpClientErrorException(HttpClientErrorException ex, HttpServletRequest request) {
+        log.error("[Exception] Erreur HTTP externe sur {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getResponseBodyAsString());
+
+        String message = "Erreur du service de paiement";
+        try {
+            Map<?, ?> body = objectMapper.readValue(ex.getResponseBodyAsString(), Map.class);
+            if (body.get("message") instanceof String msg && !msg.isBlank()) {
+                message = msg.trim();
+            }
+        } catch (Exception ignored) {}
+
+        return json(HttpStatus.BAD_GATEWAY,
+                new ErreurResponse(message, 502, "Erreur service de paiement", LocalDateTime.now())
         );
     }
 

@@ -137,6 +137,19 @@ public class SubscriptionService {
     }
 
     /**
+     * Supprime une subscription PENDING (rollback si l'initiation du paiement échoue).
+     */
+    public void cancelPendingSubscription(String subscriptionId) {
+        if (subscriptionId == null) return;
+        subscriptionRepository.findById(subscriptionId).ifPresent(sub -> {
+            if (sub.getStatut() == SubscriptionStatus.PENDING) {
+                subscriptionRepository.delete(sub);
+                log.info("[Subscription] PENDING annulée — id: {}", subscriptionId);
+            }
+        });
+    }
+
+    /**
      * Active une subscription PENDING après paiement validé.
      */
     public void activateSubscription(String subscriptionId, String transactionId) {
