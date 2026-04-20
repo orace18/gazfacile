@@ -10,8 +10,8 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET:gazfacile-super-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm}
-  expiration: 86400000
-  refresh-expiration: 604800000
+  expiration: 7200000          # 2 heures
+  refresh-expiration: 2592000000 # 30 jours
 
 cors:
   allowed-origins: http://localhost:4200,https://gazfacile.netlify.app

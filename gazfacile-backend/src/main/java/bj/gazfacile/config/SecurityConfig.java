@@ -48,7 +48,8 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // Routes publiques WebSocket
                 .requestMatchers("/ws/**").permitAll()
-                // Routes d'authentification publiques
+                // Routes d'authentification — logout-all requiert un access token valide
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout-all").authenticated()
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/otp/**", "/api/v1/otp/**").permitAll()
                 // Setup initial admin (se bloque automatiquement si admin existe)

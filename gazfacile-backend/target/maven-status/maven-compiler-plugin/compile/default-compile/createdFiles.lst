@@ -42,6 +42,7 @@ bj/gazfacile/dto/OtpVerifyRequest.class
 bj/gazfacile/service/AuthService.class
 bj/gazfacile/model/enums/StatutPaiement.class
 bj/gazfacile/controller/RevendeurController.class
+bj/gazfacile/model/RefreshToken$RefreshTokenBuilder.class
 bj/gazfacile/controller/PaiementController.class
 bj/gazfacile/model/User.class
 bj/gazfacile/controller/CommandeController.class
@@ -56,6 +57,7 @@ bj/gazfacile/model/Subscription.class
 bj/gazfacile/service/CPassOtpService$1.class
 bj/gazfacile/repository/CpassOtpRefRepository.class
 bj/gazfacile/model/enums/Role.class
+bj/gazfacile/model/RefreshToken.class
 bj/gazfacile/service/OtpService.class
 bj/gazfacile/config/CorsConfig.class
 bj/gazfacile/repository/SubscriptionPlanRepository.class
@@ -95,6 +97,7 @@ bj/gazfacile/controller/AbonnementController.class
 bj/gazfacile/model/enums/AccountType.class
 bj/gazfacile/dto/VerifyOtpResponse.class
 bj/gazfacile/repository/SubscriptionRepository.class
+bj/gazfacile/repository/RefreshTokenRepository.class
 bj/gazfacile/model/Revendeur$RevendeurBuilder.class
 bj/gazfacile/config/SecurityConfig.class
 bj/gazfacile/config/AbonnementReadConverter.class
@@ -108,6 +111,7 @@ bj/gazfacile/model/enums/ClientNeed.class
 bj/gazfacile/dto/AdminPlanRequest.class
 bj/gazfacile/exception/GlobalExceptionHandler.class
 bj/gazfacile/dto/AdminCatalogueItemDTO.class
+bj/gazfacile/service/RefreshTokenService.class
 bj/gazfacile/dto/LoginDTO.class
 bj/gazfacile/service/AbonnementService.class
 bj/gazfacile/model/Notification.class

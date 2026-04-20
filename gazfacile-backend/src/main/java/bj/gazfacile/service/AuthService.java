@@ -9,15 +9,20 @@ import bj.gazfacile.model.User;
 import bj.gazfacile.model.enums.Role;
 import bj.gazfacile.repository.UserRepository;
 import bj.gazfacile.security.JwtService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
@@ -27,6 +32,8 @@ import java.util.UUID;
 @Slf4j
 public class AuthService {
 
+    public static final String COOKIE_REFRESH = "refresh_token";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -35,10 +42,14 @@ public class AuthService {
     private final GoogleTokenService googleTokenService;
     private final FirebasePhoneTokenService firebasePhoneTokenService;
     private final PhoneNumberService phoneNumberService;
+    private final RefreshTokenService refreshTokenService;
+
+    @Value("${jwt.refresh-expiration}")
+    private long refreshExpirationMs;
 
     // ── Inscription / Connexion classique ────────────────────────────────────
 
-    public AuthResponseDTO register(RegisterDTO dto) {
+    public AuthResponseDTO register(RegisterDTO dto, HttpServletResponse response) {
         String telephone = phoneNumberService.normaliserTelephoneLocal(dto.telephone());
 
         if (userRepository.existsByTelephone(telephone)) {
@@ -62,10 +73,10 @@ public class AuthService {
 
         userRepository.save(utilisateur);
         log.info("Nouvel utilisateur inscrit : {}", utilisateur.getTelephone());
-        return construireReponse(utilisateur);
+        return construireReponse(utilisateur, response);
     }
 
-    public AuthResponseDTO login(LoginDTO dto) {
+    public AuthResponseDTO login(LoginDTO dto, HttpServletResponse response) {
         String telephone = phoneNumberService.normaliserTelephoneLocal(dto.telephone());
 
         authenticationManager.authenticate(
@@ -75,10 +86,10 @@ public class AuthService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Utilisateur introuvable"));
         log.info("Connexion réussie : {}", utilisateur.getTelephone());
-        return construireReponse(utilisateur);
+        return construireReponse(utilisateur, response);
     }
 
-    public AuthResponseDTO loginParOtp(OtpLoginDTO dto) {
+    public AuthResponseDTO loginParOtp(OtpLoginDTO dto, HttpServletResponse response) {
         String telephone = phoneNumberService.normaliserTelephoneLocal(dto.telephone());
 
         otpService.verifierOtp(telephone, dto.code());
@@ -93,30 +104,20 @@ public class AuthService {
         }
 
         log.info("Connexion OTP réussie : {}", utilisateur.getTelephone());
-        return construireReponse(utilisateur);
+        return construireReponse(utilisateur, response);
     }
 
     // ── OTP ──────────────────────────────────────────────────────────────────
 
-    /**
-     * Envoie un OTP au numéro donné.
-     * Peut être appelé avant ou après l'inscription.
-     */
     public void envoyerOtp(String telephone) {
         otpService.envoyerOtp(phoneNumberService.normaliserTelephoneLocal(telephone));
     }
 
-    /**
-     * Vérifie l'OTP et marque le téléphone comme vérifié.
-     *
-     * @throws ResponseStatusException 404 si l'utilisateur n'existe pas encore
-     */
     public void verifierOtp(String telephone, String code) {
         String telephoneLocal = phoneNumberService.normaliserTelephoneLocal(telephone);
 
         otpService.verifierOtp(telephoneLocal, code);
 
-        // Marquer le téléphone comme vérifié si l'utilisateur existe
         userRepository.findByTelephone(telephoneLocal).ifPresent(u -> {
             u.setTelephoneVerifie(true);
             userRepository.save(u);
@@ -126,17 +127,7 @@ public class AuthService {
 
     // ── Google OAuth2 ────────────────────────────────────────────────────────
 
-    /**
-     * Connexion / inscription via Google Identity Services.
-     *
-     * Flux :
-     *  1. Valider l'ID token Google
-     *  2. Chercher l'utilisateur par googleId puis par email
-     *  3. Si trouvé : mettre à jour et connecter
-     *  4. Si nouveau + telephone fourni : créer le compte
-     *  5. Si nouveau sans telephone : retourner 202 ACCEPTED (frontend demande le téléphone)
-     */
-    public AuthResponseDTO loginAvecGoogle(GoogleLoginDTO dto) {
+    public AuthResponseDTO loginAvecGoogle(GoogleLoginDTO dto, HttpServletResponse response) {
         GoogleTokenService.GoogleUserInfo info;
         try {
             info = googleTokenService.valider(dto.idToken());
@@ -147,31 +138,26 @@ public class AuthService {
         Role role = (dto.role() != null) ? dto.role() : Role.CLIENT;
         if (role == Role.ADMIN) role = Role.CLIENT;
 
-        // Chercher par googleId
         User utilisateur = userRepository.findByGoogleId(info.googleId())
                 .orElseGet(() -> userRepository.findByEmail(info.email()).orElse(null));
 
         if (utilisateur != null) {
-            // Lier le googleId si pas encore fait
             if (utilisateur.getGoogleId() == null) {
                 utilisateur.setGoogleId(info.googleId());
                 userRepository.save(utilisateur);
             }
             log.info("[Google] Connexion : {}", utilisateur.getTelephone());
-            return construireReponse(utilisateur);
+            return construireReponse(utilisateur, response);
         }
 
-        // Nouveau compte Google — le téléphone est obligatoire
         if (dto.telephone() == null || dto.telephone().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.PRECONDITION_REQUIRED,
-                    "TELEPHONE_REQUIS");
+            throw new ResponseStatusException(HttpStatus.PRECONDITION_REQUIRED, "TELEPHONE_REQUIS");
         }
 
         FirebasePhoneTokenService.VerifiedPhoneIdentity phoneIdentity =
                 firebasePhoneTokenService.verifierTelephone(dto.firebaseIdToken(), dto.telephone());
 
         if (userRepository.existsByTelephone(phoneIdentity.telephoneLocal())) {
-            // Le téléphone existe déjà — lier les comptes
             utilisateur = userRepository.findByTelephone(phoneIdentity.telephoneLocal()).get();
             utilisateur.setGoogleId(info.googleId());
             utilisateur.setFirebaseUid(phoneIdentity.firebaseUid());
@@ -181,10 +167,9 @@ public class AuthService {
             }
             userRepository.save(utilisateur);
             log.info("[Google] Compte lié pour {}", utilisateur.getTelephone());
-            return construireReponse(utilisateur);
+            return construireReponse(utilisateur, response);
         }
 
-        // Créer un nouveau compte
         utilisateur = User.builder()
                 .telephone(phoneIdentity.telephoneLocal())
                 .email(info.email())
@@ -200,20 +185,82 @@ public class AuthService {
 
         userRepository.save(utilisateur);
         log.info("[Google] Nouveau compte créé : {} avec rôle {}", utilisateur.getTelephone(), role);
-        return construireReponse(utilisateur);
+        return construireReponse(utilisateur, response);
+    }
+
+    // ── Refresh / Logout ──────────────────────────────────────────────────────
+
+    /**
+     * Valide le refresh token (cookie), effectue la rotation, et retourne un nouveau token d'accès.
+     * Si le token est révoqué ou introuvable, lève une 401.
+     */
+    public AuthResponseDTO rafraichirToken(String rawRefreshToken, HttpServletResponse response) {
+        String userId = refreshTokenService.validerEtRoter(rawRefreshToken);
+
+        User utilisateur = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "Utilisateur introuvable"));
+
+        if (!utilisateur.isActif()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Compte désactivé");
+        }
+
+        log.info("[Refresh] Token renouvelé pour userId={}", userId);
+        return construireReponse(utilisateur, response);
+    }
+
+    /**
+     * Révoque le refresh token en base et efface le cookie côté client.
+     */
+    public void deconnecter(String rawRefreshToken, HttpServletResponse response) {
+        if (rawRefreshToken != null && !rawRefreshToken.isBlank()) {
+            refreshTokenService.revoquer(rawRefreshToken);
+        }
+        effacerCookie(response);
+    }
+
+    /**
+     * Révoque TOUS les refresh tokens de l'utilisateur et efface le cookie courant.
+     */
+    public void deconnecterTousLesAppareils(String userId, HttpServletResponse response) {
+        refreshTokenService.revoquerTous(userId);
+        effacerCookie(response);
+        log.info("[Auth] Déconnexion de tous les appareils pour userId={}", userId);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private AuthResponseDTO construireReponse(User utilisateur) {
-        String token = jwtService.generateToken(utilisateur);
-        String refreshToken = jwtService.generateRefreshToken(utilisateur);
+    private AuthResponseDTO construireReponse(User utilisateur, HttpServletResponse response) {
+        String accessToken = jwtService.generateToken(utilisateur);
+        String rawRefreshToken = refreshTokenService.creerToken(utilisateur.getId());
+
+        // Cookie HttpOnly — le browser le gère, Angular n'y accède pas
+        ResponseCookie cookie = ResponseCookie.from(COOKIE_REFRESH, rawRefreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/api/v1/auth")
+                .maxAge(Duration.ofMillis(refreshExpirationMs))
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
         return new AuthResponseDTO(
-                token, refreshToken,
+                accessToken,
                 utilisateur.getTelephone(),
                 utilisateur.getNom(),
                 utilisateur.getEmail(),
                 utilisateur.getRoles()
         );
+    }
+
+    private void effacerCookie(HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie.from(COOKIE_REFRESH, "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/api/v1/auth")
+                .maxAge(0)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }

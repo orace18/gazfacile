@@ -329,10 +329,9 @@ export interface SubscriptionDTO {
   statut: string;
 }
 
-/** Réponse après authentification. */
+/** Réponse après authentification. Le refresh token est dans un cookie HttpOnly. */
 export interface AuthResponse {
   token: string;
-  refreshToken: string;
   telephone: string;
   nom: string;
   email?: string;

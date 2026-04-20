@@ -5,6 +5,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/services/auth.service';
 import { Role } from '../../../core/models/revendeur.model';
 import { NotificationBellComponent } from '../../../features/notifications/notification-bell/notification-bell.component';
@@ -24,6 +26,7 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
+    MatDividerModule,
     NotificationBellComponent
   ],
   template: `
@@ -77,6 +80,11 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
             <mat-icon>arrow_drop_down</mat-icon>
           </button>
           <mat-menu #menuUtilisateur="matMenu">
+            <button mat-menu-item (click)="deconnecterTousLesAppareils()">
+              <mat-icon>devices_off</mat-icon>
+              Déconnecter tous les appareils
+            </button>
+            <mat-divider></mat-divider>
             <button mat-menu-item (click)="authService.logout()">
               <mat-icon>logout</mat-icon>
               Déconnexion
@@ -225,4 +233,16 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
 export class NavbarComponent {
   readonly authService = inject(AuthService);
   readonly Role = Role;
+  private readonly snackBar = inject(MatSnackBar);
+
+  deconnecterTousLesAppareils(): void {
+    this.authService.logoutAllDevices().subscribe({
+      next: () => {
+        this.snackBar.open('Déconnecté de tous les appareils.', undefined, { duration: 3000 });
+      },
+      error: () => {
+        this.snackBar.open('Déconnecté de tous les appareils.', undefined, { duration: 3000 });
+      }
+    });
+  }
 }

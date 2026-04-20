@@ -6,11 +6,10 @@ import java.util.Set;
 
 /**
  * DTO retourné après une authentification réussie.
- * Contient les tokens JWT et les informations de base de l'utilisateur.
+ * Le refresh token n'est plus dans le body — il est transmis via cookie HttpOnly.
  */
 public record AuthResponseDTO(
         String token,
-        String refreshToken,
         String telephone,
         String nom,
         String email,

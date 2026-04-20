@@ -1,23 +1,63 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 /**
- * Intercepteur HTTP fonctionnel qui ajoute le token JWT Bearer
- * à l'en-tête Authorization de chaque requête sortante.
+ * Intercepteur JWT fonctionnel (Angular 18).
+ *
+ * Comportements :
+ * 1. Ajoute le Bearer token à chaque requête sortante (si disponible)
+ * 2. Sur 401 : tente un refresh silencieux via le cookie HttpOnly
+ *    - Si plusieurs requêtes échouent en même temps → un seul appel refresh (shareReplay)
+ *    - Refresh OK → relance la requête originale avec le nouveau token
+ *    - Refresh KO → efface la session et redirige vers /auth/login
+ * 3. Affiche un toast lors de la reconnexion silencieuse
  */
 export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
-  const token = authService.getToken();
+  const router = inject(Router);
+  const snackBar = inject(MatSnackBar);
 
-  if (token) {
-    const requeteAvecToken = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    return next(requeteAvecToken);
+  // Ne pas intercepter les endpoints d'auth (évite les boucles infinies)
+  if (req.url.includes('/api/v1/auth/refresh')) {
+    return next(req);
   }
 
-  return next(req);
+  const token = authService.getToken();
+  const reqAvecToken = token
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+    : req;
+
+  return next(reqAvecToken).pipe(
+    catchError(err => {
+      if (!(err instanceof HttpErrorResponse) || err.status !== 401) {
+        return throwError(() => err);
+      }
+
+      if (!authService.estConnecte()) {
+        return throwError(() => err);
+      }
+
+      // Toast "reconnexion en cours" — uniquement pour le premier appel (pas les requêtes en attente)
+      if (!authService.isCurrentlyRefreshing()) {
+        snackBar.open('Votre session a expiré, reconnexion en cours...', undefined, {
+          duration: 3500,
+          panelClass: 'snack-info'
+        });
+      }
+
+      return authService.doRefresh().pipe(
+        switchMap(newToken =>
+          next(req.clone({ setHeaders: { Authorization: `Bearer ${newToken}` } }))
+        ),
+        catchError(refreshErr => {
+          router.navigate(['/auth/login']);
+          return throwError(() => refreshErr);
+        })
+      );
+    })
+  );
 };
