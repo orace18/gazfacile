@@ -7,12 +7,16 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
-import { OtpService } from '../../../core/services/otp.service';
 import { InscriptionStateService } from '../../../core/services/inscription-state.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import { PaiementService } from '../../../core/services/paiement.service';
+import { WebAuthnHelper } from '../../../core/helpers/webauthn.helper';
 import { Role } from '../../../core/models/revendeur.model';
+
+/** Étapes du formulaire d'inscription. */
+type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
 
 @Component({
   selector: 'app-register-form',
@@ -33,7 +37,7 @@ import { Role } from '../../../core/models/revendeur.model';
         <div class="entete-auth">
           <img src="assets/logo.svg" alt="GazFacile" class="logo-auth">
           <h1>Créer mon compte</h1>
-          <p class="sous-titre">Inscription rapide en deux étapes avant le paiement.</p>
+          <p class="sous-titre">Inscription rapide avant le paiement.</p>
         </div>
 
         @if (inscriptionState.resumeLabel()) {
@@ -44,16 +48,19 @@ import { Role } from '../../../core/models/revendeur.model';
           </div>
         }
 
+        <!-- Indicateur d'étape -->
         <div class="etapes-header">
-          <div class="etape-badge" [class.active]="etape === 1">1. Nom</div>
-          <div class="etape-badge" [class.active]="etape === 2">2. Téléphone</div>
+          <div class="etape-badge" [class.active]="etape === 'nom'">1. Nom</div>
+          <div class="etape-badge" [class.active]="etape === 'telephone'">2. Numéro</div>
+          <div class="etape-badge" [class.active]="etape === 'authentification' || etape === 'pin'">3. Sécurité</div>
         </div>
 
-        @if (etape === 1) {
-          <form [formGroup]="nomForm" class="formulaire" (ngSubmit)="continuerVersTelephone()">
+        <!-- Étape 1 : Nom -->
+        @if (etape === 'nom') {
+          <form [formGroup]="nomForm" class="formulaire" (ngSubmit)="continuerVersNumero()">
             <mat-form-field appearance="outline" class="champ-pleine-largeur">
               <mat-label>Nom complet</mat-label>
-              <input matInput formControlName="nom" placeholder="Ex: Koffi Djossou">
+              <input matInput formControlName="nom" placeholder="Ex : Koffi Djossou">
               <mat-icon matPrefix>person</mat-icon>
               @if (nomForm.get('nom')?.invalid && nomForm.get('nom')?.touched) {
                 <mat-error>Le nom est obligatoire</mat-error>
@@ -61,124 +68,177 @@ import { Role } from '../../../core/models/revendeur.model';
             </mat-form-field>
 
             <button mat-raised-button type="submit" class="btn-principal" [disabled]="nomForm.invalid">
-              <span class="btn-inner">
-                <mat-icon>arrow_forward</mat-icon>
-                Suivant
-              </span>
+              <mat-icon>arrow_forward</mat-icon>
+              Suivant
             </button>
           </form>
         }
 
-        @if (etape === 2) {
-          <div class="bloc-verification">
+        <!-- Étape 2 : Numéro de téléphone -->
+        @if (etape === 'telephone') {
+          <form [formGroup]="telephoneForm" class="formulaire">
+            <mat-form-field appearance="outline" class="champ-pleine-largeur">
+              <mat-label>Numéro de téléphone</mat-label>
+              <input
+                matInput
+                formControlName="telephone"
+                placeholder="0197000000"
+                type="tel"
+                inputmode="numeric"
+                autocomplete="tel"
+              >
+              <div matPrefix class="prefixe-tel">+229</div>
+              @if (telephoneForm.get('telephone')?.hasError('required') && telephoneForm.get('telephone')?.touched) {
+                <mat-error>Le numéro de téléphone est obligatoire</mat-error>
+              }
+              @if (telephoneForm.get('telephone')?.hasError('pattern') && telephoneForm.get('telephone')?.touched) {
+                <mat-error>Format invalide. Exemple : 0197000000</mat-error>
+              }
+            </mat-form-field>
+
+            @if (erreur) {
+              <div class="erreur-globale">
+                <mat-icon>error_outline</mat-icon> {{ erreur }}
+              </div>
+            }
+
+            <button
+              mat-raised-button
+              type="button"
+              class="btn-principal"
+              [disabled]="telephoneForm.invalid || envoi"
+              (click)="continuerVersAuthentification()"
+            >
+              @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
+              @else { <mat-icon>arrow_forward</mat-icon> }
+              {{ envoi ? 'Vérification...' : 'Suivant' }}
+            </button>
+
+            <button mat-button type="button" class="btn-secondaire" (click)="retourNom()">
+              <mat-icon>arrow_back</mat-icon>
+              Retour
+            </button>
+          </form>
+        }
+
+        <!-- Étape 3 : Sécurité (WebAuthn ou PIN) -->
+        @if (etape === 'authentification') {
+          <div class="formulaire">
+            <div class="info-telephone">
+              <mat-icon>phone_android</mat-icon>
+              <span>+229 {{ telephoneLocalAffiche }}</span>
+            </div>
+
             <p class="instruction">
-              Saisissez votre numéro, recevez un code SMS, puis confirmez votre inscription.
+              Choisissez comment sécuriser votre compte.
             </p>
 
-            <form [formGroup]="telephoneForm" class="formulaire">
-              <mat-form-field appearance="outline" class="champ-pleine-largeur">
-                <mat-label>Numéro de téléphone</mat-label>
-                <input
-                  matInput
-                  formControlName="telephone"
-                  placeholder="0197000000"
-                  type="tel"
-                  [readonly]="otpEnvoye"
-                >
-                <div matPrefix class="prefixe-tel">+229</div>
-                @if (telephoneForm.get('telephone')?.hasError('required') && telephoneForm.get('telephone')?.touched) {
-                  <mat-error>Le numéro de téléphone est obligatoire</mat-error>
-                }
-                @if (telephoneForm.get('telephone')?.hasError('pattern') && telephoneForm.get('telephone')?.touched) {
-                  <mat-error>Format invalide. Exemple: 0197000000</mat-error>
-                }
-              </mat-form-field>
+            @if (erreur) {
+              <div class="erreur-globale">
+                <mat-icon>error_outline</mat-icon> {{ erreur }}
+              </div>
+            }
 
-              @if (otpEnvoye) {
-                <div class="otp-info">
-                  <mat-icon>phone_android</mat-icon>
-                  <p>Code envoyé au <strong>+229 {{ telephoneLocalAffiche }}</strong></p>
-                </div>
-
-                <mat-form-field appearance="outline" class="champ-pleine-largeur">
-                  <mat-label>Code de vérification</mat-label>
-                  <input
-                    matInput
-                    [formControl]="otpControl"
-                    placeholder="123456"
-                    maxlength="6"
-                    type="tel"
-                    inputmode="numeric"
-                    autocomplete="one-time-code"
-                  >
-                  <mat-icon matPrefix>lock</mat-icon>
-                  @if (otpControl.invalid && otpControl.touched) {
-                    <mat-error>Le code doit comporter 6 chiffres</mat-error>
-                  }
-                </mat-form-field>
-              }
-
-              @if (erreur) {
-                <div class="erreur-globale">
-                  <mat-icon>error_outline</mat-icon> {{ erreur }}
-                </div>
-              }
-
-              @if (!otpEnvoye) {
-                <button
-                  mat-raised-button
-                  type="button"
-                  class="btn-principal"
-                  [disabled]="telephoneForm.invalid || envoiOtp"
-                  (click)="demanderOtp()"
-                >
-                  <span class="btn-inner">
-                    @if (envoiOtp) {
-                      <mat-spinner diameter="20"></mat-spinner>
-                    } @else {
-                      <mat-icon>sms</mat-icon>
-                    }
-                    {{ envoiOtp ? 'Envoi...' : 'Envoyer le code' }}
-                  </span>
-                </button>
-              }
-
-              @if (otpEnvoye) {
-                <button
-                  mat-raised-button
-                  type="button"
-                  class="btn-principal"
-                  [disabled]="otpControl.invalid || envoi"
-                  (click)="verifierEtInscrire()"
-                >
-                  <span class="btn-inner">
-                    @if (envoi) {
-                      <mat-spinner diameter="20"></mat-spinner>
-                    } @else {
-                      <mat-icon>check_circle</mat-icon>
-                    }
-                    {{ envoi ? 'Vérification...' : 'Vérifier et continuer' }}
-                  </span>
-                </button>
-
-                <button mat-button type="button" class="btn-secondaire" [disabled]="envoiOtp" (click)="demanderOtp()">
-                  <span class="btn-inner">
-                    @if (envoiOtp) { <mat-spinner diameter="14"></mat-spinner> }
-                    {{ envoiOtp ? 'Envoi...' : 'Renvoyer le code' }}
-                  </span>
-                </button>
-
-                <button mat-button type="button" class="btn-secondaire" (click)="modifierNumero()">
-                  <mat-icon>edit</mat-icon>
-                  Modifier le numéro
-                </button>
-              }
-
-              <button mat-button type="button" class="btn-secondaire" (click)="retourEtape1()">
-                <mat-icon>arrow_back</mat-icon>
-                Retour
+            @if (webAuthnSupporte) {
+              <button mat-raised-button type="button" class="btn-biometrique"
+                [disabled]="envoi"
+                (click)="inscrireAvecBiometrie()">
+                @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
+                @else { <mat-icon>fingerprint</mat-icon> }
+                Enregistrer mon empreinte / Face ID
               </button>
-            </form>
+
+              <div class="separateur"><span>ou</span></div>
+            }
+
+            <button mat-stroked-button type="button" class="btn-pin"
+              [disabled]="envoi"
+              (click)="afficherCreationPin()">
+              <mat-icon>pin</mat-icon>
+              Créer un PIN 6 chiffres
+            </button>
+
+            @if (!webAuthnSupporte) {
+              <button mat-stroked-button type="button" class="btn-pin"
+                [disabled]="envoi"
+                (click)="inscrireSansBiometrie()">
+                <mat-icon>person_add</mat-icon>
+                Continuer sans sécurité biométrique
+              </button>
+            }
+
+            <button mat-button type="button" class="btn-secondaire" (click)="retourNumero()">
+              <mat-icon>arrow_back</mat-icon>
+              Retour
+            </button>
+          </div>
+        }
+
+        <!-- Étape 3b : Création PIN -->
+        @if (etape === 'pin') {
+          <div class="formulaire">
+            <div class="info-telephone">
+              <mat-icon>phone_android</mat-icon>
+              <span>+229 {{ telephoneLocalAffiche }}</span>
+            </div>
+
+            <mat-form-field appearance="outline" class="champ-pleine-largeur">
+              <mat-label>PIN 6 chiffres</mat-label>
+              <input
+                matInput
+                [formControl]="pinControl"
+                placeholder="••••••"
+                type="password"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="new-password"
+              >
+              <mat-icon matPrefix>lock</mat-icon>
+              @if (pinControl.invalid && pinControl.touched) {
+                <mat-error>Le PIN doit comporter 6 chiffres</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="champ-pleine-largeur">
+              <mat-label>Confirmer le PIN</mat-label>
+              <input
+                matInput
+                [formControl]="pinConfirmControl"
+                placeholder="••••••"
+                type="password"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="new-password"
+              >
+              <mat-icon matPrefix>lock_outline</mat-icon>
+              @if (pinConfirmControl.invalid && pinConfirmControl.touched) {
+                <mat-error>Le PIN doit comporter 6 chiffres</mat-error>
+              }
+              @if (pinConfirmControl.valid && pinControl.valid && pinControl.value !== pinConfirmControl.value) {
+                <mat-error>Les PIN ne correspondent pas</mat-error>
+              }
+            </mat-form-field>
+
+            @if (erreur) {
+              <div class="erreur-globale">
+                <mat-icon>error_outline</mat-icon> {{ erreur }}
+              </div>
+            }
+
+            <button mat-raised-button type="button" class="btn-principal"
+              [disabled]="pinControl.invalid || pinConfirmControl.invalid || pinControl.value !== pinConfirmControl.value || envoi"
+              (click)="inscrireAvecPin()">
+              @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
+              @else { <mat-icon>check_circle</mat-icon> }
+              {{ envoi ? 'Inscription...' : 'Créer mon compte' }}
+            </button>
+
+            <button mat-button type="button" class="btn-secondaire"
+              [disabled]="envoi"
+              (click)="retourAuthentification()">
+              <mat-icon>arrow_back</mat-icon>
+              Retour
+            </button>
           </div>
         }
 
@@ -260,16 +320,16 @@ import { Role } from '../../../core/models/revendeur.model';
 
     .etapes-header {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
       margin-bottom: 22px;
     }
 
     .etape-badge {
       border: 1px solid var(--color-border);
-      padding: 10px 12px;
+      padding: 10px 8px;
       text-align: center;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 600;
       color: var(--color-text-muted);
       background: var(--color-bg);
@@ -281,7 +341,7 @@ import { Role } from '../../../core/models/revendeur.model';
       }
     }
 
-    .formulaire, .bloc-verification {
+    .formulaire {
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -299,44 +359,33 @@ import { Role } from '../../../core/models/revendeur.model';
       margin-right: 8px;
     }
 
-    .instruction {
-      margin: 0;
-      font-size: 0.9rem;
-      color: var(--color-text-muted);
-    }
-
-    .otp-info {
+    .info-telephone {
       display: flex;
       align-items: center;
       gap: 10px;
       padding: 12px 14px;
       background: color-mix(in srgb, var(--color-primary) 8%, white);
-      color: var(--color-text);
+      border-radius: 8px;
 
       mat-icon {
         color: var(--color-primary);
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
       }
 
-      p {
-        margin: 0;
-        font-size: 0.9rem;
+      span {
+        font-weight: 600;
+        color: var(--color-text);
+        font-size: 0.95rem;
       }
     }
 
-    .erreur-globale {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 14px;
-      background: rgba(244, 67, 54, 0.08);
-      color: #c62828;
-      font-size: 0.88rem;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
+    .instruction {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--color-text-muted);
+      text-align: center;
     }
 
     .btn-principal {
@@ -351,12 +400,74 @@ import { Role } from '../../../core/models/revendeur.model';
       gap: 8px;
     }
 
+    .btn-biometrique {
+      width: 100%;
+      height: 52px;
+      background: var(--color-primary) !important;
+      color: #fff !important;
+      font-weight: 700;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+    }
+
+    .btn-pin {
+      width: 100%;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+
     .btn-secondaire {
       align-self: center;
       color: var(--color-primary) !important;
       display: inline-flex;
       align-items: center;
       gap: 6px;
+    }
+
+    .separateur {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--color-text-muted);
+      font-size: 0.82rem;
+
+      &::before, &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--color-border);
+      }
+    }
+
+    .erreur-globale {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      background: rgba(244, 67, 54, 0.08);
+      border-radius: 8px;
+      color: #c62828;
+      font-size: 0.88rem;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
     }
 
     .lien-connexion {
@@ -382,14 +493,13 @@ import { Role } from '../../../core/models/revendeur.model';
       }
 
       .etapes-header {
-        grid-template-columns: 1fr;
+        font-size: 0.75rem;
       }
     }
   `]
 })
 export class RegisterFormComponent implements OnDestroy {
   private readonly authService = inject(AuthService);
-  private readonly otpService = inject(OtpService);
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly paiementService = inject(PaiementService);
   private readonly router = inject(Router);
@@ -397,11 +507,11 @@ export class RegisterFormComponent implements OnDestroy {
 
   readonly inscriptionState = inject(InscriptionStateService);
 
-  etape: 1 | 2 = 1;
+  etape: Etape = 'nom';
   envoi = false;
-  envoiOtp = false;
-  otpEnvoye = false;
   erreur: string | null = null;
+
+  readonly webAuthnSupporte = WebAuthnHelper.isSupported();
 
   readonly nomForm = this.fb.group({
     nom: ['', Validators.required]
@@ -411,7 +521,12 @@ export class RegisterFormComponent implements OnDestroy {
     telephone: ['', [Validators.required, Validators.pattern(/^(\+229|00229)?\s*\d{10}$/)]]
   });
 
-  readonly otpControl = this.fb.control('', [
+  readonly pinControl = this.fb.control('', [
+    Validators.required,
+    Validators.pattern(/^\d{6}$/)
+  ]);
+
+  readonly pinConfirmControl = this.fb.control('', [
     Validators.required,
     Validators.pattern(/^\d{6}$/)
   ]);
@@ -424,105 +539,175 @@ export class RegisterFormComponent implements OnDestroy {
     return this.normaliserTelephoneLocal(this.telephoneForm.value.telephone || '');
   }
 
-  continuerVersTelephone(): void {
+  private get telephone(): string {
+    return this.normaliserTelephoneLocal(this.telephoneForm.value.telephone!);
+  }
+
+  private get nom(): string {
+    return this.nomForm.value.nom!.trim();
+  }
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+
+  continuerVersNumero(): void {
     if (this.nomForm.invalid) {
       this.nomForm.markAllAsTouched();
       return;
     }
-
-    this.etape = 2;
     this.erreur = null;
+    this.etape = 'telephone';
   }
 
-  demanderOtp(): void {
+  continuerVersAuthentification(): void {
     if (this.telephoneForm.invalid) {
       this.telephoneForm.markAllAsTouched();
       return;
     }
-
-    this.envoiOtp = true;
     this.erreur = null;
-
-    this.otpService.envoyer(this.normaliserTelephoneLocal(this.telephoneForm.value.telephone!)).subscribe({
-      next: () => {
-        this.envoiOtp = false;
-        this.otpEnvoye = true;
-        this.otpControl.reset();
-      },
-      error: err => {
-        this.envoiOtp = false;
-        this.erreur = err.message;
-      }
-    });
+    this.etape = 'authentification';
   }
 
-  verifierEtInscrire(): void {
-    if (this.otpControl.invalid) {
-      this.otpControl.markAsTouched();
+  afficherCreationPin(): void {
+    this.erreur = null;
+    this.pinControl.reset();
+    this.pinConfirmControl.reset();
+    this.etape = 'pin';
+  }
+
+  retourNom(): void {
+    this.erreur = null;
+    this.etape = 'nom';
+  }
+
+  retourNumero(): void {
+    this.erreur = null;
+    this.etape = 'telephone';
+  }
+
+  retourAuthentification(): void {
+    this.erreur = null;
+    this.etape = 'authentification';
+  }
+
+  // ── Inscription WebAuthn ──────────────────────────────────────────────────
+
+  async inscrireAvecBiometrie(): Promise<void> {
+    this.envoi = true;
+    this.erreur = null;
+
+    try {
+      // Étape 1 : créer l'utilisateur et obtenir les options WebAuthn
+      const options = await firstValueFrom(
+        this.authService.startWebAuthnRegistration({
+          telephone: this.telephone,
+          nom: this.nom,
+          role: this.role
+        })
+      );
+
+      // Étape 2 : invoquer l'authenticateur (empreinte, Face ID, clé de sécurité)
+      const credential = await WebAuthnHelper.registerWithBiometric(options);
+
+      // Étape 3 : envoyer le credential au backend pour validation
+      await firstValueFrom(
+        this.authService.finishWebAuthnRegistration({
+          telephone: this.telephone,
+          credential
+        })
+      );
+
+      this.inscriptionState.reset();
+      await this.lancerSouscription();
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError') {
+        this.erreur = "Enregistrement annulé. Réessayez ou choisissez le PIN.";
+      } else {
+        this.erreur = err?.message || "Enregistrement de l'empreinte échoué. Réessayez.";
+      }
+      this.envoi = false;
+    }
+  }
+
+  // ── Inscription avec PIN ───────────────────────────────────────────────────
+
+  async inscrireAvecPin(): Promise<void> {
+    if (this.pinControl.invalid || this.pinConfirmControl.invalid
+        || this.pinControl.value !== this.pinConfirmControl.value) {
       return;
     }
 
     this.envoi = true;
     this.erreur = null;
 
-    this.authService.register({
-      nom: this.nomForm.value.nom!.trim(),
-      telephone: this.normaliserTelephoneLocal(this.telephoneForm.value.telephone!),
-      role: this.role,
-      accountType: this.inscriptionState.role() ?? undefined,
-      clientNeed: this.inscriptionState.clientNeed() ?? undefined,
-      otpCode: this.otpControl.value!
-    }).subscribe({
-      next: () => this.lancerSouscription(),
-      error: err => {
-        this.envoi = false;
-        this.erreur = err.message || 'Erreur lors de l’inscription';
-      }
-    });
+    try {
+      // Créer le compte (inscription simplifiée)
+      await firstValueFrom(
+        this.authService.inscrireSimple({
+          telephone: this.telephone,
+          nom: this.nom,
+          role: this.role
+        })
+      );
+
+      // Configurer le PIN (l'utilisateur est maintenant authentifié via le JWT en mémoire)
+      await firstValueFrom(
+        this.authService.setupPin({ pin: this.pinControl.value! })
+      );
+
+      this.inscriptionState.reset();
+      await this.lancerSouscription();
+    } catch (err: any) {
+      this.erreur = err?.message || 'Erreur lors de l\'inscription';
+      this.envoi = false;
+    }
   }
 
-  private lancerSouscription(): void {
+  // ── Inscription sans biométrie (fallback) ─────────────────────────────────
+
+  async inscrireSansBiometrie(): Promise<void> {
+    this.envoi = true;
+    this.erreur = null;
+
+    try {
+      await firstValueFrom(
+        this.authService.inscrireSimple({
+          telephone: this.telephone,
+          nom: this.nom,
+          role: this.role
+        })
+      );
+
+      this.inscriptionState.reset();
+      await this.lancerSouscription();
+    } catch (err: any) {
+      this.erreur = err?.message || 'Erreur lors de l\'inscription';
+      this.envoi = false;
+    }
+  }
+
+  // ── Souscription post-inscription ─────────────────────────────────────────
+
+  private async lancerSouscription(): Promise<void> {
     const plan = this.inscriptionState.selectedPlan();
     if (!plan) {
       this.envoi = false;
-      this.inscriptionState.reset();
       this.router.navigate(['/']);
       return;
     }
 
-    const telephonePaiement = this.normaliserTelephoneLocal(this.telephoneForm.value.telephone!);
-
-    this.subscriptionService.subscribe(plan.id, telephonePaiement).subscribe({
-      next: (response) => {
-        this.inscriptionState.reset();
-        this.paiementService.redirectVersCheckout(response.checkoutUrl);
-      },
-      error: err => {
-        this.envoi = false;
-        this.erreur = err.message || 'Compte créé, mais impossible d’initier le paiement.';
-      }
-    });
-  }
-
-  retourEtape1(): void {
-    this.etape = 1;
-    this.erreur = null;
-    this.reinitialiserOtp();
-  }
-
-  modifierNumero(): void {
-    this.erreur = null;
-    this.reinitialiserOtp();
-    this.telephoneForm.get('telephone')?.markAsUntouched();
+    try {
+      const response = await firstValueFrom(
+        this.subscriptionService.subscribe(plan.id, this.telephone)
+      );
+      this.paiementService.redirectVersCheckout(response.checkoutUrl);
+    } catch (err: any) {
+      this.envoi = false;
+      this.erreur = err.message || 'Compte créé, mais impossible d\'initier le paiement.';
+    }
   }
 
   ngOnDestroy(): void {
-    this.reinitialiserOtp();
-  }
-
-  private reinitialiserOtp(): void {
-    this.otpEnvoye = false;
-    this.otpControl.reset();
+    // Nettoyage si le composant est détruit en cours de processus
   }
 
   private normaliserTelephoneLocal(telephone: string): string {

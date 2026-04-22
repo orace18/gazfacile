@@ -28,19 +28,18 @@ fedapay:
   # URL de retour après paiement (votre frontend)
   callback-url: ${FEDAPAY_CALLBACK_URL:https://gazfacile.netlify.app/paiement/confirmation}
 
-sms:
-  # Africa's Talking — utiliser "sandbox" en développement
-  api-key: ${SMS_API_KEY:sandbox}
-  username: ${SMS_USERNAME:sandbox}
-  sender: ${SMS_SENDER:GazFacile}
+webauthn:
+  rp:
+    # Identifiant du Relying Party (doit correspondre au domaine de l'app)
+    id: ${WEBAUTHN_RP_ID:localhost}
+    # Nom affiché dans les dialogues d'authentification
+    name: ${WEBAUTHN_RP_NAME:GazFacile}
+    # Origine autorisée (protocole + domaine + port)
+    origin: ${WEBAUTHN_RP_ORIGIN:http://localhost:4200}
 
 google:
   # Client ID OAuth2 de votre projet Google Cloud Console
   client-id: ${GOOGLE_CLIENT_ID:}
-
-firebase:
-  # JSON complet du service account Firebase Admin
-  service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON:}
 
 logging:
   level:

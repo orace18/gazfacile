@@ -43,15 +43,18 @@ import { Role } from '../../../core/models/revendeur.model';
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="champ">
-            <mat-label>Mot de passe</mat-label>
-            <input matInput formControlName="password"
+            <mat-label>PIN administrateur</mat-label>
+            <input matInput formControlName="pin"
               [type]="mdpVisible ? 'text' : 'password'"
-              placeholder="Mot de passe administrateur">
+              placeholder="••••••"
+              inputmode="numeric"
+              maxlength="20"
+              autocomplete="current-password">
             <button matSuffix mat-icon-button type="button" (click)="mdpVisible = !mdpVisible">
               <mat-icon>{{ mdpVisible ? 'visibility_off' : 'visibility' }}</mat-icon>
             </button>
-            @if (formulaire.get('password')?.invalid && formulaire.get('password')?.touched) {
-              <mat-error>Le mot de passe est obligatoire</mat-error>
+            @if (formulaire.get('pin')?.invalid && formulaire.get('pin')?.touched) {
+              <mat-error>Le PIN est obligatoire</mat-error>
             }
           </mat-form-field>
 
@@ -167,7 +170,7 @@ export class AdminLoginComponent {
 
   readonly formulaire = this.fb.group({
     telephone: ['', Validators.required],
-    password: ['', Validators.required]
+    pin: ['', Validators.required]
   });
 
   soumettre(): void {
@@ -179,9 +182,9 @@ export class AdminLoginComponent {
     this.envoi = true;
     this.erreur = null;
 
-    const { telephone, password } = this.formulaire.value;
+    const { telephone, pin } = this.formulaire.value;
 
-    this.authService.login({ telephone: telephone!, password: password! }).subscribe({
+    this.authService.pinLogin({ telephone: telephone!, pin: pin! }).subscribe({
       next: () => {
         this.envoi = false;
         if (this.authService.hasRole(Role.ADMIN)) {
@@ -191,7 +194,7 @@ export class AdminLoginComponent {
           this.erreur = 'Accès refusé : vous n\'êtes pas administrateur';
         }
       },
-      error: err => {
+      error: (err: any) => {
         this.envoi = false;
         this.erreur = err.message || 'Identifiants incorrects';
       }

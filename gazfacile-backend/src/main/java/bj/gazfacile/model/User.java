@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 /**
  * Entité utilisateur de l'application GazFacile.
  * Implémente UserDetails pour l'intégration avec Spring Security.
+ * L'authentification est assurée par WebAuthn (Passkeys) ou PIN 6 chiffres.
  */
 @Document(collection = "users")
 @Data
@@ -39,9 +40,7 @@ public class User implements UserDetails {
 
     private String email;
 
-    @NotBlank(message = "Le mot de passe est obligatoire")
-    private String password;
-
+    @NotBlank(message = "Le nom est obligatoire")
     private String nom;
 
     @Builder.Default
@@ -51,13 +50,12 @@ public class User implements UserDetails {
     @Indexed(sparse = true)
     private String googleId;
 
-    /** UID Firebase Auth si le téléphone a été vérifié via Phone Auth. */
-    @Indexed(unique = true, sparse = true)
-    private String firebaseUid;
+    /** Hash BCrypt du PIN 6 chiffres — null si le PIN n'est pas configuré. */
+    private String pinHash;
 
-    /** Vrai si le numéro de téléphone a été vérifié par OTP. */
+    /** Vrai si l'utilisateur a enregistré au moins un credential WebAuthn (Passkey). */
     @Builder.Default
-    private boolean telephoneVerifie = false;
+    private boolean webAuthnRegistered = false;
 
     @Builder.Default
     private boolean actif = true;
@@ -76,6 +74,15 @@ public class User implements UserDetails {
     @Override
     public String getUsername() {
         return telephone;
+    }
+
+    /**
+     * Pas de mot de passe — l'authentification se fait par WebAuthn ou PIN.
+     * Spring Security requiert une valeur non-null, donc on retourne une chaîne vide.
+     */
+    @Override
+    public String getPassword() {
+        return "";
     }
 
     @Override

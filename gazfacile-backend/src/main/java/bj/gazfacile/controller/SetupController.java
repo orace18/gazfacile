@@ -17,6 +17,7 @@ import java.util.Set;
 /**
  * Endpoint unique pour initialiser le compte administrateur.
  * Se désactive automatiquement dès qu'un admin existe.
+ * L'admin utilise un PIN pour se connecter.
  */
 @RestController
 @RequestMapping("/api/v1/setup")
@@ -37,10 +38,10 @@ public class SetupController {
         User admin = User.builder()
                 .telephone("0147946910")
                 .email("facile.gaz@gmail.com")
-                .password(passwordEncoder.encode("@Juscard38183"))
+                // PIN initial : "@Juscard38183" — à changer après la première connexion
+                .pinHash(passwordEncoder.encode("@Juscard38183"))
                 .nom("Admin GazFacile")
                 .roles(Set.of(Role.ADMIN))
-                .telephoneVerifie(true)
                 .actif(true)
                 .createdAt(LocalDateTime.now())
                 .build();

@@ -12,7 +12,5 @@ public record GoogleLoginDTO(
     /** Numéro de téléphone optionnel — requis si c'est la première connexion Google. */
     String telephone,
     /** Rôle choisi côté frontend pour un nouveau compte Google. */
-    Role role,
-    /** Token Firebase Phone Auth prouvant la possession du numéro. */
-    String firebaseIdToken
+    Role role
 ) {}

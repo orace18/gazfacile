@@ -5,16 +5,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -23,6 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 /**
  * Configuration de la sécurité Spring Security avec JWT.
  * API REST stateless : pas de session, pas de CSRF.
+ * L'authentification se fait par WebAuthn ou PIN — pas de DaoAuthenticationProvider.
  */
 @Configuration
 @EnableWebSecurity
@@ -31,7 +27,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
-    private final UserDetailsService userDetailsService;
     private final CorsConfig corsConfig;
 
     @Bean
@@ -48,10 +43,10 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // Routes publiques WebSocket
                 .requestMatchers("/ws/**").permitAll()
-                // Routes d'authentification — logout-all requiert un access token valide
+                // Routes d'authentification — logout-all et pin/setup requièrent un access token valide
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout-all").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/pin/setup").authenticated()
                 .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/api/otp/**", "/api/v1/otp/**").permitAll()
                 // Setup initial admin (se bloque automatiquement si admin existe)
                 .requestMatchers(HttpMethod.POST, "/api/v1/setup/admin").permitAll()
                 // Webhook FedaPay : public (FedaPay appelle sans token JWT)
@@ -90,23 +85,9 @@ public class SecurityConfig {
                 // Tout le reste est protégé
                 .anyRequest().authenticated()
             )
-            .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder());
-        return provider;
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
     }
 
     @Bean

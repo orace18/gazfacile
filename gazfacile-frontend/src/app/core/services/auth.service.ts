@@ -6,7 +6,12 @@ import {
 } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { AuthResponse, LoginDTO, OtpLoginDTO, RegisterDTO, Role } from '../models/revendeur.model';
+import {
+  AuthResponse, RegisterDTO, Role,
+  WebAuthnRegisterStartDTO, WebAuthnRegisterFinishDTO,
+  WebAuthnLoginStartDTO, WebAuthnLoginFinishDTO,
+  PinLoginDTO, PinSetupDTO
+} from '../models/revendeur.model';
 
 /** Clé localStorage — profil utilisateur SANS le token (pas de XSS sur le token). */
 const CLE_USER = 'gf_user';
@@ -20,7 +25,7 @@ interface UserProfil {
 }
 
 /**
- * Service d'authentification.
+ * Service d'authentification GazFacile.
  *
  * Sécurité :
  * - Access token stocké en mémoire uniquement (jamais localStorage/sessionStorage)
@@ -38,17 +43,13 @@ export class AuthService {
   private _refreshObs: Observable<string> | null = null;
 
   // ── État utilisateur ───────────────────────────────────────────────────────
-  /** Utilisateur courant (chargé depuis localStorage au démarrage, token non inclus). */
   readonly currentUser = signal<AuthResponse | null>(this.chargerProfilLocal());
-
-  /** Vrai si un utilisateur est considéré connecté. */
   readonly estConnecte = computed(() => this.currentUser() !== null);
 
   // ── Inactivité ─────────────────────────────────────────────────────────────
-  /** Émet quand l'utilisateur est inactif depuis 30 minutes. */
   readonly inactivite$ = new Subject<void>();
 
-  private readonly DELAI_INACTIVITE = 30 * 60 * 1000; // 30 min
+  private readonly DELAI_INACTIVITE = 30 * 60 * 1000;
   private _timerInactivite: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -56,28 +57,74 @@ export class AuthService {
     private readonly router: Router
   ) {}
 
-  // ── Authentification ───────────────────────────────────────────────────────
+  // ── WebAuthn — Inscription ─────────────────────────────────────────────────
 
-  login(dto: LoginDTO): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, dto).pipe(
-      tap(res => this.sauvegarderSession(res)),
+  /** Étape 1 : obtient les options de création de credential. */
+  startWebAuthnRegistration(dto: WebAuthnRegisterStartDTO): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/webauthn/register/start`, dto).pipe(
       catchError(err => throwError(() =>
-        new Error(err.error?.message || 'Numéro de téléphone ou mot de passe incorrect')
+        new Error(err.error?.message || "Impossible de démarrer l'enregistrement biométrique")
       ))
     );
   }
 
-  loginAvecOtp(dto: OtpLoginDTO): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login/otp`, dto).pipe(
+  /** Étape 2 : envoie le credential créé et obtient le JWT. */
+  finishWebAuthnRegistration(dto: WebAuthnRegisterFinishDTO): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/webauthn/register/finish`, dto).pipe(
       tap(res => this.sauvegarderSession(res)),
       catchError(err => throwError(() =>
-        new Error(err.error?.message || 'Numéro de téléphone ou code OTP incorrect')
+        new Error(err.error?.message || "Enregistrement de l'empreinte échoué. Réessayez.")
       ))
     );
   }
 
-  register(dto: RegisterDTO): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/register`, dto).pipe(
+  // ── WebAuthn — Connexion ───────────────────────────────────────────────────
+
+  /** Étape 1 : obtient les options d'authentification. */
+  startWebAuthnLogin(dto: WebAuthnLoginStartDTO): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/webauthn/login/start`, dto).pipe(
+      catchError(err => throwError(() =>
+        new Error(err.error?.message || 'Aucune empreinte enregistrée pour ce numéro')
+      ))
+    );
+  }
+
+  /** Étape 2 : envoie l'assertion et obtient le JWT. */
+  finishWebAuthnLogin(dto: WebAuthnLoginFinishDTO): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/webauthn/login/finish`, dto).pipe(
+      tap(res => this.sauvegarderSession(res)),
+      catchError(err => throwError(() =>
+        new Error(err.error?.message || 'Empreinte non reconnue')
+      ))
+    );
+  }
+
+  // ── PIN ────────────────────────────────────────────────────────────────────
+
+  /** Connexion par PIN 6 chiffres. */
+  pinLogin(dto: PinLoginDTO): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/pin/login`, dto).pipe(
+      tap(res => this.sauvegarderSession(res)),
+      catchError(err => throwError(() =>
+        new Error(err.error?.message || 'PIN incorrect')
+      ))
+    );
+  }
+
+  /** Configure un PIN pour l'utilisateur connecté (access token requis). */
+  setupPin(dto: PinSetupDTO): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/pin/setup`, dto).pipe(
+      catchError(err => throwError(() =>
+        new Error(err.error?.message || 'Impossible de configurer le PIN')
+      ))
+    );
+  }
+
+  // ── Inscription simplifiée ─────────────────────────────────────────────────
+
+  /** Inscription sans vérification biométrique (fallback total). */
+  inscrireSimple(dto: RegisterDTO): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/register/simple`, dto).pipe(
       tap(res => this.sauvegarderSession(res)),
       catchError(err => throwError(() =>
         new Error(err.error?.message || "Erreur lors de l'inscription")
@@ -85,14 +132,17 @@ export class AuthService {
     );
   }
 
+  // ── Détection WebAuthn ─────────────────────────────────────────────────────
+
+  /** Vérifie si le navigateur supporte WebAuthn / Passkeys. */
+  isWebAuthnSupported(): boolean {
+    return typeof window !== 'undefined'
+      && !!navigator.credentials
+      && !!window.PublicKeyCredential;
+  }
+
   // ── Refresh silencieux ─────────────────────────────────────────────────────
 
-  /**
-   * Déclenche un refresh silencieux.
-   * Plusieurs appels simultanés partagent le même Observable (pas d'appels parallèles).
-   *
-   * @returns Observable du nouveau token d'accès
-   */
   doRefresh(): Observable<string> {
     if (this._refreshObs) {
       return this._refreshObs;
@@ -114,19 +164,13 @@ export class AuthService {
     return this._refreshObs;
   }
 
-  /** Vrai si un refresh est déjà en cours (pour éviter le toast dupliqué). */
   isCurrentlyRefreshing(): boolean {
     return this._refreshObs !== null;
   }
 
-  /**
-   * Tentative de restauration de session au démarrage de l'app (AppInitializer).
-   * Si le cookie refresh est valide → token en mémoire restauré.
-   * Sinon → profil localStorage effacé.
-   */
   async tenterRestaurationSession(): Promise<void> {
     if (!localStorage.getItem(CLE_USER)) {
-      return; // Pas d'utilisateur connu → rien à restaurer
+      return;
     }
 
     try {
@@ -135,7 +179,6 @@ export class AuthService {
       );
       this.sauvegarderSession(res);
     } catch {
-      // Cookie expiré ou invalide → on efface le profil local
       localStorage.removeItem(CLE_USER);
       this.currentUser.set(null);
     }
@@ -143,16 +186,14 @@ export class AuthService {
 
   // ── Déconnexion ────────────────────────────────────────────────────────────
 
-  /** Révoque le refresh token et efface la session locale. */
   logout(): void {
     this.http
       .post(`${this.apiUrl}/logout`, {}, { withCredentials: true })
-      .subscribe({ error: () => {} }); // Erreur ignorée — on efface quand même
+      .subscribe({ error: () => {} });
     this.effacerSession();
     this.router.navigate(['/']);
   }
 
-  /** Révoque TOUS les refresh tokens de l'utilisateur (tous les appareils). */
   logoutAllDevices(): Observable<void> {
     return this.http
       .post<void>(`${this.apiUrl}/logout-all`, {}, { withCredentials: true })
@@ -168,7 +209,6 @@ export class AuthService {
 
   // ── Getters ────────────────────────────────────────────────────────────────
 
-  /** Retourne le token d'accès en mémoire (jamais depuis localStorage). */
   getToken(): string | null {
     return this._accessToken;
   }
@@ -183,7 +223,6 @@ export class AuthService {
 
   // ── Timer d'inactivité ─────────────────────────────────────────────────────
 
-  /** Réinitialise le timer d'inactivité. À appeler sur chaque interaction utilisateur. */
   resetActivityTimer(): void {
     if (!this.estConnecte()) return;
 
@@ -205,10 +244,9 @@ export class AuthService {
 
   // ── Helpers privés ─────────────────────────────────────────────────────────
 
-  private sauvegarderSession(res: AuthResponse): void {
+  sauvegarderSession(res: AuthResponse): void {
     this._accessToken = res.token;
 
-    // Persister uniquement les données d'affichage (pas le token)
     const profil: UserProfil = {
       telephone: res.telephone,
       nom: res.nom,
@@ -232,7 +270,6 @@ export class AuthService {
       const data = localStorage.getItem(CLE_USER);
       if (!data) return null;
       const profil = JSON.parse(data) as UserProfil;
-      // Token vide — sera restauré par AppInitializer via le cookie refresh
       return { token: '', ...profil };
     } catch {
       return null;

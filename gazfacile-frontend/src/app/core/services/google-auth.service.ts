@@ -116,8 +116,8 @@ export class GoogleAuthService {
    * Envoie l'ID token au backend pour validation et authentification.
    * Si le compte est nouveau, `telephone` est requis.
    */
-  loginAvecGoogle(idToken: string, telephone?: string, role?: Role, firebaseIdToken?: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(this.apiUrl, { idToken, telephone, role, firebaseIdToken }).pipe(
+  loginAvecGoogle(idToken: string, telephone?: string, role?: Role): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(this.apiUrl, { idToken, telephone, role }).pipe(
       catchError(err => {
         if (err.status === 428) {
           // Backend indique que le téléphone est requis

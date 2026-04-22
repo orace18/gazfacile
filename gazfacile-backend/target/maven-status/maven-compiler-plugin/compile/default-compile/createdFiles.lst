@@ -1,6 +1,7 @@
 bj/gazfacile/dto/OtpSendRequest.class
 bj/gazfacile/repository/UserRepository.class
 bj/gazfacile/service/OtpFacade.class
+bj/gazfacile/service/ChallengeStore.class
 bj/gazfacile/model/enums/TypeNotification.class
 bj/gazfacile/service/AvisService.class
 bj/gazfacile/dto/StockUpdateDTO.class
@@ -22,8 +23,12 @@ bj/gazfacile/repository/TransactionRepository.class
 bj/gazfacile/dto/AdminSubscriptionPlanDTO.class
 bj/gazfacile/service/SmsService.class
 bj/gazfacile/model/OtpRecord$OtpRecordBuilder.class
+bj/gazfacile/config/WebAuthnProperties.class
+bj/gazfacile/config/WebAuthnProperties$RpConfig.class
 bj/gazfacile/service/CPassTokenService$CachedToken.class
 bj/gazfacile/dto/OtpEnvoyerDTO.class
+bj/gazfacile/dto/WebAuthnLoginStartDTO.class
+bj/gazfacile/model/WebAuthnCredential.class
 bj/gazfacile/dto/DashboardStatsDTO.class
 bj/gazfacile/service/GoogleTokenService.class
 bj/gazfacile/model/Avis$AvisBuilder.class
@@ -51,6 +56,7 @@ bj/gazfacile/controller/SubscriptionPlanController.class
 bj/gazfacile/dto/SubscriptionPlanDTO.class
 bj/gazfacile/service/FirebasePhoneTokenService.class
 bj/gazfacile/model/enums/StatutCommande.class
+bj/gazfacile/dto/WebAuthnRegisterStartDTO.class
 bj/gazfacile/model/ConsultationSession$ConsultationSessionBuilder.class
 bj/gazfacile/dto/SubscribeRequestDTO.class
 bj/gazfacile/model/Subscription.class
@@ -65,6 +71,7 @@ bj/gazfacile/model/Transaction.class
 bj/gazfacile/service/NotificationService.class
 bj/gazfacile/model/CpassOtpRef$CpassOtpRefBuilder.class
 bj/gazfacile/repository/OtpRepository.class
+bj/gazfacile/service/ChallengeStore$EntreeChallenge.class
 bj/gazfacile/dto/AvisDTO.class
 bj/gazfacile/dto/AbonnementStatutDTO.class
 bj/gazfacile/model/User$UserBuilder.class
@@ -74,6 +81,7 @@ bj/gazfacile/exception/OtpInvalidException.class
 bj/gazfacile/controller/AvisController.class
 bj/gazfacile/GazFacileApplication.class
 bj/gazfacile/repository/RevendeurRepository.class
+bj/gazfacile/model/WebAuthnCredential$WebAuthnCredentialBuilder.class
 bj/gazfacile/model/Avis.class
 bj/gazfacile/dto/OtpLoginDTO.class
 bj/gazfacile/service/ProduitRevendeurService.class
@@ -89,10 +97,12 @@ bj/gazfacile/config/CPassProperties.class
 bj/gazfacile/config/WebSocketConfig.class
 bj/gazfacile/dto/SendOtpResponse.class
 bj/gazfacile/config/MongoConfig.class
+bj/gazfacile/dto/WebAuthnRegisterFinishDTO.class
 bj/gazfacile/model/enums/SubscriptionStatus.class
 bj/gazfacile/model/Transaction$TransactionBuilder.class
 bj/gazfacile/model/Revendeur.class
 bj/gazfacile/dto/CommandeDTO.class
+bj/gazfacile/dto/PinLoginDTO.class
 bj/gazfacile/controller/AbonnementController.class
 bj/gazfacile/model/enums/AccountType.class
 bj/gazfacile/dto/VerifyOtpResponse.class
@@ -102,13 +112,17 @@ bj/gazfacile/model/Revendeur$RevendeurBuilder.class
 bj/gazfacile/config/SecurityConfig.class
 bj/gazfacile/config/AbonnementReadConverter.class
 bj/gazfacile/security/JwtService.class
+bj/gazfacile/dto/PinSetupDTO.class
 bj/gazfacile/model/enums/StockStatus.class
 bj/gazfacile/model/enums/TypeTransaction.class
 bj/gazfacile/service/FirebasePhoneTokenService$VerifiedPhoneIdentity.class
+bj/gazfacile/service/WebAuthnService.class
 bj/gazfacile/dto/AbonnementInitDTO.class
+bj/gazfacile/dto/WebAuthnLoginFinishDTO.class
 bj/gazfacile/controller/ProduitRevendeurController.class
 bj/gazfacile/model/enums/ClientNeed.class
 bj/gazfacile/dto/AdminPlanRequest.class
+bj/gazfacile/repository/WebAuthnCredentialRepository.class
 bj/gazfacile/exception/GlobalExceptionHandler.class
 bj/gazfacile/dto/AdminCatalogueItemDTO.class
 bj/gazfacile/service/RefreshTokenService.class
@@ -119,7 +133,9 @@ bj/gazfacile/model/enums/Abonnement.class
 bj/gazfacile/service/SubscriptionService.class
 bj/gazfacile/config/DataSeeder.class
 bj/gazfacile/dto/StatutCommandeDTO.class
+bj/gazfacile/service/LoginAttemptService$InfoTentatives.class
 bj/gazfacile/security/JwtAuthFilter.class
+bj/gazfacile/service/LoginAttemptService.class
 bj/gazfacile/dto/AuthResponseDTO.class
 bj/gazfacile/model/OtpRecord.class
 bj/gazfacile/controller/NotificationController.class

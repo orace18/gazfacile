@@ -282,26 +282,46 @@ export interface StockUpdateDTO {
   stockStatus: StockStatus;
 }
 
-/** DTO pour la connexion. */
-export interface LoginDTO {
-  telephone: string;
-  password: string;
-}
-
-/** DTO pour l'inscription. */
+/** DTO pour l'inscription simplifiée (fallback). */
 export interface RegisterDTO {
   telephone: string;
   nom: string;
   role?: Role;
-  accountType?: string;
-  clientNeed?: string;
-  otpCode: string;
 }
 
-/** DTO pour la connexion OTP. */
-export interface OtpLoginDTO {
+/** DTO pour démarrer l'inscription WebAuthn. */
+export interface WebAuthnRegisterStartDTO {
   telephone: string;
-  code: string;
+  nom: string;
+  role?: Role;
+}
+
+/** DTO pour finaliser l'inscription WebAuthn. */
+export interface WebAuthnRegisterFinishDTO {
+  telephone: string;
+  credential: any; // RegistrationResponseJSON de @simplewebauthn/browser
+}
+
+/** DTO pour démarrer la connexion WebAuthn. */
+export interface WebAuthnLoginStartDTO {
+  telephone: string;
+}
+
+/** DTO pour finaliser la connexion WebAuthn. */
+export interface WebAuthnLoginFinishDTO {
+  telephone: string;
+  assertion: any; // AuthenticationResponseJSON de @simplewebauthn/browser
+}
+
+/** DTO pour la connexion par PIN. */
+export interface PinLoginDTO {
+  telephone: string;
+  pin: string;
+}
+
+/** DTO pour configurer un PIN (utilisateur authentifié). */
+export interface PinSetupDTO {
+  pin: string;
 }
 
 /** DTO plan d'abonnement (depuis le backend). */

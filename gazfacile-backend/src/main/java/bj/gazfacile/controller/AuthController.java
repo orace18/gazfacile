@@ -17,8 +17,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.Map;
 
 /**
- * Authentification : inscription, connexion, OTP SMS, Google OAuth2,
- * refresh token et logout.
+ * Authentification : WebAuthn (Passkeys), PIN 6 chiffres, Google OAuth2,
+ * inscription simplifiée, refresh token et logout.
  */
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -28,41 +28,93 @@ public class AuthController {
     private final AuthService authService;
     private final GoogleTokenService googleTokenService;
 
-    // ── Inscription / Connexion ───────────────────────────────────────────────
+    // ── WebAuthn (Passkeys) — Inscription ─────────────────────────────────────
 
-    @PostMapping("/register")
-    public ResponseEntity<AuthResponseDTO> register(
+    /**
+     * Étape 1 d'inscription WebAuthn.
+     * Crée ou retrouve l'utilisateur et retourne les options de création de credential.
+     */
+    @PostMapping("/webauthn/register/start")
+    public ResponseEntity<Map<String, Object>> webAuthnInscriptionDebut(
+            @Valid @RequestBody WebAuthnRegisterStartDTO dto) {
+        return ResponseEntity.ok(authService.demarrerInscriptionWebAuthn(dto));
+    }
+
+    /**
+     * Étape 2 d'inscription WebAuthn.
+     * Vérifie le credential et retourne le JWT d'accès.
+     */
+    @PostMapping("/webauthn/register/finish")
+    public ResponseEntity<AuthResponseDTO> webAuthnInscriptionFin(
+            @Valid @RequestBody WebAuthnRegisterFinishDTO dto,
+            HttpServletResponse response) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(authService.terminerInscriptionWebAuthn(dto, response));
+    }
+
+    // ── WebAuthn (Passkeys) — Connexion ───────────────────────────────────────
+
+    /**
+     * Étape 1 de connexion WebAuthn.
+     * Retourne les options d'authentification avec les credentials autorisés.
+     */
+    @PostMapping("/webauthn/login/start")
+    public ResponseEntity<Map<String, Object>> webAuthnConnexionDebut(
+            @Valid @RequestBody WebAuthnLoginStartDTO dto) {
+        return ResponseEntity.ok(authService.demarrerConnexionWebAuthn(dto));
+    }
+
+    /**
+     * Étape 2 de connexion WebAuthn.
+     * Vérifie l'assertion et retourne le JWT d'accès.
+     */
+    @PostMapping("/webauthn/login/finish")
+    public ResponseEntity<AuthResponseDTO> webAuthnConnexionFin(
+            @Valid @RequestBody WebAuthnLoginFinishDTO dto,
+            HttpServletResponse response) {
+        return ResponseEntity.ok(authService.terminerConnexionWebAuthn(dto, response));
+    }
+
+    // ── PIN ───────────────────────────────────────────────────────────────────
+
+    /**
+     * Configure un PIN 6 chiffres pour l'utilisateur connecté.
+     * Requiert un access token valide.
+     */
+    @PostMapping("/pin/setup")
+    public ResponseEntity<Map<String, String>> configurerPin(
+            @Valid @RequestBody PinSetupDTO dto) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()
+                || !(auth.getPrincipal() instanceof User utilisateur)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+        authService.configurerPin(utilisateur.getTelephone(), dto);
+        return ResponseEntity.ok(Map.of("message", "PIN configuré avec succès"));
+    }
+
+    /**
+     * Connexion par PIN 6 chiffres.
+     * Bloqué après 3 échecs pendant 15 minutes.
+     */
+    @PostMapping("/pin/login")
+    public ResponseEntity<AuthResponseDTO> connexionParPin(
+            @Valid @RequestBody PinLoginDTO dto,
+            HttpServletResponse response) {
+        return ResponseEntity.ok(authService.connexionParPin(dto, response));
+    }
+
+    // ── Inscription simplifiée ────────────────────────────────────────────────
+
+    /**
+     * Inscription sans vérification biométrique (fallback total).
+     */
+    @PostMapping("/register/simple")
+    public ResponseEntity<AuthResponseDTO> inscrireSimple(
             @Valid @RequestBody RegisterDTO dto,
             HttpServletResponse response) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(dto, response));
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<AuthResponseDTO> login(
-            @Valid @RequestBody LoginDTO dto,
-            HttpServletResponse response) {
-        return ResponseEntity.ok(authService.login(dto, response));
-    }
-
-    @PostMapping("/login/otp")
-    public ResponseEntity<AuthResponseDTO> loginParOtp(
-            @Valid @RequestBody OtpLoginDTO dto,
-            HttpServletResponse response) {
-        return ResponseEntity.ok(authService.loginParOtp(dto, response));
-    }
-
-    // ── OTP ──────────────────────────────────────────────────────────────────
-
-    @PostMapping("/otp/envoyer")
-    public ResponseEntity<Map<String, String>> envoyerOtp(@Valid @RequestBody OtpEnvoyerDTO dto) {
-        authService.envoyerOtp(dto.telephone());
-        return ResponseEntity.ok(Map.of("message", "Code OTP envoyé au " + dto.telephone()));
-    }
-
-    @PostMapping("/otp/verifier")
-    public ResponseEntity<Map<String, String>> verifierOtp(@Valid @RequestBody OtpVerifierDTO dto) {
-        authService.verifierOtp(dto.telephone(), dto.code());
-        return ResponseEntity.ok(Map.of("message", "Numéro de téléphone vérifié"));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(authService.inscrireSimple(dto, response));
     }
 
     // ── Google OAuth2 ─────────────────────────────────────────────────────────

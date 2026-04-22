@@ -4,7 +4,7 @@ import bj.gazfacile.model.enums.Role;
 import jakarta.validation.constraints.NotBlank;
 
 /**
- * DTO pour l'inscription d'un nouvel utilisateur.
+ * DTO pour l'inscription simplifiée (fallback sans vérification biométrique).
  */
 public record RegisterDTO(
 
@@ -15,8 +15,5 @@ public record RegisterDTO(
         String nom,
 
         /** Rôle souhaité : CLIENT ou REVENDEUR. Par défaut CLIENT. */
-        Role role,
-
-        @NotBlank(message = "Le code OTP est obligatoire")
-        String otpCode
+        Role role
 ) {}
