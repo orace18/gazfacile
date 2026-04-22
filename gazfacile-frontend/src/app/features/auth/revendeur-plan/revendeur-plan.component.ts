@@ -16,7 +16,7 @@ import { PlanInscription, PlanType, SubscriptionPlanDTO } from '../../../core/mo
     <div class="page-plans">
       <div class="conteneur">
         <div class="entete">
-          <img src="assets/logo.svg" alt="GazFacile" class="logo">
+          <img src="assets/logo-white.svg" alt="GazFacile" class="logo">
           <h1>Formules Revendeur</h1>
           <p class="sous-titre">Choisissez la formule qui vous convient pour être visible sur GazFacile</p>
         </div>
@@ -188,7 +188,7 @@ import { PlanInscription, PlanType, SubscriptionPlanDTO } from '../../../core/mo
       font-size: 2.2rem;
       width: 2.2rem;
       height: 2.2rem;
-      color: var(--color-primary);
+      color: var(--color-accent);
       margin-bottom: 6px;
     }
 

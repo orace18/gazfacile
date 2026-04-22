@@ -12,7 +12,7 @@ import { Role } from '../../../core/models/revendeur.model';
     <div class="page-choix">
       <div class="conteneur">
         <div class="entete">
-          <img src="assets/logo.svg" alt="GazFacile" class="logo">
+          <img src="assets/logo-white.svg" alt="GazFacile" class="logo">
           <h1>Créer un compte</h1>
           <p class="sous-titre">Choisissez votre profil pour commencer</p>
         </div>

@@ -12,11 +12,18 @@ import {
  */
 export class WebAuthnHelper {
 
-  /**
-   * Vérifie si le navigateur supporte WebAuthn / Passkeys.
-   */
   static isSupported(): boolean {
     return typeof window !== 'undefined' && browserSupportsWebAuthn();
+  }
+
+  /** Vérifie si l'appareil possède un authentificateur biométrique intégré (mobile, PC avec Windows Hello, Touch ID…). */
+  static async isBiometricAvailable(): Promise<boolean> {
+    if (typeof window === 'undefined' || !browserSupportsWebAuthn()) return false;
+    try {
+      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch {
+      return false;
+    }
   }
 
   /**

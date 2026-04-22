@@ -13,7 +13,7 @@ import { ClientNeed } from '../../../core/models/revendeur.model';
     <div class="page-choix">
       <div class="conteneur">
         <div class="entete">
-          <img src="assets/logo.svg" alt="GazFacile" class="logo">
+          <img src="assets/logo-white.svg" alt="GazFacile" class="logo">
           <h1>Que cherchez-vous ?</h1>
           <p class="sous-titre">Choisissez le service qui vous correspond</p>
         </div>

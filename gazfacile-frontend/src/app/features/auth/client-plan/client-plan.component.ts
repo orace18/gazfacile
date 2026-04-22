@@ -23,7 +23,7 @@ import {
     <div class="page-plans">
       <div class="conteneur">
         <div class="entete">
-          <img src="assets/logo.svg" alt="GazFacile" class="logo">
+          <img src="assets/logo-white.svg" alt="GazFacile" class="logo">
           <h1>{{ titre() }}</h1>
           <p class="sous-titre">{{ sousTitre() }}</p>
         </div>
@@ -196,7 +196,7 @@ import {
       font-size: 2.5rem;
       width: 2.5rem;
       height: 2.5rem;
-      color: var(--color-primary);
+      color: var(--color-accent);
       margin-bottom: 8px;
     }
 

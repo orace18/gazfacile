@@ -1,4 +1,4 @@
-import { Component, OnDestroy, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -68,8 +68,10 @@ type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
             </mat-form-field>
 
             <button mat-raised-button type="submit" class="btn-principal" [disabled]="nomForm.invalid">
-              <mat-icon>arrow_forward</mat-icon>
-              Suivant
+              <span class="btn-content">
+                <mat-icon>arrow_forward</mat-icon>
+                Suivant
+              </span>
             </button>
           </form>
         }
@@ -109,9 +111,11 @@ type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
               [disabled]="telephoneForm.invalid || envoi"
               (click)="continuerVersAuthentification()"
             >
-              @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
-              @else { <mat-icon>arrow_forward</mat-icon> }
-              {{ envoi ? 'Vérification...' : 'Suivant' }}
+              <span class="btn-content">
+                @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
+                @else { <mat-icon>arrow_forward</mat-icon> }
+                {{ envoi ? 'Vérification...' : 'Suivant' }}
+              </span>
             </button>
 
             <button mat-button type="button" class="btn-secondaire" (click)="retourNom()">
@@ -139,13 +143,15 @@ type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
               </div>
             }
 
-            @if (webAuthnSupporte) {
+            @if (webAuthnSupporte()) {
               <button mat-raised-button type="button" class="btn-biometrique"
                 [disabled]="envoi"
                 (click)="inscrireAvecBiometrie()">
-                @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
-                @else { <mat-icon>fingerprint</mat-icon> }
-                Enregistrer mon empreinte / Face ID
+                <span class="btn-content">
+                  @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
+                  @else { <mat-icon>fingerprint</mat-icon> }
+                  Enregistrer mon empreinte / Face ID
+                </span>
               </button>
 
               <div class="separateur"><span>ou</span></div>
@@ -154,16 +160,20 @@ type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
             <button mat-stroked-button type="button" class="btn-pin"
               [disabled]="envoi"
               (click)="afficherCreationPin()">
-              <mat-icon>pin</mat-icon>
-              Créer un PIN 6 chiffres
+              <span class="btn-content">
+                <mat-icon>pin</mat-icon>
+                Créer un PIN 6 chiffres
+              </span>
             </button>
 
-            @if (!webAuthnSupporte) {
+            @if (!webAuthnSupporte()) {
               <button mat-stroked-button type="button" class="btn-pin"
                 [disabled]="envoi"
                 (click)="inscrireSansBiometrie()">
-                <mat-icon>person_add</mat-icon>
-                Continuer sans sécurité biométrique
+                <span class="btn-content">
+                  <mat-icon>person_add</mat-icon>
+                  Continuer sans sécurité biométrique
+                </span>
               </button>
             }
 
@@ -228,9 +238,11 @@ type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
             <button mat-raised-button type="button" class="btn-principal"
               [disabled]="pinControl.invalid || pinConfirmControl.invalid || pinControl.value !== pinConfirmControl.value || envoi"
               (click)="inscrireAvecPin()">
-              @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
-              @else { <mat-icon>check_circle</mat-icon> }
-              {{ envoi ? 'Inscription...' : 'Créer mon compte' }}
+              <span class="btn-content">
+                @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
+                @else { <mat-icon>check_circle</mat-icon> }
+                {{ envoi ? 'Inscription...' : 'Créer mon compte' }}
+              </span>
             </button>
 
             <button mat-button type="button" class="btn-secondaire"
@@ -388,16 +400,20 @@ type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
       text-align: center;
     }
 
+    .btn-content {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      line-height: 1;
+    }
+
     .btn-principal {
       width: 100%;
       height: 48px;
       background: var(--color-accent) !important;
       color: #fff !important;
       font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
     }
 
     .btn-biometrique {
@@ -407,12 +423,8 @@ type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
       color: #fff !important;
       font-weight: 700;
       font-size: 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
 
-      mat-icon {
+      .btn-content mat-icon {
         font-size: 24px;
         width: 24px;
         height: 24px;
@@ -422,10 +434,6 @@ type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
     .btn-pin {
       width: 100%;
       height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
       font-weight: 600;
     }
 
@@ -498,7 +506,7 @@ type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
     }
   `]
 })
-export class RegisterFormComponent implements OnDestroy {
+export class RegisterFormComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly paiementService = inject(PaiementService);
@@ -511,7 +519,11 @@ export class RegisterFormComponent implements OnDestroy {
   envoi = false;
   erreur: string | null = null;
 
-  readonly webAuthnSupporte = WebAuthnHelper.isSupported();
+  readonly webAuthnSupporte = signal(false);
+
+  ngOnInit(): void {
+    WebAuthnHelper.isBiometricAvailable().then(v => this.webAuthnSupporte.set(v));
+  }
 
   readonly nomForm = this.fb.group({
     nom: ['', Validators.required]
