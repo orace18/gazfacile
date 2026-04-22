@@ -21,19 +21,19 @@ public class ChallengeStore {
     private final ConcurrentHashMap<String, EntreeChallenge> store = new ConcurrentHashMap<>();
 
     /**
-     * Sauvegarde un challenge pour un numéro de téléphone.
+     * Sauvegarde un challenge et l'origine de la requête pour un numéro de téléphone.
      * Remplace tout challenge existant pour ce numéro.
      */
-    public void sauvegarder(String telephone, byte[] challenge) {
-        store.put(telephone, new EntreeChallenge(challenge, System.currentTimeMillis()));
+    public void sauvegarder(String telephone, byte[] challenge, String origin) {
+        store.put(telephone, new EntreeChallenge(challenge, origin, System.currentTimeMillis()));
         log.debug("[WebAuthn] Challenge stocké pour {}", telephone);
     }
 
     /**
-     * Récupère et supprime le challenge associé au numéro.
+     * Récupère et supprime le challenge et l'origine associés au numéro.
      * Retourne null si le challenge est expiré ou introuvable.
      */
-    public byte[] recupererEtSupprimer(String telephone) {
+    public ChallengeData recupererEtSupprimer(String telephone) {
         EntreeChallenge entree = store.remove(telephone);
         if (entree == null) {
             log.debug("[WebAuthn] Challenge introuvable pour {}", telephone);
@@ -43,8 +43,11 @@ public class ChallengeStore {
             log.debug("[WebAuthn] Challenge expiré pour {}", telephone);
             return null;
         }
-        return entree.challenge();
+        return new ChallengeData(entree.challenge(), entree.origin());
     }
+
+    /** Données récupérées depuis le store : challenge + origine de la requête initiale. */
+    public record ChallengeData(byte[] challenge, String origin) {}
 
     /** Supprime toutes les entrées expirées (toutes les 60 secondes). */
     @Scheduled(fixedDelay = 60_000)
@@ -58,5 +61,5 @@ public class ChallengeStore {
         }
     }
 
-    private record EntreeChallenge(byte[] challenge, long timestamp) {}
+    private record EntreeChallenge(byte[] challenge, String origin, long timestamp) {}
 }

@@ -21,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -66,14 +67,14 @@ public class WebAuthnService {
      * @return Map correspondant au format PublicKeyCredentialCreationOptionsJSON
      *         attendu par @simplewebauthn/browser
      */
-    public Map<String, Object> genererOptionsInscription(User utilisateur) {
-        // Générer un challenge aléatoire de 32 octets
+    public Map<String, Object> genererOptionsInscription(User utilisateur, String origin) {
+        String rpId = rpIdDepuisOrigin(origin);
+
         byte[] challengeBytes = new byte[32];
         secureRandom.nextBytes(challengeBytes);
         String challengeB64 = Base64.getUrlEncoder().withoutPadding().encodeToString(challengeBytes);
 
-        // Stocker le challenge pour vérification ultérieure
-        challengeStore.sauvegarder(utilisateur.getTelephone(), challengeBytes);
+        challengeStore.sauvegarder(utilisateur.getTelephone(), challengeBytes, origin);
 
         // Construire la liste des credentials déjà enregistrés (pour les exclure)
         List<Map<String, Object>> credentialsExclus = credentialRepository
@@ -93,7 +94,7 @@ public class WebAuthnService {
 
         Map<String, Object> options = new LinkedHashMap<>();
         options.put("rp", Map.of(
-                "id", properties.getRp().getId(),
+                "id", rpId,
                 "name", properties.getRp().getName()
         ));
         options.put("user", Map.of(
@@ -129,12 +130,13 @@ public class WebAuthnService {
      */
     @SuppressWarnings("unchecked")
     public WebAuthnCredential verifierInscription(String telephone, Map<String, Object> credentialJson) {
-        // Récupérer le challenge stocké (une seule utilisation)
-        byte[] challengeBytes = challengeStore.recupererEtSupprimer(telephone);
-        if (challengeBytes == null) {
+        ChallengeStore.ChallengeData challengeData = challengeStore.recupererEtSupprimer(telephone);
+        if (challengeData == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Challenge expiré ou introuvable. Recommencez l'inscription.");
         }
+        byte[] challengeBytes = challengeData.challenge();
+        String origin = challengeData.origin();
 
         User utilisateur = userRepository.findByTelephone(telephone)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
@@ -157,10 +159,9 @@ public class WebAuthnService {
                 new HashSet<>(transports)
         );
 
-        // Paramètres de vérification (origine, rpId, challenge)
         ServerProperty serverProperty = new ServerProperty(
-                new Origin(properties.getRp().getOrigin()),
-                properties.getRp().getId(),
+                new Origin(origin),
+                rpIdDepuisOrigin(origin),
                 new DefaultChallenge(challengeBytes),
                 null
         );
@@ -220,7 +221,9 @@ public class WebAuthnService {
      *
      * @return Map correspondant au format PublicKeyCredentialRequestOptionsJSON
      */
-    public Map<String, Object> genererOptionsAuthentification(String telephone) {
+    public Map<String, Object> genererOptionsAuthentification(String telephone, String origin) {
+        String rpId = rpIdDepuisOrigin(origin);
+
         User utilisateur = userRepository.findByTelephone(telephone)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Aucun compte associé à ce numéro"));
@@ -234,7 +237,7 @@ public class WebAuthnService {
         byte[] challengeBytes = new byte[32];
         secureRandom.nextBytes(challengeBytes);
         String challengeB64 = Base64.getUrlEncoder().withoutPadding().encodeToString(challengeBytes);
-        challengeStore.sauvegarder(telephone, challengeBytes);
+        challengeStore.sauvegarder(telephone, challengeBytes, origin);
 
         List<Map<String, Object>> allowCredentials = credentials.stream()
                 .map(c -> {
@@ -249,7 +252,7 @@ public class WebAuthnService {
         Map<String, Object> options = new LinkedHashMap<>();
         options.put("challenge", challengeB64);
         options.put("timeout", 60000);
-        options.put("rpId", properties.getRp().getId());
+        options.put("rpId", rpId);
         options.put("allowCredentials", allowCredentials);
         options.put("userVerification", "preferred");
 
@@ -267,11 +270,13 @@ public class WebAuthnService {
      */
     @SuppressWarnings("unchecked")
     public User verifierAuthentification(String telephone, Map<String, Object> assertionJson) {
-        byte[] challengeBytes = challengeStore.recupererEtSupprimer(telephone);
-        if (challengeBytes == null) {
+        ChallengeStore.ChallengeData challengeData = challengeStore.recupererEtSupprimer(telephone);
+        if (challengeData == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Challenge expiré ou introuvable. Recommencez la connexion.");
         }
+        byte[] challengeBytes = challengeData.challenge();
+        String origin = challengeData.origin();
 
         User utilisateur = userRepository.findByTelephone(telephone)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -328,8 +333,8 @@ public class WebAuthnService {
         );
 
         ServerProperty serverProperty = new ServerProperty(
-                new Origin(properties.getRp().getOrigin()),
-                properties.getRp().getId(),
+                new Origin(origin),
+                rpIdDepuisOrigin(origin),
                 new DefaultChallenge(challengeBytes),
                 null
         );
@@ -357,6 +362,21 @@ public class WebAuthnService {
         } catch (Exception e) {
             log.warn("[WebAuthn] Vérification d'authentification échouée pour {} : {}", telephone, e.getMessage());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Empreinte non reconnue");
+        }
+    }
+
+    /**
+     * Extrait le hostname depuis une URL d'origine.
+     * Ex: "http://192.168.1.5:4200" → "192.168.1.5"
+     *     "https://gazfacile.bj"    → "gazfacile.bj"
+     * Retombe sur la valeur configurée si l'origine est invalide.
+     */
+    private String rpIdDepuisOrigin(String origin) {
+        try {
+            return new URI(origin).getHost();
+        } catch (Exception e) {
+            log.warn("[WebAuthn] Origine invalide '{}', fallback sur rpId configuré", origin);
+            return properties.getRp().getId();
         }
     }
 

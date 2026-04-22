@@ -59,7 +59,7 @@ public class AuthService {
      * Étape 1 : génère les options de création de credential WebAuthn.
      * Crée l'utilisateur s'il n'existe pas encore.
      */
-    public Map<String, Object> demarrerInscriptionWebAuthn(WebAuthnRegisterStartDTO dto) {
+    public Map<String, Object> demarrerInscriptionWebAuthn(WebAuthnRegisterStartDTO dto, String origin) {
         String telephone = phoneNumberService.normaliserTelephoneLocal(dto.telephone());
 
         User utilisateur = userRepository.findByTelephone(telephone).orElseGet(() -> {
@@ -81,7 +81,7 @@ public class AuthService {
         }
 
         log.info("[WebAuthn] Début d'inscription pour {}", telephone);
-        return webAuthnService.genererOptionsInscription(utilisateur);
+        return webAuthnService.genererOptionsInscription(utilisateur, origin);
     }
 
     /**
@@ -104,10 +104,10 @@ public class AuthService {
     /**
      * Étape 1 : génère les options d'authentification WebAuthn.
      */
-    public Map<String, Object> demarrerConnexionWebAuthn(WebAuthnLoginStartDTO dto) {
+    public Map<String, Object> demarrerConnexionWebAuthn(WebAuthnLoginStartDTO dto, String origin) {
         String telephone = phoneNumberService.normaliserTelephoneLocal(dto.telephone());
         log.info("[WebAuthn] Début de connexion pour {}", telephone);
-        return webAuthnService.genererOptionsAuthentification(telephone);
+        return webAuthnService.genererOptionsAuthentification(telephone, origin);
     }
 
     /**

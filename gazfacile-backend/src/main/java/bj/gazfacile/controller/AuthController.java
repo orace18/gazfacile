@@ -4,6 +4,7 @@ import bj.gazfacile.dto.*;
 import bj.gazfacile.model.User;
 import bj.gazfacile.service.AuthService;
 import bj.gazfacile.service.GoogleTokenService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,8 +37,9 @@ public class AuthController {
      */
     @PostMapping("/webauthn/register/start")
     public ResponseEntity<Map<String, Object>> webAuthnInscriptionDebut(
-            @Valid @RequestBody WebAuthnRegisterStartDTO dto) {
-        return ResponseEntity.ok(authService.demarrerInscriptionWebAuthn(dto));
+            @Valid @RequestBody WebAuthnRegisterStartDTO dto,
+            HttpServletRequest request) {
+        return ResponseEntity.ok(authService.demarrerInscriptionWebAuthn(dto, resolveOrigin(request)));
     }
 
     /**
@@ -60,8 +62,9 @@ public class AuthController {
      */
     @PostMapping("/webauthn/login/start")
     public ResponseEntity<Map<String, Object>> webAuthnConnexionDebut(
-            @Valid @RequestBody WebAuthnLoginStartDTO dto) {
-        return ResponseEntity.ok(authService.demarrerConnexionWebAuthn(dto));
+            @Valid @RequestBody WebAuthnLoginStartDTO dto,
+            HttpServletRequest request) {
+        return ResponseEntity.ok(authService.demarrerConnexionWebAuthn(dto, resolveOrigin(request)));
     }
 
     /**
@@ -174,5 +177,24 @@ public class AuthController {
         }
         authService.deconnecterTousLesAppareils(user.getId(), response);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Extrait l'origine depuis le header HTTP "Origin".
+     * Si absent (appel direct, Postman…), reconstruit depuis scheme + host + port.
+     * Retombe sur la valeur configurée en dernier recours.
+     */
+    private String resolveOrigin(HttpServletRequest request) {
+        String origin = request.getHeader("Origin");
+        if (origin != null && !origin.isBlank()) {
+            return origin;
+        }
+        // Fallback : reconstruire depuis les composants de la requête
+        String scheme = request.getScheme();
+        String host = request.getServerName();
+        int port = request.getServerPort();
+        boolean defaultPort = ("http".equals(scheme) && port == 80)
+                || ("https".equals(scheme) && port == 443);
+        return defaultPort ? scheme + "://" + host : scheme + "://" + host + ":" + port;
     }
 }
