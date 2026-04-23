@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["angular:styles/component:css;f17499079908340f056922133b1469e73f46c9efaaca297fba1c7051b37ec94f;/home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-frontend/src/app/features/map/map.component.ts"],
-  "sourcesContent": ["\n    :host {\n      display: block;\n      height: 100%;\n      width: 100%;\n      min-height: 400px;\n      border-radius: var(--radius-md);\n      overflow: hidden;\n    }\n    google-map {\n      display: block;\n      height: 100%;\n      border-radius: var(--radius-md);\n      overflow: hidden;\n    }\n  "],
-  "mappings": ";AACI;AACE,WAAS;AACT,UAAQ;AACR,SAAO;AACP,cAAY;AACZ,iBAAe,IAAI;AACnB,YAAU;AACZ;AACA;AACE,WAAS;AACT,UAAQ;AACR,iBAAe,IAAI;AACnB,YAAU;AACZ;",
-  "names": []
-}

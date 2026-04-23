@@ -115,7 +115,12 @@ export class AuthService {
         }
       }),
       catchError(err => throwError(() =>
-        new Error(err.error?.message || 'PIN incorrect')
+        new Error(
+          err.error?.erreurs?.pin
+          || err.error?.erreurs?.telephone
+          || err.error?.message
+          || 'PIN incorrect'
+        )
       ))
     );
   }

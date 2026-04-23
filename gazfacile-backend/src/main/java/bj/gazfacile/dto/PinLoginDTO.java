@@ -1,10 +1,11 @@
 package bj.gazfacile.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 
 /**
- * DTO pour la connexion par PIN 6 chiffres.
+ * DTO pour la connexion par PIN.
+ * Le format détaillé est validé dans le service afin de rester compatible
+ * avec les anciens codes admin générés avant l'uniformisation vers 6 chiffres.
  */
 public record PinLoginDTO(
 
@@ -12,6 +13,5 @@ public record PinLoginDTO(
         String telephone,
 
         @NotBlank(message = "Le PIN est obligatoire")
-        @Pattern(regexp = "^\\d{6}$", message = "Le PIN doit comporter exactement 6 chiffres")
         String pin
 ) {}

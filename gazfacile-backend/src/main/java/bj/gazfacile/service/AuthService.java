@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Service d'authentification GazFacile.
@@ -41,6 +42,8 @@ import java.util.Set;
 public class AuthService {
 
     public static final String COOKIE_REFRESH = "refresh_token";
+    private static final Pattern PIN_6_CHIFFRES = Pattern.compile("^\\d{6}$");
+    private static final Pattern CODE_ADMIN_LEGACY = Pattern.compile("^[A-Za-z0-9!@#$%]{8,20}$");
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -158,6 +161,11 @@ public class AuthService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Aucun compte associé à ce numéro"));
 
+        if (!formatPinValide(utilisateur, dto.pin())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Le PIN doit comporter exactement 6 chiffres");
+        }
+
         if (utilisateur.getPinHash() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Aucun PIN configuré pour ce compte. Utilisez votre empreinte ou créez un PIN.");
@@ -185,6 +193,15 @@ public class AuthService {
 
         log.info("[PIN] Connexion réussie pour {}", telephone);
         return construireReponse(utilisateur, response);
+    }
+
+    private boolean formatPinValide(User utilisateur, String pin) {
+        if (PIN_6_CHIFFRES.matcher(pin).matches()) {
+            return true;
+        }
+
+        return utilisateur.getRoles().contains(Role.ADMIN)
+                && CODE_ADMIN_LEGACY.matcher(pin).matches();
     }
 
     // ── TOTP 2FA ──────────────────────────────────────────────────────────────

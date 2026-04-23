@@ -29,7 +29,6 @@ public class SetupController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    private static final String PIN_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @PostMapping("/admin")
@@ -39,7 +38,7 @@ public class SetupController {
                     .body(Map.of("message", "Un compte administrateur existe déjà"));
         }
 
-        String pinGenere = genererPin(14);
+        String pinGenere = genererPin();
 
         User admin = User.builder()
                 .telephone("0147946910")
@@ -61,11 +60,7 @@ public class SetupController {
         ));
     }
 
-    private static String genererPin(int longueur) {
-        StringBuilder sb = new StringBuilder(longueur);
-        for (int i = 0; i < longueur; i++) {
-            sb.append(PIN_CHARS.charAt(SECURE_RANDOM.nextInt(PIN_CHARS.length())));
-        }
-        return sb.toString();
+    private static String genererPin() {
+        return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     }
 }
