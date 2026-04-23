@@ -63,7 +63,7 @@ class PaiementServiceTest {
         when(commandeRepository.findById("cmd-1")).thenReturn(Optional.of(commande));
         when(commandeRepository.save(any(Commande.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Transaction resultat = paiementService.getByReference("REF-123");
+        Transaction resultat = paiementService.getByReference("REF-123", "0199001122", false);
 
         assertEquals(StatutFedaPay.APPROVED, resultat.getStatut());
         assertNotNull(resultat.getUpdatedAt());
