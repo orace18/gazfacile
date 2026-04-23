@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -98,10 +100,15 @@ public class PaiementController {
 
     /**
      * Détail d'une transaction par sa référence interne.
-     * Public : utilisé par la page de confirmation post-paiement FedaPay.
+     * Requiert une authentification. Seul le client ayant initié la transaction (ou un admin) peut y accéder.
      */
     @GetMapping("/transaction/{reference}")
-    public ResponseEntity<Transaction> getTransaction(@PathVariable String reference) {
-        return ResponseEntity.ok(paiementService.getByReference(reference));
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Transaction> getTransaction(
+            @PathVariable String reference,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return ResponseEntity.ok(paiementService.getByReference(reference, userDetails.getUsername(), isAdmin));
     }
 }

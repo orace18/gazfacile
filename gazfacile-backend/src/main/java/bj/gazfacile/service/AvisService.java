@@ -10,6 +10,8 @@ import bj.gazfacile.repository.RevendeurRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,6 +28,7 @@ public class AvisService {
     private final AvisRepository avisRepository;
     private final RevendeurRepository revendeurRepository;
     private final NotificationService notificationService;
+    private final PhoneNumberService phoneNumberService;
 
     /**
      * Soumet un avis pour un revendeur.
@@ -34,18 +37,22 @@ public class AvisService {
      * @param dto données de l'avis
      * @return l'avis créé
      */
-    public Avis soumettre(AvisDTO dto) {
+    public Avis soumettre(AvisDTO dto, String telephoneJwt) {
+        // Le téléphone vient du JWT — le champ auteurTelephone du DTO est ignoré.
+        String auteurTelephone = phoneNumberService.normaliserTelephoneLocal(telephoneJwt);
+
         Revendeur revendeur = revendeurRepository.findById(dto.revendeurId())
                 .orElseThrow(() -> new ResourceNotFoundException("Revendeur", dto.revendeurId()));
 
-        if (avisRepository.existsByRevendeurIdAndAuteurTelephone(dto.revendeurId(), dto.auteurTelephone())) {
-            throw new IllegalArgumentException("Vous avez déjà laissé un avis pour ce revendeur");
+        if (avisRepository.existsByRevendeurIdAndAuteurTelephone(dto.revendeurId(), auteurTelephone)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Vous avez déjà laissé un avis pour ce revendeur");
         }
 
         Avis avis = Avis.builder()
                 .revendeurId(dto.revendeurId())
                 .auteurNom(dto.auteurNom())
-                .auteurTelephone(dto.auteurTelephone())
+                .auteurTelephone(auteurTelephone)
                 .note(dto.note())
                 .commentaire(dto.commentaire())
                 .createdAt(LocalDateTime.now())

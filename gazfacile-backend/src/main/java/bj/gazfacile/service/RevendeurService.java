@@ -8,8 +8,10 @@ import bj.gazfacile.model.enums.StockStatus;
 import bj.gazfacile.repository.RevendeurRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -116,8 +118,12 @@ public class RevendeurService {
      * @param dto nouveau statut de stock
      * @return le revendeur mis à jour
      */
-    public Revendeur updateStock(String id, StockUpdateDTO dto) {
+    public Revendeur updateStock(String id, StockUpdateDTO dto, String telephoneAuthentifie, boolean isAdmin) {
         Revendeur revendeur = getById(id);
+        if (!isAdmin && !telephoneAuthentifie.equals(revendeur.getUserId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Accès refusé : vous n'êtes pas le propriétaire de ce dépôt");
+        }
         StockStatus ancienStatut = revendeur.getStockStatus();
         revendeur.setStockStatus(dto.stockStatus());
         revendeur.setUpdatedAt(LocalDateTime.now());

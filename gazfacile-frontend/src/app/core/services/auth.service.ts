@@ -38,6 +38,8 @@ export class AuthService {
 
   // ── Token en mémoire ───────────────────────────────────────────────────────
   private _accessToken: string | null = null;
+  /** Token temporaire 2FA en attente (valable 5 min, non persisté). */
+  private _pendingToken: string | null = null;
 
   /** Observable partagé pendant un refresh en cours (évite les appels parallèles). */
   private _refreshObs: Observable<string> | null = null;
@@ -104,10 +106,53 @@ export class AuthService {
   /** Connexion par PIN 6 chiffres. */
   pinLogin(dto: PinLoginDTO): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/pin/login`, dto).pipe(
-      tap(res => this.sauvegarderSession(res)),
+      tap(res => {
+        if (res.pending2fa) {
+          // Stocker le token temporaire pour le step TOTP — ne pas créer de session
+          this._pendingToken = res.token;
+        } else {
+          this.sauvegarderSession(res);
+        }
+      }),
       catchError(err => throwError(() =>
         new Error(err.error?.message || 'PIN incorrect')
       ))
+    );
+  }
+
+  // ── TOTP 2FA ───────────────────────────────────────────────────────────────
+
+  /** Initie le setup TOTP : retourne l'URI otpauth:// et le secret brut. */
+  totpSetup(): Observable<{ otpauthUri: string; secret: string }> {
+    return this.http.post<{ otpauthUri: string; secret: string }>(
+      `${this.apiUrl}/totp/setup`, {}
+    ).pipe(catchError(err => throwError(() => new Error(err.error?.message || 'Erreur setup 2FA'))));
+  }
+
+  /** Confirme le setup avec un premier code valide — active le 2FA. */
+  totpConfirm(code: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/totp/confirm`, { code }).pipe(
+      catchError(err => throwError(() => new Error(err.error?.message || 'Code TOTP invalide')))
+    );
+  }
+
+  /** Vérifie le code TOTP avec le token pending — retourne le JWT complet. */
+  totpVerify(code: string): Observable<AuthResponse> {
+    const token = this._pendingToken;
+    this._pendingToken = null;
+    return this.http.post<AuthResponse>(
+      `${this.apiUrl}/totp/verify`, { code },
+      { headers: { Authorization: `Bearer ${token}` } }
+    ).pipe(
+      tap(res => this.sauvegarderSession(res)),
+      catchError(err => throwError(() => new Error(err.error?.message || 'Code TOTP invalide')))
+    );
+  }
+
+  /** Désactive le 2FA après vérification d'un code valide. */
+  totpDisable(code: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/totp/disable`, { code }).pipe(
+      catchError(err => throwError(() => new Error(err.error?.message || 'Code invalide')))
     );
   }
 

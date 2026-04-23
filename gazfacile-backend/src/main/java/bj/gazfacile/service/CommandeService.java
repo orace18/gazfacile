@@ -188,27 +188,40 @@ public class CommandeService {
 
     /**
      * Retourne toutes les commandes d'un revendeur.
-     *
-     * @param revendeurId identifiant du revendeur
+     * Vérifie que l'appelant est bien le propriétaire du revendeur (sauf admin).
      */
-    public List<Commande> getByRevendeur(String revendeurId) {
+    public List<Commande> getByRevendeur(String revendeurId, String telephoneAuthentifie, boolean isAdmin) {
+        if (!isAdmin) {
+            Revendeur revendeur = revendeurRepository.findById(revendeurId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Revendeur", revendeurId));
+            if (!telephoneAuthentifie.equals(revendeur.getUserId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Accès refusé : vous n'êtes pas le propriétaire de ce dépôt");
+            }
+        }
         return commandeRepository.findByRevendeurIdOrderByCreatedAtDesc(revendeurId);
     }
 
     /**
      * Met à jour le statut d'une commande.
-     *
-     * @param id            identifiant de la commande
-     * @param nouveauStatut nouveau statut
-     * @return la commande mise à jour
+     * Vérifie que l'appelant est le revendeur propriétaire de la commande (sauf admin).
      */
-    public Commande updateStatut(String id, StatutCommande nouveauStatut) {
+    public Commande updateStatut(String id, StatutCommande nouveauStatut, String telephoneAuthentifie, boolean isAdmin) {
         Commande commande = commandeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Commande", id));
 
+        if (!isAdmin) {
+            String revendeurId = commande.getRevendeurId();
+            Revendeur revendeur = revendeurRepository.findById(revendeurId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Revendeur", revendeurId));
+            if (!telephoneAuthentifie.equals(revendeur.getUserId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Accès refusé : seul le revendeur peut modifier le statut de cette commande");
+            }
+        }
+
         commande.setStatutCommande(nouveauStatut);
 
-        // Enregistrer la date de livraison si la commande est livrée
         if (nouveauStatut == StatutCommande.LIVREE) {
             commande.setLivraisonAt(LocalDateTime.now());
             commande.setStatutPaiement(StatutPaiement.PAYE);

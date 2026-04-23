@@ -1,6 +1,7 @@
 package bj.gazfacile.service;
 
 import bj.gazfacile.dto.*;
+import org.springframework.http.HttpStatus;
 import bj.gazfacile.model.User;
 import bj.gazfacile.model.enums.Role;
 import bj.gazfacile.repository.UserRepository;
@@ -49,6 +50,7 @@ public class AuthService {
     private final GoogleTokenService googleTokenService;
     private final PhoneNumberService phoneNumberService;
     private final RefreshTokenService refreshTokenService;
+    private final TotpService totpService;
 
     @Value("${jwt.refresh-expiration}")
     private long refreshExpirationMs;
@@ -171,8 +173,88 @@ public class AuthService {
         }
 
         loginAttemptService.reinitialiser(telephone);
+
+        // Si l'admin a activé le 2FA → retourner un token temporaire en attente de TOTP
+        if (utilisateur.isTotpEnabled()) {
+            String pendingToken = jwtService.generatePending2faToken(utilisateur);
+            log.info("[PIN] 2FA requis pour {}", telephone);
+            return new AuthResponseDTO(pendingToken, telephone,
+                    utilisateur.getNom(), utilisateur.getEmail(),
+                    utilisateur.getRoles(), true);
+        }
+
         log.info("[PIN] Connexion réussie pour {}", telephone);
         return construireReponse(utilisateur, response);
+    }
+
+    // ── TOTP 2FA ──────────────────────────────────────────────────────────────
+
+    /**
+     * Étape 1 du setup 2FA : génère un secret et retourne l'URI otpauth://.
+     * Le secret est sauvegardé temporairement mais le 2FA n'est PAS encore actif.
+     * L'utilisateur doit confirmer avec un code valide via confirmerSetupTotp().
+     */
+    public bj.gazfacile.dto.TotpSetupResponseDTO initierSetupTotp(String telephone) {
+        User utilisateur = userRepository.findByTelephone(telephone)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        String secret = totpService.genererSecret();
+        utilisateur.setTotpSecret(secret);
+        utilisateur.setTotpEnabled(false); // pas encore actif avant confirmation
+        userRepository.save(utilisateur);
+        String uri = totpService.genererOtpauthUri(secret, telephone);
+        log.info("[TOTP] Setup initié pour {}", telephone);
+        return new bj.gazfacile.dto.TotpSetupResponseDTO(uri, secret);
+    }
+
+    /**
+     * Étape 2 du setup 2FA : vérifie que le premier code TOTP est valide,
+     * puis active le 2FA. Protège contre les configurations incorrectes.
+     */
+    public void confirmerSetupTotp(String telephone, String code) {
+        User utilisateur = userRepository.findByTelephone(telephone)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (utilisateur.getTotpSecret() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Setup TOTP non initié");
+        }
+        if (!totpService.verifier(utilisateur.getTotpSecret(), code)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Code TOTP invalide");
+        }
+        utilisateur.setTotpEnabled(true);
+        userRepository.save(utilisateur);
+        log.info("[TOTP] 2FA activé pour {}", telephone);
+    }
+
+    /**
+     * Vérification TOTP post-PIN : valide le code, puis retourne le JWT complet.
+     * Appelé uniquement avec un token 2FA en attente (ROLE_2FA_PENDING).
+     */
+    public AuthResponseDTO verifierTotp(String telephone, String code, jakarta.servlet.http.HttpServletResponse response) {
+        User utilisateur = userRepository.findByTelephone(telephone)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!utilisateur.isTotpEnabled() || utilisateur.getTotpSecret() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "2FA non configuré");
+        }
+        if (!totpService.verifier(utilisateur.getTotpSecret(), code)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Code TOTP invalide");
+        }
+        log.info("[TOTP] Vérification réussie pour {}", telephone);
+        return construireReponse(utilisateur, response);
+    }
+
+    /**
+     * Désactive le 2FA après vérification d'un code TOTP valide.
+     * Exige un code correct pour éviter le désactivation accidentelle ou malveillante.
+     */
+    public void desactiverTotp(String telephone, String code) {
+        User utilisateur = userRepository.findByTelephone(telephone)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!totpService.verifier(utilisateur.getTotpSecret(), code)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Code TOTP invalide");
+        }
+        utilisateur.setTotpEnabled(false);
+        utilisateur.setTotpSecret(null);
+        userRepository.save(utilisateur);
+        log.info("[TOTP] 2FA désactivé pour {}", telephone);
     }
 
     // ── Inscription simplifiée (fallback total) ───────────────────────────────
@@ -189,18 +271,18 @@ public class AuthService {
                     "Ce numéro de téléphone est déjà associé à un compte");
         }
 
-        Role role = (dto.role() != null && dto.role() != Role.ADMIN) ? dto.role() : Role.CLIENT;
-
+        // Le rôle REVENDEUR nécessite un flux vérifié (WebAuthn/Google + paiement).
+        // L'inscription simplifiée crée uniquement des comptes CLIENT.
         User utilisateur = User.builder()
                 .telephone(telephone)
                 .nom(dto.nom())
-                .roles(Set.of(role))
+                .roles(Set.of(Role.CLIENT))
                 .actif(true)
                 .createdAt(LocalDateTime.now())
                 .build();
 
         userRepository.save(utilisateur);
-        log.info("[Auth] Inscription simplifiée : {}", telephone);
+        log.info("[Auth] Inscription simplifiée (CLIENT) : {}", telephone);
         return construireReponse(utilisateur, response);
     }
 

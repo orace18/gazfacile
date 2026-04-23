@@ -218,9 +218,6 @@ type EcranConnexion = 'telephone' | 'choix' | 'pin' | 'google-telephone';
           <p>Pas encore de compte ?
             <a routerLink="/auth/register">Créer un compte</a>
           </p>
-          <p class="lien-revendeur">
-            Vous êtes administrateur ? Utilisez la page <a routerLink="/admin/login">admin</a>.
-          </p>
         </div>
       </div>
     </div>

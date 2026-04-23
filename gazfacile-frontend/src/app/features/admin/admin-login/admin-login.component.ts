@@ -31,47 +31,96 @@ import { Role } from '../../../core/models/revendeur.model';
           <p class="sous-titre">Accès réservé</p>
         </div>
 
-        <form [formGroup]="formulaire" (ngSubmit)="soumettre()" class="formulaire">
+        <!-- Écran 1 : Téléphone + PIN -->
+        @if (!ecranTotp) {
+          <form [formGroup]="formulaire" (ngSubmit)="soumettre()" class="formulaire">
 
-          <mat-form-field appearance="outline" class="champ">
-            <mat-label>Numéro de téléphone</mat-label>
-            <input matInput formControlName="telephone" placeholder="Ex: 97000000" type="tel">
-            <mat-icon matPrefix>phone</mat-icon>
-            @if (formulaire.get('telephone')?.invalid && formulaire.get('telephone')?.touched) {
-              <mat-error>Le numéro de téléphone est obligatoire</mat-error>
+            <mat-form-field appearance="outline" class="champ">
+              <mat-label>Numéro de téléphone</mat-label>
+              <input matInput formControlName="telephone" placeholder="Ex: 97000000" type="tel">
+              <mat-icon matPrefix>phone</mat-icon>
+              @if (formulaire.get('telephone')?.invalid && formulaire.get('telephone')?.touched) {
+                <mat-error>Le numéro de téléphone est obligatoire</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="champ">
+              <mat-label>PIN administrateur</mat-label>
+              <input matInput formControlName="pin"
+                [type]="mdpVisible ? 'text' : 'password'"
+                placeholder="••••••"
+                inputmode="numeric"
+                maxlength="20"
+                autocomplete="current-password">
+              <button matSuffix mat-icon-button type="button" (click)="mdpVisible = !mdpVisible">
+                <mat-icon>{{ mdpVisible ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              @if (formulaire.get('pin')?.invalid && formulaire.get('pin')?.touched) {
+                <mat-error>Le PIN est obligatoire</mat-error>
+              }
+            </mat-form-field>
+
+            @if (erreur) {
+              <div class="erreur">
+                <mat-icon>error_outline</mat-icon>
+                {{ erreur }}
+              </div>
             }
-          </mat-form-field>
 
-          <mat-form-field appearance="outline" class="champ">
-            <mat-label>PIN administrateur</mat-label>
-            <input matInput formControlName="pin"
-              [type]="mdpVisible ? 'text' : 'password'"
-              placeholder="••••••"
-              inputmode="numeric"
-              maxlength="20"
-              autocomplete="current-password">
-            <button matSuffix mat-icon-button type="button" (click)="mdpVisible = !mdpVisible">
-              <mat-icon>{{ mdpVisible ? 'visibility_off' : 'visibility' }}</mat-icon>
+            <button mat-raised-button type="submit" class="btn-connexion"
+              [disabled]="formulaire.invalid || envoi">
+              @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
+              @else { <mat-icon>lock_open</mat-icon> }
+              Se connecter
             </button>
-            @if (formulaire.get('pin')?.invalid && formulaire.get('pin')?.touched) {
-              <mat-error>Le PIN est obligatoire</mat-error>
-            }
-          </mat-form-field>
+          </form>
+        }
 
-          @if (erreur) {
-            <div class="erreur">
-              <mat-icon>error_outline</mat-icon>
-              {{ erreur }}
+        <!-- Écran 2 : Code TOTP (2FA) -->
+        @if (ecranTotp) {
+          <div class="formulaire">
+            <div class="info-2fa">
+              <mat-icon class="icone-shield">security</mat-icon>
+              <div>
+                <strong>Vérification en deux étapes</strong>
+                <p>Ouvrez Google Authenticator et saisissez le code à 6 chiffres.</p>
+              </div>
             </div>
-          }
 
-          <button mat-raised-button type="submit" class="btn-connexion"
-            [disabled]="formulaire.invalid || envoi">
-            @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
-            @else { <mat-icon>lock_open</mat-icon> }
-            Se connecter
-          </button>
-        </form>
+            <mat-form-field appearance="outline" class="champ">
+              <mat-label>Code à 6 chiffres</mat-label>
+              <input matInput [formControl]="totpControl"
+                placeholder="123456"
+                type="text"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="one-time-code">
+              <mat-icon matPrefix>pin</mat-icon>
+              @if (totpControl.invalid && totpControl.touched) {
+                <mat-error>Entrez le code à 6 chiffres</mat-error>
+              }
+            </mat-form-field>
+
+            @if (erreur) {
+              <div class="erreur">
+                <mat-icon>error_outline</mat-icon>
+                {{ erreur }}
+              </div>
+            }
+
+            <button mat-raised-button class="btn-connexion"
+              [disabled]="totpControl.invalid || envoi"
+              (click)="verifierTotp()">
+              @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
+              @else { <mat-icon>verified_user</mat-icon> }
+              Vérifier
+            </button>
+
+            <button mat-button class="btn-retour" (click)="retourPin()">
+              <mat-icon>arrow_back</mat-icon> Retour
+            </button>
+          </div>
+        }
       </div>
     </div>
   `,
@@ -157,6 +206,37 @@ import { Role } from '../../../core/models/revendeur.model';
 
       mat-spinner { margin-right: 8px; }
     }
+
+    .info-2fa {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px;
+      background: #e8f0fe;
+      border-radius: 8px;
+      border-left: 4px solid #1a73e8;
+
+      .icone-shield {
+        color: #1a73e8;
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+
+      strong { display: block; color: #1a1a2e; margin-bottom: 4px; }
+
+      p { margin: 0; font-size: 0.85rem; color: #444; }
+    }
+
+    .btn-retour {
+      align-self: center;
+      color: #666 !important;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
   `]
 })
 export class AdminLoginComponent {
@@ -167,27 +247,34 @@ export class AdminLoginComponent {
   mdpVisible = false;
   envoi = false;
   erreur: string | null = null;
+  ecranTotp = false;
 
   readonly formulaire = this.fb.group({
     telephone: ['', Validators.required],
     pin: ['', Validators.required]
   });
 
+  readonly totpControl = this.fb.control('', [
+    Validators.required,
+    Validators.pattern(/^\d{6}$/)
+  ]);
+
   soumettre(): void {
     if (this.formulaire.invalid) {
       this.formulaire.markAllAsTouched();
       return;
     }
-
     this.envoi = true;
     this.erreur = null;
-
     const { telephone, pin } = this.formulaire.value;
 
     this.authService.pinLogin({ telephone: telephone!, pin: pin! }).subscribe({
-      next: () => {
+      next: (res) => {
         this.envoi = false;
-        if (this.authService.hasRole(Role.ADMIN)) {
+        if (res.pending2fa) {
+          // Le backend demande le code TOTP → afficher l'écran 2FA
+          this.ecranTotp = true;
+        } else if (this.authService.hasRole(Role.ADMIN)) {
           this.router.navigate(['/admin']);
         } else {
           this.authService.logout();
@@ -199,5 +286,33 @@ export class AdminLoginComponent {
         this.erreur = err.message || 'Identifiants incorrects';
       }
     });
+  }
+
+  verifierTotp(): void {
+    if (this.totpControl.invalid) {
+      this.totpControl.markAsTouched();
+      return;
+    }
+    this.envoi = true;
+    this.erreur = null;
+
+    this.authService.totpVerify(this.totpControl.value!).subscribe({
+      next: () => {
+        this.envoi = false;
+        this.router.navigate(['/admin']);
+      },
+      error: (err: any) => {
+        this.envoi = false;
+        this.erreur = err.message || 'Code TOTP invalide';
+        this.totpControl.reset();
+      }
+    });
+  }
+
+  retourPin(): void {
+    this.ecranTotp = false;
+    this.erreur = null;
+    this.totpControl.reset();
+    this.formulaire.get('pin')?.reset();
   }
 }

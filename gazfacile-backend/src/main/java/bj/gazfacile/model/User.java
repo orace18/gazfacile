@@ -57,6 +57,13 @@ public class User implements UserDetails {
     @Builder.Default
     private boolean webAuthnRegistered = false;
 
+    /** Secret TOTP (Base32) — non null si le 2FA est configuré. */
+    private String totpSecret;
+
+    /** Vrai si le 2FA TOTP est actif pour ce compte. */
+    @Builder.Default
+    private boolean totpEnabled = false;
+
     @Builder.Default
     private boolean actif = true;
 

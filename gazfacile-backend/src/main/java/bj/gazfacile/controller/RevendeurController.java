@@ -116,9 +116,12 @@ public class RevendeurController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Revendeur> updateStock(
             @PathVariable String id,
-            @Valid @RequestBody StockUpdateDTO dto
+            @Valid @RequestBody StockUpdateDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
-        return ResponseEntity.ok(revendeurService.updateStock(id, dto));
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return ResponseEntity.ok(revendeurService.updateStock(id, dto, userDetails.getUsername(), isAdmin));
     }
 
     /**

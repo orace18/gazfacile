@@ -10,7 +10,9 @@ import bj.gazfacile.repository.CommandeRepository;
 import bj.gazfacile.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -118,12 +120,27 @@ public class PaiementService {
 
     /**
      * Retourne une transaction par sa référence interne.
+     * Vérifie que l'appelant est bien le client de la transaction (sauf admin).
      */
-    public Transaction getByReference(String reference) {
+    public Transaction getByReference(String reference, String telephoneAuthentifie, boolean isAdmin) {
         Transaction transaction = transactionRepository.findByReference(reference)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction introuvable : " + reference));
 
+        if (!isAdmin) {
+            String telTransaction = normaliserPourComparaison(transaction.getClientTelephone());
+            String telDemandeur  = normaliserPourComparaison(telephoneAuthentifie);
+            if (!telTransaction.equals(telDemandeur)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Accès refusé : cette transaction ne vous appartient pas");
+            }
+        }
+
         return synchroniserTransactionSiNecessaire(transaction);
+    }
+
+    private static String normaliserPourComparaison(String telephone) {
+        if (telephone == null) return "";
+        return telephone.replaceFirst("^\\+229", "").replaceFirst("^00229", "").replaceAll("\\s+", "");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

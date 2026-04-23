@@ -23,6 +23,8 @@ import {
   AdminCatalogueItem,
   AdminSubscription
 } from '../../../core/services/admin.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { QRCodeComponent } from 'angularx-qrcode';
 import { DashboardStats } from '../../../core/models/notification.model';
 import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType } from '../../../core/models/revendeur.model';
 
@@ -34,7 +36,7 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType } from '../
     MatCardModule, MatIconModule, MatProgressSpinnerModule,
     MatTableModule, MatButtonModule, MatTabsModule,
     MatChipsModule, MatSelectModule, MatTooltipModule, MatSnackBarModule,
-    MatFormFieldModule, MatInputModule
+    MatFormFieldModule, MatInputModule, QRCodeComponent
   ],
   template: `
     <div class="dashboard-page">
@@ -663,6 +665,151 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType } from '../
             }
           </mat-tab>
 
+          <!-- ── Onglet 9 : Sécurité (2FA TOTP) ── -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>security</mat-icon>&nbsp;Sécurité
+            </ng-template>
+
+            <div class="section-securite">
+
+              <!-- Statut 2FA -->
+              <div class="carte-statut-2fa" [class.actif]="totp2faActif()">
+                <div class="statut-icone">
+                  <mat-icon>{{ totp2faActif() ? 'verified_user' : 'gpp_maybe' }}</mat-icon>
+                </div>
+                <div class="statut-texte">
+                  <h3>Authentification à deux facteurs (2FA)</h3>
+                  <p>{{ totp2faActif()
+                    ? 'Le 2FA est actif. Votre compte est protégé par Google Authenticator.'
+                    : 'Le 2FA n\'est pas activé. Activez-le pour sécuriser votre compte admin.' }}
+                  </p>
+                </div>
+                <span class="badge-statut" [class.badge-actif]="totp2faActif()">
+                  {{ totp2faActif() ? 'Actif' : 'Inactif' }}
+                </span>
+              </div>
+
+              <!-- Setup 2FA (si non actif) -->
+              @if (!totp2faActif()) {
+                <div class="carte-action">
+                  <h4><mat-icon>qr_code_2</mat-icon> Configurer le 2FA</h4>
+
+                  @if (!totpUri()) {
+                    <p class="aide">Cliquez pour générer vos codes de configuration Google Authenticator.</p>
+                    <button mat-raised-button class="btn-activer" (click)="lancerSetupTotp()"
+                      [disabled]="totpEnvoi()">
+                      @if (totpEnvoi()) { <mat-spinner diameter="18"></mat-spinner> }
+                      @else { <mat-icon>add_moderator</mat-icon> }
+                      Activer le 2FA
+                    </button>
+                  }
+
+                  @if (totpUri()) {
+                    <div class="setup-totp">
+
+                      <!-- Étape 1 : QR code -->
+                      <div class="etape">
+                        <span class="numero-etape">1</span>
+                        <div>
+                          <strong>Scannez ce QR code</strong> avec Google Authenticator, Authy ou toute autre application TOTP.
+                        </div>
+                      </div>
+
+                      <div class="qr-bloc">
+                        <qrcode
+                          [qrdata]="totpUri()!"
+                          [width]="200"
+                          [errorCorrectionLevel]="'M'"
+                          [colorDark]="'#1a1a2e'"
+                          [colorLight]="'#ffffff'">
+                        </qrcode>
+                        <p class="qr-note">Impossible de scanner ?</p>
+                        <div class="secret-block">
+                          <label>Clé secrète (saisie manuelle)</label>
+                          <div class="secret-row">
+                            <code>{{ totpSecret() }}</code>
+                            <button mat-icon-button (click)="copierSecret()" matTooltip="Copier la clé">
+                              <mat-icon>content_copy</mat-icon>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Étape 2 : Confirmation -->
+                      <div class="etape">
+                        <span class="numero-etape">2</span>
+                        <div>
+                          <strong>Entrez le code à 6 chiffres</strong> affiché par l'application pour confirmer la configuration.
+                        </div>
+                      </div>
+
+                      <mat-form-field appearance="outline" class="champ-code">
+                        <mat-label>Code de confirmation</mat-label>
+                        <input matInput [(ngModel)]="totpCodeConfirm"
+                          placeholder="123456"
+                          type="text"
+                          inputmode="numeric"
+                          maxlength="6"
+                          autocomplete="one-time-code">
+                        <mat-icon matPrefix>pin</mat-icon>
+                      </mat-form-field>
+
+                      @if (totpErreur()) {
+                        <div class="erreur-totp">
+                          <mat-icon>error_outline</mat-icon> {{ totpErreur() }}
+                        </div>
+                      }
+
+                      <div class="actions-setup">
+                        <button mat-raised-button class="btn-activer"
+                          [disabled]="totpCodeConfirm.length !== 6 || totpEnvoi()"
+                          (click)="confirmerSetupTotp()">
+                          @if (totpEnvoi()) { <mat-spinner diameter="18"></mat-spinner> }
+                          @else { <mat-icon>check_circle</mat-icon> }
+                          Confirmer et activer
+                        </button>
+                        <button mat-stroked-button (click)="annulerSetup()">Annuler</button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Désactiver 2FA (si actif) -->
+              @if (totp2faActif()) {
+                <div class="carte-action carte-danger">
+                  <h4><mat-icon>no_encryption</mat-icon> Désactiver le 2FA</h4>
+                  <p class="aide">Entrez votre code TOTP actuel pour confirmer la désactivation.</p>
+
+                  <mat-form-field appearance="outline" class="champ-code">
+                    <mat-label>Code TOTP actuel</mat-label>
+                    <input matInput [(ngModel)]="totpCodeDesactiver"
+                      placeholder="123456"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="6">
+                    <mat-icon matPrefix>pin</mat-icon>
+                  </mat-form-field>
+
+                  @if (totpErreur()) {
+                    <div class="erreur-totp">
+                      <mat-icon>error_outline</mat-icon> {{ totpErreur() }}
+                    </div>
+                  }
+
+                  <button mat-raised-button class="btn-desactiver"
+                    [disabled]="totpCodeDesactiver.length !== 6 || totpEnvoi()"
+                    (click)="desactiverTotp()">
+                    @if (totpEnvoi()) { <mat-spinner diameter="18"></mat-spinner> }
+                    @else { <mat-icon>lock_open</mat-icon> }
+                    Désactiver le 2FA
+                  </button>
+                </div>
+              }
+            </div>
+          </mat-tab>
+
         </mat-tab-group>
       </div>
     </div>
@@ -943,10 +1090,196 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType } from '../
       .kpi-grille { grid-template-columns: repeat(2, 1fr); }
       .form-plan-grille { grid-template-columns: 1fr; .champ-large { grid-column: span 1; } }
     }
+
+    /* ── Sécurité / 2FA ── */
+    .section-securite {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 700px;
+    }
+
+    .carte-statut-2fa {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 24px;
+      background: #fff8e1;
+      border-radius: 12px;
+      border: 2px solid #f9a825;
+
+      &.actif {
+        background: #e8f5e9;
+        border-color: #43a047;
+      }
+
+      .statut-icone mat-icon {
+        font-size: 36px;
+        width: 36px;
+        height: 36px;
+        color: #f9a825;
+      }
+
+      &.actif .statut-icone mat-icon { color: #43a047; }
+
+      .statut-texte {
+        flex: 1;
+        h3 { margin: 0 0 4px; font-size: 1rem; font-weight: 700; color: #1a1a2e; }
+        p  { margin: 0; font-size: 0.85rem; color: #555; }
+      }
+
+      .badge-statut {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        background: #f9a825;
+        color: white;
+
+        &.badge-actif { background: #43a047; }
+      }
+    }
+
+    .carte-action {
+      padding: 24px;
+      background: var(--color-surface);
+      border-radius: 12px;
+      border: 1px solid var(--color-border);
+
+      h4 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 12px;
+        font-size: 1rem;
+        color: var(--color-primary);
+
+        mat-icon { font-size: 20px; width: 20px; height: 20px; }
+      }
+
+      .aide { margin: 0 0 16px; font-size: 0.88rem; color: var(--color-text-muted); }
+
+      &.carte-danger {
+        border-color: #ef9a9a;
+        h4 { color: #c62828; }
+      }
+    }
+
+    .setup-totp {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+
+      .etape {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        font-size: 0.9rem;
+        color: var(--color-text);
+
+        .numero-etape {
+          flex-shrink: 0;
+          width: 26px;
+          height: 26px;
+          background: var(--color-primary);
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 0.82rem;
+        }
+      }
+    }
+
+    .qr-bloc {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 20px;
+      background: #fafafa;
+      border: 2px dashed var(--color-border);
+      border-radius: 12px;
+
+      qrcode { display: block; }
+
+      .qr-note {
+        margin: 0;
+        font-size: 0.78rem;
+        color: var(--color-text-muted);
+      }
+    }
+
+    .secret-block {
+      padding: 16px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      width: 100%;
+
+      label { font-size: 0.78rem; color: #666; display: block; margin-bottom: 8px; }
+
+      .secret-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        code {
+          flex: 1;
+          font-family: 'Courier New', monospace;
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: #1a1a2e;
+          letter-spacing: 0.15em;
+          word-break: break-all;
+        }
+      }
+    }
+
+    .champ-code { width: 100%; max-width: 220px; }
+
+    .erreur-totp {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: #fff0f0;
+      border-left: 3px solid #d32f2f;
+      color: #d32f2f;
+      font-size: 0.85rem;
+      border-radius: 4px;
+
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
+
+    .actions-setup {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-activer {
+      background: var(--color-primary) !important;
+      color: white !important;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-desactiver {
+      background: #c62828 !important;
+      color: white !important;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
   `]
 })
 export class AdminDashboardComponent implements OnInit {
   private readonly adminService = inject(AdminService);
+  private readonly authService = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly fb = inject(FormBuilder);
 
@@ -969,6 +1302,15 @@ export class AdminDashboardComponent implements OnInit {
   readonly chargementSubscriptions = signal(false);
 
   readonly planEnEdition   = signal<AdminPlan | null>(null);
+
+  // ── TOTP 2FA ──────────────────────────────────────────────────────────────
+  readonly totp2faActif    = signal(false);
+  readonly totpUri         = signal<string | null>(null);
+  readonly totpSecret      = signal<string | null>(null);
+  readonly totpEnvoi       = signal(false);
+  readonly totpErreur      = signal<string | null>(null);
+  totpCodeConfirm    = '';
+  totpCodeDesactiver = '';
 
   readonly colonnesRevendeurs   = ['nom', 'telephone', 'abonnement', 'stock', 'actif'];
   readonly colonnesCatalogue    = ['revendeur', 'produit', 'prix', 'stock', 'maj'];
@@ -1214,5 +1556,76 @@ export class AdminDashboardComponent implements OnInit {
 
   libelleStatutSub(s: string): string {
     return ({ ACTIVE: 'Actif', PENDING: 'En attente', EXPIRED: 'Expiré' } as Record<string,string>)[s] ?? s;
+  }
+
+  // ── TOTP 2FA ──────────────────────────────────────────────────────────────
+
+  lancerSetupTotp(): void {
+    this.totpEnvoi.set(true);
+    this.totpErreur.set(null);
+    this.authService.totpSetup().subscribe({
+      next: res => {
+        this.totpUri.set(res.otpauthUri);
+        this.totpSecret.set(res.secret);
+        this.totpEnvoi.set(false);
+      },
+      error: err => {
+        this.totpErreur.set(err.message);
+        this.totpEnvoi.set(false);
+      }
+    });
+  }
+
+  confirmerSetupTotp(): void {
+    this.totpEnvoi.set(true);
+    this.totpErreur.set(null);
+    this.authService.totpConfirm(this.totpCodeConfirm).subscribe({
+      next: () => {
+        this.totp2faActif.set(true);
+        this.totpUri.set(null);
+        this.totpSecret.set(null);
+        this.totpCodeConfirm = '';
+        this.totpEnvoi.set(false);
+        this.snackBar.open('2FA activé avec succès ✓', 'OK', { duration: 4000 });
+      },
+      error: err => {
+        this.totpErreur.set(err.message || 'Code invalide');
+        this.totpCodeConfirm = '';
+        this.totpEnvoi.set(false);
+      }
+    });
+  }
+
+  desactiverTotp(): void {
+    this.totpEnvoi.set(true);
+    this.totpErreur.set(null);
+    this.authService.totpDisable(this.totpCodeDesactiver).subscribe({
+      next: () => {
+        this.totp2faActif.set(false);
+        this.totpCodeDesactiver = '';
+        this.totpEnvoi.set(false);
+        this.snackBar.open('2FA désactivé', 'OK', { duration: 3000 });
+      },
+      error: err => {
+        this.totpErreur.set(err.message || 'Code invalide');
+        this.totpCodeDesactiver = '';
+        this.totpEnvoi.set(false);
+      }
+    });
+  }
+
+  annulerSetup(): void {
+    this.totpUri.set(null);
+    this.totpSecret.set(null);
+    this.totpCodeConfirm = '';
+    this.totpErreur.set(null);
+  }
+
+  copierSecret(): void {
+    if (this.totpSecret()) {
+      navigator.clipboard.writeText(this.totpSecret()!).then(() =>
+        this.snackBar.open('Clé copiée', '', { duration: 2000 })
+      );
+    }
   }
 }

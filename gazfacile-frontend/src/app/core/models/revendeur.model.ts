@@ -356,6 +356,8 @@ export interface AuthResponse {
   nom: string;
   email?: string;
   roles: Role[];
+  /** Vrai si un code TOTP est requis avant d'obtenir le JWT complet. */
+  pending2fa?: boolean;
 }
 
 /** Message WebSocket diffusé lors d'une mise à jour de stock. */

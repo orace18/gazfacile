@@ -5,6 +5,7 @@ import bj.gazfacile.dto.AdminPlanRequest;
 import bj.gazfacile.dto.AdminSubscriptionDTO;
 import bj.gazfacile.dto.AdminSubscriptionPlanDTO;
 import bj.gazfacile.dto.DashboardStatsDTO;
+import bj.gazfacile.dto.UserAdminDTO;
 import bj.gazfacile.model.Commande;
 import bj.gazfacile.model.Revendeur;
 import bj.gazfacile.model.Transaction;
@@ -83,8 +84,10 @@ public class AdminController {
     // ── Utilisateurs ──────────────────────────────────────────────────────────
 
     @GetMapping("/utilisateurs")
-    public ResponseEntity<List<User>> getTousUtilisateurs() {
-        return ResponseEntity.ok(userRepository.findAll());
+    public ResponseEntity<List<UserAdminDTO>> getTousUtilisateurs() {
+        return ResponseEntity.ok(
+                userRepository.findAll().stream().map(UserAdminDTO::from).toList()
+        );
     }
 
     /** Désactive un utilisateur (soft delete). */

@@ -48,7 +48,6 @@ bj/gazfacile/service/AuthService.class
 bj/gazfacile/model/enums/StatutPaiement.class
 bj/gazfacile/controller/RevendeurController.class
 bj/gazfacile/model/RefreshToken$RefreshTokenBuilder.class
-bj/gazfacile/controller/PaiementController.class
 bj/gazfacile/model/User.class
 bj/gazfacile/controller/CommandeController.class
 bj/gazfacile/controller/AuthController.class
@@ -151,7 +150,6 @@ bj/gazfacile/model/SubscriptionPlan.class
 bj/gazfacile/model/enums/FormatBouteille.class
 bj/gazfacile/controller/OtpController.class
 bj/gazfacile/model/Commande.class
-bj/gazfacile/service/CommandeService.class
 bj/gazfacile/service/PhoneNumberService.class
 bj/gazfacile/dto/GoogleLoginDTO.class
 bj/gazfacile/config/AbonnementScheduler.class

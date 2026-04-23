@@ -30,6 +30,10 @@ public class JwtService {
     @Value("${jwt.refresh-expiration}")
     private long refreshExpiration;
 
+    private static final long PENDING_2FA_EXPIRATION_MS = 5 * 60 * 1000L; // 5 minutes
+    private static final String CLAIM_SCOPE = "scope";
+    private static final String SCOPE_2FA_PENDING = "2fa_pending";
+
     /** Génère un token JWT d'accès pour l'utilisateur donné. */
     public String generateToken(UserDetails userDetails) {
         return generateToken(new HashMap<>(), userDetails, expiration);
@@ -38,6 +42,26 @@ public class JwtService {
     /** Génère un token de rafraîchissement avec une durée de vie plus longue. */
     public String generateRefreshToken(UserDetails userDetails) {
         return generateToken(new HashMap<>(), userDetails, refreshExpiration);
+    }
+
+    /**
+     * Génère un token JWT à durée très courte (5 min) signalant que le 2FA est requis.
+     * Ce token ne donne accès qu'à l'endpoint /auth/totp/verify.
+     */
+    public String generatePending2faToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(CLAIM_SCOPE, SCOPE_2FA_PENDING);
+        return generateToken(claims, userDetails, PENDING_2FA_EXPIRATION_MS);
+    }
+
+    /** Retourne true si le token est un token 2FA en attente (scope = 2fa_pending). */
+    public boolean isPending2faToken(String token) {
+        try {
+            String scope = extractClaim(token, claims -> claims.get(CLAIM_SCOPE, String.class));
+            return SCOPE_2FA_PENDING.equals(scope);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails, long duree) {

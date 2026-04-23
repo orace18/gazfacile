@@ -257,8 +257,8 @@ UTILISATEUR CONNECTÉ
 Configuration
 -------------
   baseUrl      : https://api-gateway.clubchretien.org/cc-cpass
-  client_id    : cl_JD__IMC_p4Felq4F8gWM1nbY  (stocké en variable d'env)
-  client_secret: cs_GtNCYLotL0gZYwZT1Sk...    (stocké en variable d'env)
+  client_id    : [REDACTED — variable d'env CPASS_CLIENT_ID]
+  client_secret: [REDACTED — variable d'env CPASS_CLIENT_SECRET]
   Auth         : POST /auth/token → access_token (Bearer, expire 1h)
   Refresh      : POST /auth/refresh → nouveau token automatique
 

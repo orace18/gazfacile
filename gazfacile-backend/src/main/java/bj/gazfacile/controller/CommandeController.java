@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -46,23 +48,26 @@ public class CommandeController {
      */
     @GetMapping("/revendeur/{id}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<Commande>> getByRevendeur(@PathVariable String id) {
-        return ResponseEntity.ok(commandeService.getByRevendeur(id));
+    public ResponseEntity<List<Commande>> getByRevendeur(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return ResponseEntity.ok(commandeService.getByRevendeur(id, userDetails.getUsername(), isAdmin));
     }
 
     /**
      * Met à jour le statut d'une commande.
-     * Requiert une authentification.
-     *
-     * @param id  identifiant de la commande
-     * @param dto nouveau statut validé
+     * Seul le revendeur propriétaire ou un admin peut modifier le statut.
      */
     @PatchMapping("/{id}/statut")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Commande> updateStatut(
             @PathVariable String id,
-            @Valid @RequestBody StatutCommandeDTO dto
-    ) {
-        return ResponseEntity.ok(commandeService.updateStatut(id, dto.statutCommande()));
+            @Valid @RequestBody StatutCommandeDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return ResponseEntity.ok(commandeService.updateStatut(id, dto.statutCommande(), userDetails.getUsername(), isAdmin));
     }
 }

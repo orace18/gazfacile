@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/environments/environment.ts"],
+  "sourcesContent": ["export const environment = {\n  production: false,\n  apiUrl: 'http://localhost:8080/api/v1',\n  wsUrl: 'http://localhost:8080/ws',\n  googleClientId: '',\n  firebase: {\n    apiKey: '',\n    authDomain: '',\n    projectId: '',\n    appId: '',\n    messagingSenderId: ''\n  }\n};\n"],
+  "mappings": ";AAAO,IAAM,cAAc;EACzB,YAAY;EACZ,QAAQ;EACR,OAAO;EACP,gBAAgB;EAChB,UAAU;IACR,QAAQ;IACR,YAAY;IACZ,WAAW;IACX,OAAO;IACP,mBAAmB;;;",
+  "names": []
+}

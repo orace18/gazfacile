@@ -43,16 +43,19 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // Routes publiques WebSocket
                 .requestMatchers("/ws/**").permitAll()
-                // Routes d'authentification — logout-all et pin/setup requièrent un access token valide
+                // Routes d'authentification
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout-all").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/pin/setup").authenticated()
+                // TOTP verify : accessible uniquement avec un token "2FA pending"
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/totp/verify").hasRole("2FA_PENDING")
+                // TOTP setup/confirm/disable : ADMIN uniquement
+                .requestMatchers("/api/v1/auth/totp/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 // Setup initial admin (se bloque automatiquement si admin existe)
                 .requestMatchers(HttpMethod.POST, "/api/v1/setup/admin").permitAll()
                 // Webhook FedaPay : public (FedaPay appelle sans token JWT)
                 .requestMatchers(HttpMethod.POST, "/api/v1/paiement/webhook").permitAll()
-                // Consultation transaction par référence : publique (page confirmation post-paiement)
-                .requestMatchers(HttpMethod.GET, "/api/v1/paiement/transaction/**").permitAll()
+                // Consultation transaction par référence : authentifiée (contient des PII client)
                 // Autres routes paiement : authentifiées
                 .requestMatchers("/api/v1/paiement/**").authenticated()
                 // Plans d'abonnement : publics (affichés avant inscription)
@@ -67,8 +70,8 @@ public class SecurityConfig {
                 // Lecture des revendeurs et des avis : publique
                 .requestMatchers(HttpMethod.GET, "/api/v1/revendeurs/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/avis/revendeur/**").permitAll()
-                // Soumission d'un avis : publique (un numéro de téléphone suffit)
-                .requestMatchers(HttpMethod.POST, "/api/v1/avis").permitAll()
+                // Soumission d'un avis : authentification requise (empêche les faux avis)
+                .requestMatchers(HttpMethod.POST, "/api/v1/avis").authenticated()
                 // Création et modification de revendeurs requiert une authentification
                 .requestMatchers(HttpMethod.POST, "/api/v1/revendeurs/**").authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/api/v1/revendeurs/**").authenticated()

@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +29,9 @@ public class SetupController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    private static final String PIN_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     @PostMapping("/admin")
     public ResponseEntity<Map<String, String>> creerAdmin() {
         if (userRepository.existsByRolesContaining(Role.ADMIN)) {
@@ -35,11 +39,12 @@ public class SetupController {
                     .body(Map.of("message", "Un compte administrateur existe déjà"));
         }
 
+        String pinGenere = genererPin(14);
+
         User admin = User.builder()
                 .telephone("0147946910")
                 .email("facile.gaz@gmail.com")
-                // PIN initial : "@Juscard38183" — à changer après la première connexion
-                .pinHash(passwordEncoder.encode("@Juscard38183"))
+                .pinHash(passwordEncoder.encode(pinGenere))
                 .nom("Admin GazFacile")
                 .roles(Set.of(Role.ADMIN))
                 .actif(true)
@@ -49,6 +54,18 @@ public class SetupController {
         userRepository.save(admin);
         log.info("[Setup] Compte administrateur créé : {}", admin.getTelephone());
 
-        return ResponseEntity.ok(Map.of("message", "Compte administrateur créé avec succès"));
+        return ResponseEntity.ok(Map.of(
+                "message", "Compte administrateur créé avec succès",
+                "pin", pinGenere,
+                "warning", "Notez ce PIN immédiatement — il ne sera plus affiché"
+        ));
+    }
+
+    private static String genererPin(int longueur) {
+        StringBuilder sb = new StringBuilder(longueur);
+        for (int i = 0; i < longueur; i++) {
+            sb.append(PIN_CHARS.charAt(SECURE_RANDOM.nextInt(PIN_CHARS.length())));
+        }
+        return sb.toString();
     }
 }
