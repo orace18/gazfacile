@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -680,10 +680,7 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType } from '../
                 </div>
                 <div class="statut-texte">
                   <h3>Authentification à deux facteurs (2FA)</h3>
-                  <p>{{ totp2faActif()
-                    ? 'Le 2FA est actif. Votre compte est protégé par Google Authenticator.'
-                    : 'Le 2FA n\'est pas activé. Activez-le pour sécuriser votre compte admin.' }}
-                  </p>
+                  <p>{{ totpStatutMessage() }}</p>
                 </div>
                 <span class="badge-statut" [class.badge-actif]="totp2faActif()">
                   {{ totp2faActif() ? 'Actif' : 'Inactif' }}
@@ -1305,6 +1302,10 @@ export class AdminDashboardComponent implements OnInit {
 
   // ── TOTP 2FA ──────────────────────────────────────────────────────────────
   readonly totp2faActif    = signal(false);
+  readonly totpStatutMessage = computed(() => this.totp2faActif()
+    ? "Le 2FA est actif. Votre compte est protégé par Google Authenticator."
+    : "Le 2FA n'est pas activé. Activez-le pour sécuriser votre compte admin."
+  );
   readonly totpUri         = signal<string | null>(null);
   readonly totpSecret      = signal<string | null>(null);
   readonly totpEnvoi       = signal(false);
