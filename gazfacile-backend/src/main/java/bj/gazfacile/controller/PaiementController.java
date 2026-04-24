@@ -64,10 +64,9 @@ public class PaiementController {
         }
 
         try {
-            // Parser le payload JSON manuellement (évite la désérialisation complexe)
-            // Format attendu : {"name": "transaction.approved", "entity": {"id": 123, "status": "approved"}}
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             Map<?, ?> body = mapper.readValue(payload, Map.class);
+            String eventName = (String) body.get("name");
 
             Map<?, ?> entity = (Map<?, ?>) body.get("entity");
             if (entity == null) {
@@ -75,10 +74,23 @@ public class PaiementController {
                 return ResponseEntity.ok().build();
             }
 
-            long fedaPayId = ((Number) entity.get("id")).longValue();
+            // payment_request.approved : l'entité est un payment_request, l'ID transaction est dans transaction_id
+            // transaction.* : l'entité est directement la transaction
+            long fedaPayId;
+            if (eventName != null && eventName.startsWith("payment_request.")) {
+                Object txId = entity.get("transaction_id");
+                if (txId == null) {
+                    log.warn("[Webhook] payment_request sans transaction_id — ignoré. Payload: {}", payload.substring(0, Math.min(300, payload.length())));
+                    return ResponseEntity.ok().build();
+                }
+                fedaPayId = ((Number) txId).longValue();
+            } else {
+                fedaPayId = ((Number) entity.get("id")).longValue();
+            }
+
             String statut = (String) entity.get("status");
 
-            log.info("[Webhook] FedaPay event '{}' — Transaction {} → {}", body.get("name"), fedaPayId, statut);
+            log.info("[Webhook] FedaPay event '{}' — Transaction {} → {}", eventName, fedaPayId, statut);
             paiementService.traiterWebhook(fedaPayId, statut);
 
         } catch (Exception ex) {

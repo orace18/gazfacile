@@ -140,7 +140,12 @@ public class PaiementService {
 
     private static String normaliserPourComparaison(String telephone) {
         if (telephone == null) return "";
-        return telephone.replaceFirst("^\\+229", "").replaceFirst("^00229", "").replaceAll("\\s+", "");
+        String t = telephone.replaceAll("\\s+", "");
+        if (t.startsWith("+229")) return t.substring(4);
+        if (t.startsWith("00229")) return t.substring(5);
+        // Format 229XXXXXXXXXX sans + ni 00 (ex: 2290162647739 = 13 chiffres)
+        if (t.startsWith("229") && t.length() > 10) return t.substring(3);
+        return t;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

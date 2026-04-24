@@ -193,4 +193,11 @@ public class AdminController {
     public ResponseEntity<List<AdminSubscriptionDTO>> getToutesSubscriptions() {
         return ResponseEntity.ok(adminService.getSubscriptionsAdmin());
     }
+
+    /** Force l'activation d'une subscription PENDING (correction manuelle après webhook manquant). */
+    @PostMapping("/subscriptions/{id}/activer")
+    public ResponseEntity<Void> activerSubscription(@PathVariable String id) {
+        subscriptionService.activateSubscription(id, null);
+        return ResponseEntity.ok().build();
+    }
 }
