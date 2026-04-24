@@ -13,6 +13,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
+
 /**
  * Avis laissé par un client sur un revendeur de gaz.
  * La note est entre 1 et 5 étoiles.
