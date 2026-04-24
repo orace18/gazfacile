@@ -23,10 +23,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // Broker simple en mémoire pour les topics de diffusion
-        registry.enableSimpleBroker("/topic");
-        // Préfixe pour les messages envoyés par les clients
+        // /topic : broadcast public (stock)
+        // /queue : files privées par utilisateur authentifié (notifications)
+        registry.enableSimpleBroker("/topic", "/queue");
         registry.setApplicationDestinationPrefixes("/app");
+        // Préfixe utilisé par convertAndSendToUser() pour les files privées
+        registry.setUserDestinationPrefix("/user");
     }
 
     @Override

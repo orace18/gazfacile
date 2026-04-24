@@ -8,6 +8,7 @@ import bj.gazfacile.service.SubscriptionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ public class SubscriptionController {
     private final PaiementService paiementService;
 
     @GetMapping("/current")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SubscriptionDTO> getCurrent(Authentication auth) {
         String telephone = auth.getName();
         return subscriptionService.getCurrentSubscription(telephone)
@@ -28,6 +30,7 @@ public class SubscriptionController {
     }
 
     @PostMapping("/subscribe")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PaiementResponseDTO> subscribe(
             Authentication auth,
             @Valid @RequestBody SubscribeRequestDTO dto) {

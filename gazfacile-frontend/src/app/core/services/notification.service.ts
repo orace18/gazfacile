@@ -28,8 +28,10 @@ export class NotificationService {
     // S'abonner aux notifications temps réel dès que l'utilisateur est connecté
     const user = this.authService.currentUser();
     if (user) {
+      // File privée STOMP — seul l'utilisateur authentifié reçoit ses notifications.
+      // Le broker résout /user/queue/notifications → /queue/notifications-user{sessionId}
       this.wsService.subscribe<Notification>(
-        `/topic/notifications/${user.telephone}`
+        `/user/queue/notifications`
       ).subscribe({
         next: notif => {
           this.notifications.update(liste => [notif, ...liste]);

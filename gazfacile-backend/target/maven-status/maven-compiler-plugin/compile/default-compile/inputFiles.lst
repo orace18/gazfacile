@@ -19,7 +19,6 @@
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/controller/PaiementController.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/controller/ProduitRevendeurController.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/controller/RevendeurController.java
-/home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/controller/SetupController.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/controller/SubscriptionController.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/controller/SubscriptionPlanController.java
 /home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-backend/src/main/java/bj/gazfacile/controller/TotpController.java

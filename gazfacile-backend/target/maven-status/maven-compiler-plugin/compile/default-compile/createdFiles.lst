@@ -8,7 +8,6 @@ bj/gazfacile/dto/StockUpdateDTO.class
 bj/gazfacile/exception/OtpProviderException.class
 bj/gazfacile/controller/ConsultationController.class
 bj/gazfacile/repository/AvisRepository.class
-bj/gazfacile/controller/SetupController.class
 bj/gazfacile/dto/PaiementInitDTO.class
 bj/gazfacile/service/AdminService.class
 bj/gazfacile/service/CPassOtpService.class

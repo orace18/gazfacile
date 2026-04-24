@@ -35,8 +35,11 @@ public class CommandeController {
      */
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Commande> creer(@Valid @RequestBody CommandeDTO dto) {
-        Commande commande = commandeService.creer(dto);
+    public ResponseEntity<Commande> creer(
+            @Valid @RequestBody CommandeDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        // Le téléphone client est extrait du JWT — le champ DTO est ignoré pour éviter l'usurpation
+        Commande commande = commandeService.creer(dto, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(commande);
     }
 

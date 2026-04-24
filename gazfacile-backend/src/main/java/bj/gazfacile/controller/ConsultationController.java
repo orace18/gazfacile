@@ -24,6 +24,11 @@ public class ConsultationController {
 
     private final ConsultationService consultationService;
 
+    /** Format UUID strict pour le fingerprint. */
+    private static final java.util.regex.Pattern UUID_PATTERN =
+        java.util.regex.Pattern.compile(
+            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+
     /**
      * Enregistre une consultation et retourne le quota restant.
      * Appelé quand un visiteur clique sur "Voir les détails" d'un revendeur.
@@ -32,6 +37,7 @@ public class ConsultationController {
     public ResponseEntity<ConsultationDTO> consulter(
             @RequestParam String fingerprint,
             HttpServletRequest request) {
+        validerFingerprint(fingerprint);
         String ip = extractIp(request);
         return ResponseEntity.ok(consultationService.verifierEtIncrementer(fingerprint, ip));
     }
@@ -44,6 +50,7 @@ public class ConsultationController {
     public ResponseEntity<ConsultationDTO> statut(
             @RequestParam String fingerprint,
             HttpServletRequest request) {
+        validerFingerprint(fingerprint);
         String ip = extractIp(request);
         return ResponseEntity.ok(consultationService.getStatut(fingerprint, ip));
     }
@@ -68,15 +75,29 @@ public class ConsultationController {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /** Extrait l'IP réelle en tenant compte des proxys (Render, Netlify, etc.). */
+    /**
+     * Valide que le fingerprint est un UUID v4 strict.
+     * Empêche l'injection de chaînes arbitraires longues ou malformées.
+     */
+    private void validerFingerprint(String fingerprint) {
+        if (fingerprint == null || !UUID_PATTERN.matcher(fingerprint).matches()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST,
+                "Fingerprint invalide : format UUID attendu");
+        }
+    }
+
+    /**
+     * Extrait l'IP réelle.
+     * On prend la DERNIÈRE IP de X-Forwarded-For (ajoutée par le proxy de confiance),
+     * pas la première (qui peut être forgée par le client).
+     */
     private String extractIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
+            String[] parts = forwarded.split(",");
+            // Dernière entrée = ajoutée par le proxy le plus proche (trusté)
+            return parts[parts.length - 1].trim();
         }
         return request.getRemoteAddr();
     }

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["angular:styles/component:css;1f3c15dc0d948b8419a60f020a73735a0673ba96b2118ad652c388b6aeffbf8a;/home/user/workspace/personel/workspace-orace/gazfacile/gazfacile-frontend/src/app/app.component.ts"],
+  "sourcesContent": ["\n    .contenu-principal {\n      min-height: calc(100vh - 64px);\n      background-color: var(--color-bg);\n      color: var(--color-text);\n    }\n  "],
+  "mappings": ";AACI,CAAC;AACC,cAAY,KAAK,MAAM,EAAE;AACzB,oBAAkB,IAAI;AACtB,SAAO,IAAI;AACb;",
+  "names": []
+}

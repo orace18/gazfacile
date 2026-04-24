@@ -196,12 +196,17 @@ public class AuthService {
     }
 
     private boolean formatPinValide(User utilisateur, String pin) {
-        if (PIN_6_CHIFFRES.matcher(pin).matches()) {
+        if (pin == null) return false;
+        // Format standard : 6 chiffres
+        if (PIN_6_CHIFFRES.matcher(pin).matches()) return true;
+        // Legacy admin : alphanumérique 8-20 chars (transition — loggé pour forcer la migration)
+        if (utilisateur.getRoles().contains(Role.ADMIN)
+                && CODE_ADMIN_LEGACY.matcher(pin).matches()) {
+            log.warn("[Sécurité] Admin {} utilise un PIN legacy — changer via /auth/pin/setup",
+                    utilisateur.getTelephone());
             return true;
         }
-
-        return utilisateur.getRoles().contains(Role.ADMIN)
-                && CODE_ADMIN_LEGACY.matcher(pin).matches();
+        return false;
     }
 
     // ── TOTP 2FA ──────────────────────────────────────────────────────────────

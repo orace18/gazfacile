@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -24,10 +26,15 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final AuthService authService;
     private final GoogleTokenService googleTokenService;
+
+    /** Origine autorisée configurée — seule valeur acceptée pour les flows WebAuthn. */
+    @Value("${webauthn.rp.origin}")
+    private String configuredOrigin;
 
     // ── WebAuthn (Passkeys) — Inscription ─────────────────────────────────────
 
@@ -180,21 +187,20 @@ public class AuthController {
     }
 
     /**
-     * Extrait l'origine depuis le header HTTP "Origin".
-     * Si absent (appel direct, Postman…), reconstruit depuis scheme + host + port.
-     * Retombe sur la valeur configurée en dernier recours.
+     * Retourne l'origine pour le flow WebAuthn.
+     * Valide que le header Origin de la requête correspond à l'origine configurée.
+     * Si non-concordance (appel Postman, outil API) → utilise l'origine configurée.
+     * Cela empêche qu'un attaquant forge un rpId arbitraire via le header Origin.
      */
     private String resolveOrigin(HttpServletRequest request) {
         String origin = request.getHeader("Origin");
         if (origin != null && !origin.isBlank()) {
-            return origin;
+            if (origin.equals(configuredOrigin)) {
+                return origin;
+            }
+            log.warn("[WebAuthn] Origine '{}' ne correspond pas à l'origine configurée '{}' — origin configurée utilisée",
+                    origin, configuredOrigin);
         }
-        // Fallback : reconstruire depuis les composants de la requête
-        String scheme = request.getScheme();
-        String host = request.getServerName();
-        int port = request.getServerPort();
-        boolean defaultPort = ("http".equals(scheme) && port == 80)
-                || ("https".equals(scheme) && port == 443);
-        return defaultPort ? scheme + "://" + host : scheme + "://" + host + ":" + port;
+        return configuredOrigin;
     }
 }

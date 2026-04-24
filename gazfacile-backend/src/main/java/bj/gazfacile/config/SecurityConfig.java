@@ -39,8 +39,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Page d'erreur Spring Boot (évite Access Denied en cascade)
                 .requestMatchers("/error").permitAll()
-                // Swagger / OpenAPI
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                // Swagger / OpenAPI — restreint au rôle ADMIN en production
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").hasRole("ADMIN")
                 // Routes publiques WebSocket
                 .requestMatchers("/ws/**").permitAll()
                 // Routes d'authentification
@@ -51,8 +51,8 @@ public class SecurityConfig {
                 // TOTP setup/confirm/disable : ADMIN uniquement
                 .requestMatchers("/api/v1/auth/totp/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/auth/**").permitAll()
-                // Setup initial admin (se bloque automatiquement si admin existe)
-                .requestMatchers(HttpMethod.POST, "/api/v1/setup/admin").permitAll()
+                // Endpoints OTP (envoi/vérification SMS avant inscription — flux public)
+                .requestMatchers("/api/v1/otp/**", "/api/otp/**").permitAll()
                 // Webhook FedaPay : public (FedaPay appelle sans token JWT)
                 .requestMatchers(HttpMethod.POST, "/api/v1/paiement/webhook").permitAll()
                 // Consultation transaction par référence : authentifiée (contient des PII client)

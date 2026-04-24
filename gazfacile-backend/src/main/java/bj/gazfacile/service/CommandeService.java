@@ -59,12 +59,13 @@ public class CommandeService {
      * @param dto données de la commande
      * @return la commande créée
      */
-    public Commande creer(CommandeDTO dto) {
+    public Commande creer(CommandeDTO dto, String telephoneJwt) {
         // Vérifier que le revendeur existe
         Revendeur revendeur = revendeurRepository.findById(dto.revendeurId())
                 .orElseThrow(() -> new ResourceNotFoundException("Revendeur", dto.revendeurId()));
 
-        String clientTelephone = phoneNumberService.normaliserTelephoneLocal(dto.clientTelephone());
+        // Téléphone issu du JWT — le champ DTO est ignoré pour prévenir l'usurpation d'identité
+        String clientTelephone = phoneNumberService.normaliserTelephoneLocal(telephoneJwt);
         MarqueGaz marque = parseMarque(dto.marque());
         FormatBouteille format = parseFormat(dto.taille());
 

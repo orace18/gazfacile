@@ -68,15 +68,38 @@ public class AdminController {
     public ResponseEntity<Revendeur> setAbonnement(
             @PathVariable String id,
             @RequestBody Map<String, String> body) {
-        Revendeur revendeur = revendeurService.getById(id);
-        Abonnement plan = Abonnement.valueOf(body.get("plan"));
-        revendeur.setAbonnement(plan);
-        if (plan != Abonnement.GRATUIT) {
-            int jours = body.containsKey("jours") ? Integer.parseInt(body.get("jours")) : 30;
-            revendeur.setAbonnementExpiry(LocalDateTime.now().plusDays(jours));
-        } else {
-            revendeur.setAbonnementExpiry(null);
+
+        String planStr = body.get("plan");
+        if (planStr == null || planStr.isBlank()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "Champ 'plan' obligatoire");
         }
+        Abonnement plan;
+        try {
+            plan = Abonnement.valueOf(planStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "Valeur 'plan' invalide");
+        }
+
+        int jours = 30;
+        if (body.containsKey("jours")) {
+            try {
+                jours = Integer.parseInt(body.get("jours"));
+            } catch (NumberFormatException e) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.BAD_REQUEST, "Valeur 'jours' invalide");
+            }
+            if (jours < 1 || jours > 3650) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.BAD_REQUEST, "'jours' doit être entre 1 et 3650");
+            }
+        }
+
+        Revendeur revendeur = revendeurService.getById(id);
+        revendeur.setAbonnement(plan);
+        revendeur.setAbonnementExpiry(plan != Abonnement.GRATUIT
+                ? LocalDateTime.now().plusDays(jours) : null);
         revendeur.setUpdatedAt(LocalDateTime.now());
         return ResponseEntity.ok(revendeurRepository.save(revendeur));
     }

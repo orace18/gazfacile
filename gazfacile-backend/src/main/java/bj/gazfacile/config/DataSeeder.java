@@ -1,25 +1,101 @@
 package bj.gazfacile.config;
 
 import bj.gazfacile.model.SubscriptionPlan;
+import bj.gazfacile.model.User;
 import bj.gazfacile.model.enums.PlanType;
+import bj.gazfacile.model.enums.Role;
 import bj.gazfacile.repository.SubscriptionPlanRepository;
+import bj.gazfacile.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
+/**
+ * Initialisation des données au démarrage :
+ * - Plans d'abonnement (si absents)
+ * - Compte administrateur (si absent), depuis les variables d'environnement ADMIN_PHONE et ADMIN_EMAIL
+ *
+ * Le PIN généré est affiché UNE SEULE FOIS dans les logs serveur (niveau WARN pour visibilité).
+ * Il n'est JAMAIS transmis via HTTP.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class DataSeeder {
 
+    private static final String CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     private final SubscriptionPlanRepository planRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Value("${admin.telephone:}")
+    private String adminTelephone;
+
+    @Value("${admin.email:}")
+    private String adminEmail;
+
+    @Value("${admin.nom:Admin GazFacile}")
+    private String adminNom;
 
     @PostConstruct
     public void seed() {
+        seedAdmin();
         seedPlans();
+    }
+
+    /**
+     * Crée le compte admin au démarrage si aucun n'existe.
+     * Le téléphone et l'email viennent de ADMIN_PHONE / ADMIN_EMAIL (env vars).
+     * Le PIN généré aléatoirement est affiché dans les logs serveur — jamais via HTTP.
+     */
+    private void seedAdmin() {
+        if (userRepository.existsByRolesContaining(Role.ADMIN)) {
+            return;
+        }
+
+        if (adminTelephone == null || adminTelephone.isBlank()) {
+            log.error("[Admin] Variable d'environnement ADMIN_PHONE non définie — compte admin non créé");
+            return;
+        }
+
+        String pin = genererPin();
+        User admin = User.builder()
+                .telephone(adminTelephone)
+                .email(adminEmail.isBlank() ? null : adminEmail)
+                .pinHash(passwordEncoder.encode(pin))
+                .nom(adminNom)
+                .roles(Set.of(Role.ADMIN))
+                .actif(true)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        userRepository.save(admin);
+
+        // WARN pour s'assurer que le PIN est visible dans les logs agrégés
+        log.warn("╔══════════════════════════════════════════════════════╗");
+        log.warn("║  COMPTE ADMIN CRÉÉ — CONSERVEZ CE PIN EN LIEU SÛR  ║");
+        log.warn("║  Téléphone : {}                              ║", adminTelephone);
+        log.warn("║  PIN       : {}                                 ║", pin);
+        log.warn("║  Ce message n'apparaîtra plus jamais               ║");
+        log.warn("╚══════════════════════════════════════════════════════╝");
+    }
+
+    private static String genererPin() {
+        StringBuilder sb = new StringBuilder(12);
+        for (int i = 0; i < 12; i++) {
+            sb.append(CHARS.charAt(SECURE_RANDOM.nextInt(CHARS.length())));
+        }
+        return sb.toString();
     }
 
     private void seedPlans() {

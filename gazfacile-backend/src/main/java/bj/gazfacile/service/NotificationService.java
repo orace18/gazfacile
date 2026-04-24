@@ -50,9 +50,11 @@ public class NotificationService {
 
         notif = notificationRepository.save(notif);
 
-        // Diffuser en temps reel vers le canal personnel de l'utilisateur
-        messagingTemplate.convertAndSend(
-            "/topic/notifications/" + destinataireId,
+        // File PRIVÉE par utilisateur — seul le client authentifié reçoit ses notifs.
+        // convertAndSendToUser → /user/{destinataireId}/queue/notifications
+        messagingTemplate.convertAndSendToUser(
+            destinataireId,
+            "/queue/notifications",
             Map.of(
                 "id",          notif.getId(),
                 "type",        type.name(),
