@@ -20,7 +20,10 @@ import {
   CommandeFormComponent,
   DialogCommandeData
 } from '../commande/commande-form/commande-form.component';
-import { Revendeur } from '../../core/models/revendeur.model';
+import { Revendeur, Role } from '../../core/models/revendeur.model';
+import {
+  FreeConsultationDialogComponent
+} from '../../shared/components/free-consultation-dialog/free-consultation-dialog.component';
 
 @Component({
   selector: 'app-home',
@@ -59,15 +62,22 @@ import { Revendeur } from '../../core/models/revendeur.model';
 
         @if (consultationService.statut().limite > 0) {
           <div class="quota-bande">
-            <mat-icon>visibility</mat-icon>
-            <span>
-              {{ consultationService.statut().consultationsRestantes }}
-              consultation{{ consultationService.statut().consultationsRestantes > 1 ? 's' : '' }}
-              restante{{ consultationService.statut().consultationsRestantes > 1 ? 's' : '' }}
-              @if (consultationService.statut().dateExpiration) {
-                &nbsp;·&nbsp;Expire le {{ consultationService.statut().dateExpiration | date:'dd/MM/yyyy' }}
-              }
-            </span>
+            <div class="quota-icone">
+              <mat-icon>visibility</mat-icon>
+            </div>
+            <div class="quota-texte">
+              <strong>Consultations gratuites</strong>
+              <span>
+                Vous avez
+                <b>{{ consultationService.statut().consultationsRestantes }}</b>
+                consultation{{ consultationService.statut().consultationsRestantes > 1 ? 's' : '' }}
+                restante{{ consultationService.statut().consultationsRestantes > 1 ? 's' : '' }}.
+                Après, un abonnement sera nécessaire.
+              </span>
+            </div>
+            <a routerLink="/abonnement/renouveler" class="quota-action">
+              S'abonner
+            </a>
           </div>
         }
 
@@ -425,20 +435,71 @@ import { Revendeur } from '../../core/models/revendeur.model';
     .quota-bande {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 32px;
-      background: color-mix(in srgb, var(--color-accent) 20%, var(--color-primary));
-      color: rgba(255,255,255,0.95);
+      gap: 14px;
+      padding: 14px 32px;
+      background: #fff8df;
+      border-bottom: 1px solid #f2d27a;
+      color: #2f2610;
       font-family: 'Montserrat', sans-serif;
-      font-size: 0.78rem;
-      font-weight: 600;
+      flex-shrink: 0;
+      box-shadow: 0 2px 10px rgba(47, 38, 16, 0.08);
+    }
+
+    .quota-icone {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--color-accent);
+      color: #3a2a00;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       flex-shrink: 0;
 
       mat-icon {
+        font-size: 1.35rem;
+        width: 1.35rem;
+        height: 1.35rem;
+      }
+    }
+
+    .quota-texte {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+      flex: 1;
+
+      strong {
+        font-size: 0.92rem;
+        color: #2f2610;
+      }
+
+      span {
+        font-size: 0.82rem;
+        color: #67572d;
+        line-height: 1.35;
+      }
+
+      b {
+        color: #111827;
         font-size: 1rem;
-        width: 1rem;
-        height: 1rem;
-        flex-shrink: 0;
+      }
+    }
+
+    .quota-action {
+      border: 1px solid #a77c00;
+      color: #5d4500;
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-decoration: none;
+      white-space: nowrap;
+      background: rgba(255,255,255,0.6);
+
+      &:hover {
+        background: white;
       }
     }
 
@@ -469,6 +530,7 @@ import { Revendeur } from '../../core/models/revendeur.model';
       .panneau-liste { flex: 1; max-width: 100%; height: auto; min-height: 400px; }
       .panneau-liste.avec-carte { border-top: 2px solid var(--color-border); }
       .heros-titre { font-size: 1.6rem; }
+      .quota-bande { padding: 12px 16px; }
     }
 
     @media (max-width: 480px) {
@@ -476,6 +538,8 @@ import { Revendeur } from '../../core/models/revendeur.model';
       .heros-titre { font-size: 1.3rem; }
       .heros-desc { display: none; }
       .marques-logos { display: none; }
+      .quota-bande { align-items: flex-start; }
+      .quota-action { display: none; }
     }
 
     /* ══════════════════════════════════════════════
@@ -1111,6 +1175,8 @@ export class HomeComponent implements OnInit {
   ngOnInit(): void {
     if (this.authService.estConnecte()) {
       this.revendeurService.loadAll();
+      this.consultationService.chargerStatut();
+      window.setTimeout(() => this.afficherPopupConsultationsGratuites(), 800);
     }
   }
 
@@ -1145,6 +1211,30 @@ export class HomeComponent implements OnInit {
           'OK',
           { duration: 5000 }
         );
+      }
+    });
+  }
+
+  private afficherPopupConsultationsGratuites(): void {
+    const user = this.authService.currentUser();
+    const statut = this.consultationService.statut();
+
+    if (!user?.roles?.includes(Role.CLIENT) || statut.limite <= 0 || statut.consultationsRestantes <= 0) {
+      return;
+    }
+
+    const clePopup = `gf_free_consult_popup_${user.telephone}`;
+    if (localStorage.getItem(clePopup)) {
+      return;
+    }
+
+    localStorage.setItem(clePopup, '1');
+    this.dialog.open(FreeConsultationDialogComponent, {
+      width: '440px',
+      maxWidth: '95vw',
+      data: {
+        restantes: statut.consultationsRestantes,
+        limite: statut.limite
       }
     });
   }

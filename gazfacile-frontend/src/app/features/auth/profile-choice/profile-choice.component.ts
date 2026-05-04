@@ -195,7 +195,7 @@ export class ProfileChoiceComponent {
   choisir(role: 'CLIENT' | 'REVENDEUR'): void {
     this.state.setRole(Role[role]);
     if (role === 'CLIENT') {
-      this.router.navigate(['/auth/register/client']);
+      this.router.navigate(['/auth/register/form']);
     } else {
       this.router.navigate(['/auth/register/revendeur']);
     }

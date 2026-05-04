@@ -37,7 +37,7 @@ type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
         <div class="entete-auth">
           <img src="assets/logo.svg" alt="GazFacile" class="logo-auth">
           <h1>Créer mon compte</h1>
-          <p class="sous-titre">Inscription rapide avant le paiement.</p>
+          <p class="sous-titre">Inscription rapide pour trouver du gaz près de chez vous.</p>
         </div>
 
         @if (inscriptionState.resumeLabel()) {
@@ -628,7 +628,6 @@ export class RegisterFormComponent implements OnInit, OnDestroy {
         })
       );
 
-      this.inscriptionState.reset();
       await this.lancerSouscription();
     } catch (err: any) {
       if (err?.name === 'NotAllowedError') {
@@ -666,7 +665,6 @@ export class RegisterFormComponent implements OnInit, OnDestroy {
         this.authService.setupPin({ pin: this.pinControl.value! })
       );
 
-      this.inscriptionState.reset();
       await this.lancerSouscription();
     } catch (err: any) {
       this.erreur = err?.message || 'Erreur lors de l\'inscription';
@@ -689,7 +687,6 @@ export class RegisterFormComponent implements OnInit, OnDestroy {
         })
       );
 
-      this.inscriptionState.reset();
       await this.lancerSouscription();
     } catch (err: any) {
       this.erreur = err?.message || 'Erreur lors de l\'inscription';
@@ -702,6 +699,7 @@ export class RegisterFormComponent implements OnInit, OnDestroy {
   private async lancerSouscription(): Promise<void> {
     const plan = this.inscriptionState.selectedPlan();
     if (!plan) {
+      this.inscriptionState.reset();
       this.envoi = false;
       this.router.navigate(['/']);
       return;
@@ -711,6 +709,7 @@ export class RegisterFormComponent implements OnInit, OnDestroy {
       const response = await firstValueFrom(
         this.subscriptionService.subscribe(plan.id, this.telephone)
       );
+      this.inscriptionState.reset();
       this.paiementService.redirectVersCheckout(response.checkoutUrl);
     } catch (err: any) {
       this.envoi = false;

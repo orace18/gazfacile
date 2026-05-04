@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
 import { revendeurGuard } from './core/guards/revendeur.guard';
-import { inscriptionGuard, inscriptionClientGuard, inscriptionPlanGuard } from './core/guards/inscription.guard';
+import { inscriptionGuard, inscriptionPlanGuard } from './core/guards/inscription.guard';
 
 export const routes: Routes = [
   {
@@ -64,10 +64,10 @@ export const routes: Routes = [
   {
     path: 'auth/register/client/plans',
     loadComponent: () =>
-      import('./features/auth/client-plan/client-plan.component').then(
-        m => m.ClientPlanComponent
+      import('./features/auth/register-form/register-form.component').then(
+        m => m.RegisterFormComponent
       ),
-    canActivate: [inscriptionGuard, inscriptionClientGuard]
+    canActivate: [inscriptionGuard]
   },
   {
     path: 'auth/register/revendeur',

@@ -208,6 +208,6 @@ export class ClientNeedComponent {
 
   choisir(need: 'CONSULT' | 'LIVRAISON'): void {
     this.state.setClientNeed(ClientNeed[need]);
-    this.router.navigate(['/auth/register/client/plans']);
+    this.router.navigate(['/auth/register/form']);
   }
 }

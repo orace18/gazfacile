@@ -2,6 +2,8 @@ package bj.gazfacile.service;
 
 import bj.gazfacile.dto.ConsultationDTO;
 import bj.gazfacile.model.ConsultationSession;
+import bj.gazfacile.model.User;
+import bj.gazfacile.model.enums.PlanType;
 import bj.gazfacile.repository.ConsultationRepository;
 import bj.gazfacile.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -108,6 +110,49 @@ class ConsultationServiceTest {
         assertFalse(result.autorise());
         assertEquals(0, result.consultationsRestantes());
         verify(consultationRepository, never()).save(any());
+    }
+
+    @Test
+    void consulterAuth_shouldUseFreeQuota_whenClientHasNoConsultSubscription() {
+        User user = User.builder()
+                .id("user-1")
+                .telephone("0197000000")
+                .nom("Client Test")
+                .build();
+        ConsultationSession session = session("USER:user-1", "AUTH:user-1", 0);
+
+        when(userRepository.findByTelephone(user.getTelephone())).thenReturn(Optional.of(user));
+        when(subscriptionService.getActiveSubscription(user.getId(), PlanType.CLIENT_CONSULT))
+                .thenReturn(Optional.empty());
+        when(consultationRepository.findByFingerprint("USER:user-1")).thenReturn(Optional.of(session));
+        when(consultationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ConsultationDTO result = consultationService.consulterAuth(user.getTelephone());
+
+        assertTrue(result.autorise());
+        assertEquals(2, result.consultationsRestantes());
+        assertEquals(ConsultationSession.LIMITE_GRATUITE, result.limite());
+        assertEquals(1, session.getNombreConsultations());
+    }
+
+    @Test
+    void getStatutAuth_shouldReturnFreeQuota_whenClientHasNoConsultSubscription() {
+        User user = User.builder()
+                .id("user-2")
+                .telephone("0197000001")
+                .nom("Client Test")
+                .build();
+
+        when(userRepository.findByTelephone(user.getTelephone())).thenReturn(Optional.of(user));
+        when(subscriptionService.getActiveSubscription(user.getId(), PlanType.CLIENT_CONSULT))
+                .thenReturn(Optional.empty());
+        when(consultationRepository.findByFingerprint("USER:user-2")).thenReturn(Optional.empty());
+
+        ConsultationDTO result = consultationService.getStatutAuth(user.getTelephone());
+
+        assertTrue(result.autorise());
+        assertEquals(ConsultationSession.LIMITE_GRATUITE, result.consultationsRestantes());
+        assertEquals(ConsultationSession.LIMITE_GRATUITE, result.limite());
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

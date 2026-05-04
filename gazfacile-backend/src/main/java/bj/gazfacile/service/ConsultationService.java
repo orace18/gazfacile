@@ -15,13 +15,13 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
- * Gère le quota de consultations gratuites pour les clients anonymes.
+ * Gère le quota de consultations gratuites et les quotas d'abonnement client.
  *
  * Stratégie anti-contournement :
  *  1. Fingerprint UUID stocké dans le localStorage du navigateur (principal)
  *  2. IP en fallback : si l'IP a déjà atteint la limite, bloquer même avec un nouveau fingerprint
  *
- * Un utilisateur authentifié n'est jamais bloqué (vérification côté frontend via JWT).
+ * Un utilisateur authentifié sans abonnement CLIENT_CONSULT dispose aussi du quota gratuit.
  */
 @Service
 @RequiredArgsConstructor
@@ -45,8 +45,7 @@ public class ConsultationService {
                 user.getId(), PlanType.CLIENT_CONSULT);
 
         if (opt.isEmpty()) {
-            log.debug("[Consultation-Auth] Pas d'abonnement CONSULT actif pour {}", telephone);
-            return new ConsultationDTO(false, 0, 0);
+            return verifierEtIncrementerCompte(user);
         }
 
         Subscription sub = opt.get();
@@ -78,7 +77,7 @@ public class ConsultationService {
                 user.getId(), PlanType.CLIENT_CONSULT);
 
         if (opt.isEmpty()) {
-            return new ConsultationDTO(false, 0, 0);
+            return getStatutCompte(user);
         }
 
         Subscription sub = opt.get();
@@ -154,6 +153,42 @@ public class ConsultationService {
                 .derniereConsultation(LocalDateTime.now())
                 .build();
         return consultationRepository.save(session);
+    }
+
+    private ConsultationDTO verifierEtIncrementerCompte(User user) {
+        ConsultationSession session = consultationRepository.findByFingerprint(fingerprintCompte(user))
+                .orElseGet(() -> creerSession(fingerprintCompte(user), "AUTH:" + user.getId()));
+
+        if (session.getNombreConsultations() >= ConsultationSession.LIMITE_GRATUITE) {
+            return new ConsultationDTO(false, 0, ConsultationSession.LIMITE_GRATUITE);
+        }
+
+        session.setNombreConsultations(session.getNombreConsultations() + 1);
+        session.setDerniereConsultation(LocalDateTime.now());
+        session.setIpAddress("AUTH:" + user.getId());
+        consultationRepository.save(session);
+
+        int restantes = ConsultationSession.LIMITE_GRATUITE - session.getNombreConsultations();
+        log.debug("[Consultation-Auth-Free] {} — consultation gratuite {}/{}",
+                user.getTelephone(), session.getNombreConsultations(), ConsultationSession.LIMITE_GRATUITE);
+
+        return new ConsultationDTO(true, restantes, ConsultationSession.LIMITE_GRATUITE);
+    }
+
+    private ConsultationDTO getStatutCompte(User user) {
+        return consultationRepository.findByFingerprint(fingerprintCompte(user))
+                .map(s -> {
+                    boolean autorise = s.getNombreConsultations() < ConsultationSession.LIMITE_GRATUITE;
+                    int restantes = Math.max(0, ConsultationSession.LIMITE_GRATUITE - s.getNombreConsultations());
+                    return new ConsultationDTO(autorise, restantes, ConsultationSession.LIMITE_GRATUITE);
+                })
+                .orElseGet(() -> new ConsultationDTO(true,
+                        ConsultationSession.LIMITE_GRATUITE,
+                        ConsultationSession.LIMITE_GRATUITE));
+    }
+
+    private String fingerprintCompte(User user) {
+        return "USER:" + user.getId();
     }
 
     private boolean ipAtteintLimite(String ip, String fingerprintExclu) {
