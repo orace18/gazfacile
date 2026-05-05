@@ -8,8 +8,8 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.HexFormat;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +27,8 @@ import java.util.Map;
 @Service
 @Slf4j
 public class FedaPayService {
+
+    private static final long WEBHOOK_SIGNATURE_TOLERANCE_SECONDS = 300;
 
     @Value("${fedapay.api-key}")
     private String apiKey;
@@ -194,16 +196,59 @@ public class FedaPayService {
      */
     public boolean verifierSignatureWebhook(String payload, String signature) {
         try {
+            WebhookSignatureDetails details = extraireSignatureWebhook(signature);
+            if (details == null) {
+                return false;
+            }
+
+            long ageSeconds = Math.abs((System.currentTimeMillis() / 1000) - details.timestamp());
+            if (ageSeconds > WEBHOOK_SIGNATURE_TOLERANCE_SECONDS) {
+                log.warn("[FedaPay] Signature webhook expirée: âge {}s", ageSeconds);
+                return false;
+            }
+
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(webhookSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            byte[] hash = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+            byte[] hash = mac.doFinal((details.timestamp() + "." + payload).getBytes(StandardCharsets.UTF_8));
             String calcule = HexFormat.of().formatHex(hash);
-            return calcule.equals(signature);
+            return MessageDigest.isEqual(
+                    calcule.getBytes(StandardCharsets.UTF_8),
+                    details.signature().getBytes(StandardCharsets.UTF_8)
+            );
         } catch (Exception ex) {
             log.error("[FedaPay] Erreur vérification signature webhook: {}", ex.getMessage());
             return false;
         }
     }
+
+    private WebhookSignatureDetails extraireSignatureWebhook(String header) {
+        if (header == null || header.isBlank()) {
+            return null;
+        }
+
+        long timestamp = -1;
+        String signature = null;
+        for (String partie : header.split(",")) {
+            String[] cleValeur = partie.trim().split("=", 2);
+            if (cleValeur.length != 2) {
+                continue;
+            }
+            if ("t".equals(cleValeur[0])) {
+                timestamp = Long.parseLong(cleValeur[1]);
+            } else if ("s".equals(cleValeur[0])) {
+                signature = cleValeur[1];
+            }
+        }
+
+        if (timestamp < 0 || signature == null || signature.isBlank()) {
+            log.warn("[FedaPay] Header signature webhook mal formé");
+            return null;
+        }
+
+        return new WebhookSignatureDetails(timestamp, signature);
+    }
+
+    private record WebhookSignatureDetails(long timestamp, String signature) {}
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
