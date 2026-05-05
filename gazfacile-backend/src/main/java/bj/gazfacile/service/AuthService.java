@@ -420,7 +420,7 @@ public class AuthService {
         ResponseCookie cookie = ResponseCookie.from(COOKIE_REFRESH, rawRefreshToken)
                 .httpOnly(true)
                 .secure(true)
-                .sameSite("Strict")
+                .sameSite("None")
                 .path("/api/v1/auth")
                 .maxAge(Duration.ofMillis(refreshExpirationMs))
                 .build();
@@ -439,7 +439,7 @@ public class AuthService {
         ResponseCookie cookie = ResponseCookie.from(COOKIE_REFRESH, "")
                 .httpOnly(true)
                 .secure(true)
-                .sameSite("Strict")
+                .sameSite("None")
                 .path("/api/v1/auth")
                 .maxAge(0)
                 .build();

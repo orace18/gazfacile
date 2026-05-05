@@ -28,7 +28,7 @@ import java.util.Map;
 @Slf4j
 public class FedaPayService {
 
-    private static final long WEBHOOK_SIGNATURE_TOLERANCE_SECONDS = 300;
+    private static final long WEBHOOK_SIGNATURE_TOLERANCE_SECONDS = 600;
 
     @Value("${fedapay.api-key}")
     private String apiKey;

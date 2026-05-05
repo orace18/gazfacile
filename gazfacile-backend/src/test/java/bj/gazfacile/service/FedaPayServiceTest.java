@@ -36,7 +36,7 @@ class FedaPayServiceTest {
     void verifierSignatureWebhook_shouldRejectExpiredHeader() throws Exception {
         FedaPayService service = service();
         String payload = "{}";
-        long timestamp = (System.currentTimeMillis() / 1000) - 301;
+        long timestamp = (System.currentTimeMillis() / 1000) - 601;
         String signature = signature(timestamp, payload, SECRET);
 
         assertFalse(service.verifierSignatureWebhook(payload, "t=" + timestamp + ",s=" + signature));
