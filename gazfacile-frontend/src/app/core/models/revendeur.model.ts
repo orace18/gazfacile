@@ -95,6 +95,13 @@ export interface PaiementResponseDTO {
   checkoutUrl: string;
 }
 
+export interface PaiementStatutDTO {
+  reference: string;
+  montant: number;
+  type: TypeTransaction;
+  statut: StatutFedaPay;
+}
+
 // ── Freemium consultations ───────────────────────────────────────────────────
 
 export interface ConsultationStatut {

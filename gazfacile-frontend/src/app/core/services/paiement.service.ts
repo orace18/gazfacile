@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import {
   PaiementInitDTO,
   PaiementResponseDTO,
+  PaiementStatutDTO,
   Transaction,
   TypeTransaction
 } from '../models/revendeur.model';
@@ -50,6 +51,15 @@ export class PaiementService {
    */
   getTransaction(reference: string): Observable<Transaction> {
     return this.http.get<Transaction>(`${this.apiUrl}/transaction/${reference}`).pipe(
+      catchError(() => throwError(() => new Error('Transaction introuvable')))
+    );
+  }
+
+  /**
+   * Récupère un statut public minimal pour la page de confirmation FedaPay.
+   */
+  getStatutConfirmation(reference: string): Observable<PaiementStatutDTO> {
+    return this.http.get<PaiementStatutDTO>(`${this.apiUrl}/confirmation/${reference}`).pipe(
       catchError(() => throwError(() => new Error('Transaction introuvable')))
     );
   }

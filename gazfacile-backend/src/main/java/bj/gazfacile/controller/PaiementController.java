@@ -2,6 +2,7 @@ package bj.gazfacile.controller;
 
 import bj.gazfacile.dto.PaiementInitDTO;
 import bj.gazfacile.dto.PaiementResponseDTO;
+import bj.gazfacile.dto.PaiementStatutDTO;
 import bj.gazfacile.model.Transaction;
 import bj.gazfacile.service.FedaPayService;
 import bj.gazfacile.service.PaiementService;
@@ -122,5 +123,14 @@ public class PaiementController {
         boolean isAdmin = userDetails.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         return ResponseEntity.ok(paiementService.getByReference(reference, userDetails.getUsername(), isAdmin));
+    }
+
+    /**
+     * Statut public minimal pour la page de confirmation FedaPay.
+     * Ne retourne ni téléphone, ni email, ni token checkout.
+     */
+    @GetMapping("/confirmation/{reference}")
+    public ResponseEntity<PaiementStatutDTO> getStatutConfirmation(@PathVariable String reference) {
+        return ResponseEntity.ok(paiementService.getStatutPublicByReference(reference));
     }
 }

@@ -2,6 +2,7 @@ package bj.gazfacile.service;
 
 import bj.gazfacile.dto.PaiementInitDTO;
 import bj.gazfacile.dto.PaiementResponseDTO;
+import bj.gazfacile.dto.PaiementStatutDTO;
 import bj.gazfacile.exception.ResourceNotFoundException;
 import bj.gazfacile.model.Transaction;
 import bj.gazfacile.model.enums.StatutFedaPay;
@@ -136,6 +137,16 @@ public class PaiementService {
         }
 
         return synchroniserTransactionSiNecessaire(transaction);
+    }
+
+    /**
+     * Retourne un statut public minimal pour la page de confirmation FedaPay.
+     * La référence est non prédictible et déjà présente dans le callback_url.
+     */
+    public PaiementStatutDTO getStatutPublicByReference(String reference) {
+        Transaction transaction = transactionRepository.findByReference(reference)
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction introuvable : " + reference));
+        return PaiementStatutDTO.from(synchroniserTransactionSiNecessaire(transaction));
     }
 
     private static String normaliserPourComparaison(String telephone) {

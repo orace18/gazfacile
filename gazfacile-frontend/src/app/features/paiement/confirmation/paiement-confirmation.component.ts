@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { PaiementService } from '../../../core/services/paiement.service';
-import { StatutFedaPay, Transaction } from '../../../core/models/revendeur.model';
+import { PaiementStatutDTO, StatutFedaPay } from '../../../core/models/revendeur.model';
 
 /**
  * Page de confirmation de paiement.
@@ -180,7 +180,7 @@ export class PaiementConfirmationComponent implements OnInit, OnDestroy {
 
   readonly StatutFedaPay = StatutFedaPay;
 
-  transaction = signal<Transaction | null>(null);
+  transaction = signal<PaiementStatutDTO | null>(null);
   chargement = signal(true);
   erreur = signal<string | null>(null);
 
@@ -212,7 +212,7 @@ export class PaiementConfirmationComponent implements OnInit, OnDestroy {
       this.tentativeRafraichissement = 0;
     }
 
-    this.paiementService.getTransaction(reference).subscribe({
+    this.paiementService.getStatutConfirmation(reference).subscribe({
       next: t => {
         const statutAffiche = this.resoudreStatutAffiche(t.statut, statutUrl);
         this.transaction.set(

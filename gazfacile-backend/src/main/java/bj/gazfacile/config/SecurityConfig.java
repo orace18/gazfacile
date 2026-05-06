@@ -55,6 +55,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/otp/**", "/api/otp/**").permitAll()
                 // Webhook FedaPay : public (FedaPay appelle sans token JWT)
                 .requestMatchers(HttpMethod.POST, "/api/v1/paiement/webhook").permitAll()
+                // Confirmation FedaPay : publique, données minimales sans PII
+                .requestMatchers(HttpMethod.GET, "/api/v1/paiement/confirmation/**").permitAll()
                 // Consultation transaction par référence : authentifiée (contient des PII client)
                 // Autres routes paiement : authentifiées
                 .requestMatchers("/api/v1/paiement/**").authenticated()
