@@ -31,6 +31,13 @@ export class CommandeService {
     );
   }
 
+  /** Récupère les commandes du client connecté. */
+  getMesCommandes(): Observable<Commande[]> {
+    return this.http.get<Commande[]>(`${this.apiUrl}/client`).pipe(
+      catchError(() => throwError(() => new Error('Impossible de charger vos commandes')))
+    );
+  }
+
   /** Met à jour le statut d'une commande. */
   updateStatut(id: string, statut: StatutCommande): Observable<Commande> {
     return this.http.patch<Commande>(`${this.apiUrl}/${id}/statut`, { statutCommande: statut }).pipe(

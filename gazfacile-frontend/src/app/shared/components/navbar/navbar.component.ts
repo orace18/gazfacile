@@ -67,6 +67,13 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
           </a>
         }
 
+        @if (authService.hasRole(Role.CLIENT)) {
+          <a mat-button routerLink="/client/commandes" routerLinkActive="actif">
+            <mat-icon>receipt_long</mat-icon>
+            Mes commandes
+          </a>
+        }
+
         @if (!authService.estConnecte()) {
           <a mat-button routerLink="/auth/login">Connexion</a>
           <a mat-raised-button routerLink="/auth/register" class="btn-register">
@@ -120,6 +127,12 @@ import { NotificationBellComponent } from '../../../features/notifications/notif
           <a mat-menu-item routerLink="/admin">
             <mat-icon>dashboard</mat-icon>
             Dashboard Admin
+          </a>
+        }
+        @if (authService.hasRole(Role.CLIENT)) {
+          <a mat-menu-item routerLink="/client/commandes">
+            <mat-icon>receipt_long</mat-icon>
+            Mes commandes
           </a>
         }
         @if (!authService.estConnecte()) {

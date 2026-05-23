@@ -60,6 +60,16 @@ public class CommandeController {
     }
 
     /**
+     * Retourne les commandes du client connecté.
+     */
+    @GetMapping("/client")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<Commande>> getByClient(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(commandeService.getByClient(userDetails.getUsername()));
+    }
+
+    /**
      * Met à jour le statut d'une commande.
      * Seul le revendeur propriétaire ou un admin peut modifier le statut.
      */

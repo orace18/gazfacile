@@ -9,7 +9,6 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { CommandeService } from '../../../core/services/commande.service';
 import { PaiementService } from '../../../core/services/paiement.service';
@@ -49,8 +48,7 @@ type EtapeCommande = 'choix-abonnement' | 'plans-abonnement' | 'formulaire';
     MatRadioModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatProgressSpinnerModule
   ],
   template: `
     <div class="dialog-commande">
@@ -260,6 +258,16 @@ type EtapeCommande = 'choix-abonnement' | 'plans-abonnement' | 'formulaire';
                 <span>Total estimé</span>
                 <span class="montant-total">{{ totalEstime | number:'1.0-0' }} FCFA</span>
               </div>
+              @if (formulaire.get('modePaiement')?.value === ModePaiement.ESPECES) {
+                <div class="ligne-prix acompte">
+                  <span>Acompte à payer maintenant (25%)</span>
+                  <span>{{ acompteEstime | number:'1.0-0' }} FCFA</span>
+                </div>
+                <div class="ligne-prix solde">
+                  <span>Solde à la livraison</span>
+                  <span>{{ soldeLivraisonEstime | number:'1.0-0' }} FCFA</span>
+                </div>
+              }
               <div class="recap-note">
                 Livraison gratuite jusqu'à 5 km, puis 200 FCFA par km entamé.
               </div>
@@ -331,14 +339,19 @@ type EtapeCommande = 'choix-abonnement' | 'plans-abonnement' | 'formulaire';
                       <mat-icon>payments</mat-icon>
                     </div>
                     <div class="paiement-info">
-                      <span class="paiement-nom">Espèces à la livraison</span>
-                      <span class="paiement-desc">Paiement en cash au moment de la livraison</span>
+                      <span class="paiement-nom">Paiement à la livraison</span>
+                      <span class="paiement-desc">Acompte 25% maintenant, solde en cash à la livraison</span>
                     </div>
                   </div>
                 </mat-radio-button>
               </mat-radio-group>
 
-              @if (formulaire.get('modePaiement')?.value !== ModePaiement.ESPECES) {
+              @if (formulaire.get('modePaiement')?.value === ModePaiement.ESPECES) {
+                <div class="info-fedapay info-acompte">
+                  <mat-icon>info</mat-icon>
+                  La commande sera prise en compte après paiement de l'acompte via FedaPay.
+                </div>
+              } @else {
                 <div class="info-fedapay">
                   <mat-icon>info</mat-icon>
                   Le montant final payé sera celui calculé côté serveur selon le catalogue et votre position GPS.
@@ -375,9 +388,9 @@ type EtapeCommande = 'choix-abonnement' | 'plans-abonnement' | 'formulaire';
             @if (envoi) {
               <mat-spinner diameter="18"></mat-spinner>
             } @else {
-              <mat-icon>{{ formulaire.get('modePaiement')?.value === ModePaiement.ESPECES ? 'check_circle' : 'open_in_new' }}</mat-icon>
+              <mat-icon>open_in_new</mat-icon>
             }
-            {{ formulaire.get('modePaiement')?.value === ModePaiement.ESPECES ? 'Confirmer la commande' : 'Confirmer et payer' }}
+            {{ formulaire.get('modePaiement')?.value === ModePaiement.ESPECES ? "Payer l'acompte" : 'Confirmer et payer' }}
           </button>
         }
       </mat-dialog-actions>
@@ -722,6 +735,16 @@ type EtapeCommande = 'choix-abonnement' | 'plans-abonnement' | 'formulaire';
         font-weight: 600;
         color: var(--color-text);
       }
+
+      &.acompte {
+        color: var(--color-primary);
+        font-weight: 700;
+      }
+
+      &.solde {
+        color: var(--color-text);
+        font-size: 0.8rem;
+      }
     }
 
     .montant-total {
@@ -845,6 +868,12 @@ type EtapeCommande = 'choix-abonnement' | 'plans-abonnement' | 'formulaire';
       }
     }
 
+    .info-acompte {
+      background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+      border-left-color: var(--color-accent);
+      color: #7a5a00;
+    }
+
     .erreur {
       display: flex;
       align-items: center;
@@ -896,7 +925,6 @@ export class CommandeFormComponent implements OnInit {
   private readonly inscriptionState = inject(InscriptionStateService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
-  private readonly snackBar = inject(MatSnackBar);
   private readonly ngZone = inject(NgZone);
 
   readonly ModePaiement = ModePaiement;
@@ -962,6 +990,14 @@ export class CommandeFormComponent implements OnInit {
 
   get totalEstime(): number {
     return this.sousTotal + this.fraisDistanceEstimes;
+  }
+
+  get acompteEstime(): number {
+    return Math.ceil(this.totalEstime * 0.25);
+  }
+
+  get soldeLivraisonEstime(): number {
+    return Math.max(0, this.totalEstime - this.acompteEstime);
   }
 
   ngOnInit(): void {
@@ -1083,17 +1119,10 @@ export class CommandeFormComponent implements OnInit {
 
     this.commandeService.creer(dto).subscribe({
       next: commande => {
-        if (valeurs.modePaiement === ModePaiement.ESPECES) {
-          this.envoi = false;
-          this.snackBar.open('Commande passée. Paiement prévu à la livraison.', 'OK', { duration: 5000 });
-          this.dialogRef.close(commande);
-          return;
-        }
-
         this.paiementService.initierPaiement({
           type: TypeTransaction.COMMANDE,
-          montant: Math.round(commande.total),
-          description: `Commande gaz ${produit.marqueLibelle} ${produit.formatLibelle} × ${valeurs.quantite} — ${this.data.revendeur.nom}`,
+          montant: this.montantAPayer(commande),
+          description: this.descriptionPaiement(commande, produit, valeurs.quantite),
           clientTelephone: valeurs.clientTelephone,
           commandeId: commande.id
         }).subscribe({
@@ -1116,6 +1145,27 @@ export class CommandeFormComponent implements OnInit {
 
   getMarqueLabel(marque: string): string {
     return this.catalogue.find(produit => produit.marque === marque)?.marqueLibelle ?? marque;
+  }
+
+  private montantAPayer(commande: { modePaiement: ModePaiement; total: number; acompteRequis?: number }): number {
+    if (commande.modePaiement === ModePaiement.ESPECES) {
+      return commande.acompteRequis && commande.acompteRequis > 0
+        ? commande.acompteRequis
+        : Math.ceil(commande.total * 0.25);
+    }
+
+    return Math.round(commande.total);
+  }
+
+  private descriptionPaiement(
+    commande: { modePaiement: ModePaiement },
+    produit: ProduitRevendeur,
+    quantite: number
+  ): string {
+    const detail = `${produit.marqueLibelle} ${produit.formatLibelle} × ${quantite} — ${this.data.revendeur.nom}`;
+    return commande.modePaiement === ModePaiement.ESPECES
+      ? `Acompte 25% commande gaz ${detail}`
+      : `Commande gaz ${detail}`;
   }
 
   continuerSansAbonnement(): void {

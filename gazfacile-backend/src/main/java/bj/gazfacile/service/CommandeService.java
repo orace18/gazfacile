@@ -9,6 +9,7 @@ import bj.gazfacile.model.Subscription;
 import bj.gazfacile.model.User;
 import bj.gazfacile.model.enums.FormatBouteille;
 import bj.gazfacile.model.enums.MarqueGaz;
+import bj.gazfacile.model.enums.ModePaiement;
 import bj.gazfacile.model.enums.PlanType;
 import bj.gazfacile.model.enums.StatutCommande;
 import bj.gazfacile.model.enums.StatutPaiement;
@@ -113,6 +114,10 @@ public class CommandeService {
 
         // Générer une référence unique pour la commande
         String referenceCommande = "GF-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        long acompteRequis = calculerAcompteRequis(total, dto.modePaiement());
+        double montantRestant = dto.modePaiement() == ModePaiement.ESPECES
+                ? Math.max(0, total - acompteRequis)
+                : 0;
 
         Commande commande = Commande.builder()
                 .revendeurId(dto.revendeurId())
@@ -125,6 +130,8 @@ public class CommandeService {
                 .quantite(dto.quantite())
                 .prixUnitaire(prixUnitaire)
                 .total(total)
+                .acompteRequis(acompteRequis)
+                .montantRestant(montantRestant)
                 .distanceKm(distanceKm)
                 .fraisSupplementaires(fraisSupplementaires)
                 .modePaiement(dto.modePaiement())
@@ -144,6 +151,13 @@ public class CommandeService {
                 commande.getId(), total, String.format("%.1f", distanceKm), fraisSupplementaires,
                 livraisonSubscription.map(sub -> sub.getQuotaRestant() > 0).orElse(false));
         return commande;
+    }
+
+    private long calculerAcompteRequis(double total, ModePaiement modePaiement) {
+        if (modePaiement != ModePaiement.ESPECES) {
+            return 0;
+        }
+        return (long) Math.ceil(total * 0.25);
     }
 
     private MarqueGaz parseMarque(String value) {
@@ -204,6 +218,14 @@ public class CommandeService {
     }
 
     /**
+     * Retourne les commandes du client authentifié.
+     */
+    public List<Commande> getByClient(String telephoneAuthentifie) {
+        String clientTelephone = phoneNumberService.normaliserTelephoneLocal(telephoneAuthentifie);
+        return commandeRepository.findByClientTelephoneOrderByCreatedAtDesc(clientTelephone);
+    }
+
+    /**
      * Met à jour le statut d'une commande.
      * Vérifie que l'appelant est le revendeur propriétaire de la commande (sauf admin).
      */
@@ -226,6 +248,7 @@ public class CommandeService {
         if (nouveauStatut == StatutCommande.LIVREE) {
             commande.setLivraisonAt(LocalDateTime.now());
             commande.setStatutPaiement(StatutPaiement.PAYE);
+            commande.setMontantRestant(0);
         }
 
         commande = commandeRepository.save(commande);

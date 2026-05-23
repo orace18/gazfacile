@@ -4,8 +4,12 @@ import bj.gazfacile.dto.PaiementInitDTO;
 import bj.gazfacile.dto.PaiementResponseDTO;
 import bj.gazfacile.dto.PaiementStatutDTO;
 import bj.gazfacile.exception.ResourceNotFoundException;
+import bj.gazfacile.model.Commande;
 import bj.gazfacile.model.Transaction;
+import bj.gazfacile.model.enums.ModePaiement;
 import bj.gazfacile.model.enums.StatutFedaPay;
+import bj.gazfacile.model.enums.StatutCommande;
+import bj.gazfacile.model.enums.StatutPaiement;
 import bj.gazfacile.model.enums.TypeTransaction;
 import bj.gazfacile.repository.CommandeRepository;
 import bj.gazfacile.repository.TransactionRepository;
@@ -40,6 +44,21 @@ public class PaiementService {
      * Retourne l'URL de paiement à afficher au client.
      */
     public PaiementResponseDTO initierPaiement(PaiementInitDTO dto) {
+        return initierPaiementValide(dto);
+    }
+
+    /**
+     * Initie un paiement demandé depuis l'API publique en recalculant le montant des commandes.
+     */
+    public PaiementResponseDTO initierPaiement(PaiementInitDTO dto, String telephoneAuthentifie, boolean isAdmin) {
+        if (dto.getType() == TypeTransaction.COMMANDE) {
+            preparerPaiementCommande(dto, telephoneAuthentifie, isAdmin);
+        }
+
+        return initierPaiementValide(dto);
+    }
+
+    private PaiementResponseDTO initierPaiementValide(PaiementInitDTO dto) {
         String reference = genererReference(dto.getType().name());
 
         // 1. Créer la transaction FedaPay (callback URL avec la référence pour la page de confirmation)
@@ -84,6 +103,44 @@ public class PaiementService {
         log.info("[Paiement] Transaction initiée — Ref: {}, Montant: {} FCFA", reference, dto.getMontant());
 
         return PaiementResponseDTO.from(transaction);
+    }
+
+    private void preparerPaiementCommande(PaiementInitDTO dto, String telephoneAuthentifie, boolean isAdmin) {
+        if (dto.getCommandeId() == null || dto.getCommandeId().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La commande est obligatoire pour ce paiement");
+        }
+
+        Commande commande = commandeRepository.findById(dto.getCommandeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Commande", dto.getCommandeId()));
+
+        if (!isAdmin) {
+            String telCommande = normaliserPourComparaison(commande.getClientTelephone());
+            String telDemandeur = normaliserPourComparaison(telephoneAuthentifie);
+            if (!telCommande.equals(telDemandeur)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Accès refusé : cette commande ne vous appartient pas");
+            }
+        }
+
+        if (commande.getStatutPaiement() == StatutPaiement.PAYE
+                || commande.getStatutPaiement() == StatutPaiement.ACOMPTE_PAYE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cette commande a déjà un paiement validé");
+        }
+
+        dto.setMontant(calculerMontantCommandeAPayer(commande));
+        dto.setClientTelephone(commande.getClientTelephone());
+    }
+
+    private long calculerMontantCommandeAPayer(Commande commande) {
+        if (commande.getModePaiement() == ModePaiement.ESPECES) {
+            long acompte = commande.getAcompteRequis() > 0
+                    ? commande.getAcompteRequis()
+                    : (long) Math.ceil(commande.getTotal() * 0.25);
+            return Math.max(1, acompte);
+        }
+
+        return Math.max(1, Math.round(commande.getTotal()));
     }
 
     /**
@@ -202,10 +259,18 @@ public class PaiementService {
         // Paiement commande → mettre à jour le statut de paiement
         if (transaction.getType() == TypeTransaction.COMMANDE && transaction.getCommandeId() != null) {
             commandeRepository.findById(transaction.getCommandeId()).ifPresent(commande -> {
-                commande.setStatutPaiement(bj.gazfacile.model.enums.StatutPaiement.PAYE);
+                if (commande.getModePaiement() == ModePaiement.ESPECES
+                        && transaction.getMontant() < Math.round(commande.getTotal())) {
+                    commande.setStatutPaiement(StatutPaiement.ACOMPTE_PAYE);
+                    commande.setMontantRestant(Math.max(0, commande.getTotal() - transaction.getMontant()));
+                } else {
+                    commande.setStatutPaiement(StatutPaiement.PAYE);
+                    commande.setMontantRestant(0);
+                }
+                commande.setStatutCommande(StatutCommande.CONFIRMEE);
                 commande.setReferenceTransaction(transaction.getReference());
                 commandeRepository.save(commande);
-                log.info("[Paiement] Commande {} marquée PAYÉE", commande.getId());
+                log.info("[Paiement] Commande {} mise à jour après paiement {}", commande.getId(), transaction.getReference());
             });
         }
 

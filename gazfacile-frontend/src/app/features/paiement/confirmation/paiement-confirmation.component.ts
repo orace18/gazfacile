@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { PaiementService } from '../../../core/services/paiement.service';
-import { PaiementStatutDTO, StatutFedaPay } from '../../../core/models/revendeur.model';
+import { PaiementStatutDTO, StatutFedaPay, TypeTransaction } from '../../../core/models/revendeur.model';
 
 /**
  * Page de confirmation de paiement.
@@ -66,6 +66,11 @@ import { PaiementStatutDTO, StatutFedaPay } from '../../../core/models/revendeur
           }
 
           <div class="actions">
+            @if (transaction()!.type === TypeTransaction.COMMANDE) {
+              <button mat-stroked-button class="btn-commandes" routerLink="/client/commandes">
+                <mat-icon>receipt_long</mat-icon> Mes commandes
+              </button>
+            }
             <button mat-raised-button class="btn-accueil" routerLink="/">
               <mat-icon>home</mat-icon> Retour à l'accueil
             </button>
@@ -160,6 +165,10 @@ import { PaiementStatutDTO, StatutFedaPay } from '../../../core/models/revendeur
 
     .actions {
       margin-top: 8px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
     }
 
     .btn-accueil {
@@ -167,6 +176,13 @@ import { PaiementStatutDTO, StatutFedaPay } from '../../../core/models/revendeur
       color: white !important;
       height: 44px;
       padding: 0 24px;
+    }
+
+    .btn-commandes {
+      border-color: var(--color-primary) !important;
+      color: var(--color-primary) !important;
+      height: 44px;
+      padding: 0 20px;
     }
   `]
 })
@@ -179,6 +195,7 @@ export class PaiementConfirmationComponent implements OnInit, OnDestroy {
   private readonly maxTentativesRafraichissement = 6;
 
   readonly StatutFedaPay = StatutFedaPay;
+  readonly TypeTransaction = TypeTransaction;
 
   transaction = signal<PaiementStatutDTO | null>(null);
   chargement = signal(true);

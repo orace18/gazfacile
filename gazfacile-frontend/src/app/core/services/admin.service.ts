@@ -28,6 +28,8 @@ export interface AdminCommande {
   quantite: number;
   prixUnitaire: number;
   total: number;
+  acompteRequis?: number;
+  montantRestant?: number;
   modePaiement: string;
   statutPaiement: string;
   statutCommande: string;

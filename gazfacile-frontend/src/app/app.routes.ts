@@ -94,6 +94,14 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'client/commandes',
+    loadComponent: () =>
+      import('./features/client/mes-commandes/mes-commandes.component').then(
+        m => m.MesCommandesComponent
+      ),
+    canActivate: [authGuard]
+  },
+  {
     path: 'admin/login',
     loadComponent: () =>
       import('./features/admin/admin-login/admin-login.component').then(

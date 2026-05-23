@@ -209,6 +209,7 @@ export enum StatutCommande {
 
 export enum StatutPaiement {
   EN_ATTENTE = 'EN_ATTENTE',
+  ACOMPTE_PAYE = 'ACOMPTE_PAYE',
   PAYE = 'PAYE',
   ECHOUE = 'ECHOUE',
   REMBOURSE = 'REMBOURSE'
@@ -252,6 +253,8 @@ export interface Commande {
   quantite: number;
   prixUnitaire: number;
   total: number;
+  acompteRequis?: number;
+  montantRestant?: number;
   modePaiement: ModePaiement;
   statutPaiement: StatutPaiement;
   statutCommande: StatutCommande;

@@ -41,8 +41,12 @@ public class PaiementController {
      */
     @PostMapping("/initier")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<PaiementResponseDTO> initier(@Valid @RequestBody PaiementInitDTO dto) {
-        PaiementResponseDTO response = paiementService.initierPaiement(dto);
+    public ResponseEntity<PaiementResponseDTO> initier(
+            @Valid @RequestBody PaiementInitDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        PaiementResponseDTO response = paiementService.initierPaiement(dto, userDetails.getUsername(), isAdmin);
         return ResponseEntity.ok(response);
     }
 

@@ -1001,6 +1001,7 @@ import { Revendeur, Abonnement, Transaction, StatutFedaPay, PlanType } from '../
     .badge-paiement {
       font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 10px;
       &.pay-paye    { background: rgba(46,125,50,0.12); color: #2e7d32; }
+      &.pay-acompte_paye { background: rgba(59,130,246,0.12); color: #2563eb; }
       &.pay-en_attente { background: rgba(245,158,11,0.12); color: #92400e; }
       &.pay-echoue  { background: color-mix(in srgb, var(--color-danger) 12%, transparent); color: var(--color-danger); }
       &.pay-rembourse { background: rgba(139,92,246,0.12); color: #7c3aed; }

@@ -12,6 +12,7 @@ import bj.gazfacile.model.Transaction;
 import bj.gazfacile.model.User;
 import bj.gazfacile.model.enums.Abonnement;
 import bj.gazfacile.model.enums.StatutCommande;
+import bj.gazfacile.model.enums.StatutPaiement;
 import bj.gazfacile.repository.CommandeRepository;
 import bj.gazfacile.repository.RevendeurRepository;
 import bj.gazfacile.repository.TransactionRepository;
@@ -139,7 +140,13 @@ public class AdminController {
         Commande commande = commandeRepository.findById(id)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
                         org.springframework.http.HttpStatus.NOT_FOUND, "Commande introuvable"));
-        commande.setStatutCommande(StatutCommande.valueOf(body.get("statut")));
+        StatutCommande statut = StatutCommande.valueOf(body.get("statut"));
+        commande.setStatutCommande(statut);
+        if (statut == StatutCommande.LIVREE) {
+            commande.setStatutPaiement(StatutPaiement.PAYE);
+            commande.setMontantRestant(0);
+            commande.setLivraisonAt(LocalDateTime.now());
+        }
         return ResponseEntity.ok(commandeRepository.save(commande));
     }
 

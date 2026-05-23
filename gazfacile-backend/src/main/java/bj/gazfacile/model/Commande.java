@@ -47,6 +47,12 @@ public class Commande {
 
     private double total;
 
+    /** Acompte requis avant prise en compte pour un paiement à la livraison. */
+    private long acompteRequis;
+
+    /** Solde à régler en espèces à la livraison après paiement de l'acompte. */
+    private double montantRestant;
+
     private ModePaiement modePaiement;
 
     @Builder.Default

@@ -5,6 +5,7 @@ package bj.gazfacile.model.enums;
  */
 public enum StatutPaiement {
     EN_ATTENTE,
+    ACOMPTE_PAYE,
     PAYE,
     ECHOUE,
     REMBOURSE
