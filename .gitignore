@@ -1,0 +1,8 @@
+
+# Build artifacts
+gazfacile-backend/target/
+gazfacile-frontend/dist/
+gazfacile-frontend/.angular/
+
+# Env
+.env
