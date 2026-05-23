@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ElementRef, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
@@ -9,10 +9,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
+import { GoogleAuthService } from '../../../core/services/google-auth.service';
 import { WebAuthnHelper } from '../../../core/helpers/webauthn.helper';
+import { Role } from '../../../core/models/revendeur.model';
 
 /** Écrans possibles dans le composant de connexion. */
-type EcranConnexion = 'telephone' | 'choix' | 'pin';
+type EcranConnexion = 'telephone' | 'choix' | 'pin' | 'google-telephone';
 
 @Component({
   selector: 'app-login',
@@ -70,6 +72,10 @@ type EcranConnexion = 'telephone' | 'choix' | 'pin';
               Continuer
             </button>
 
+            <div class="separateur"><span>ou</span></div>
+
+            <!-- Bouton Google rendu par le SDK Google Identity Services -->
+            <div #googleBtnContainer class="google-btn-container"></div>
           </div>
         }
 
@@ -159,6 +165,52 @@ type EcranConnexion = 'telephone' | 'choix' | 'pin';
                 Utiliser mon empreinte
               </button>
             }
+          </div>
+        }
+
+        <!-- Écran 4 : téléphone requis pour un nouveau compte Google -->
+        @if (ecran === 'google-telephone') {
+          <div class="formulaire">
+            <div class="info-google">
+              <mat-icon>info</mat-icon>
+              <p>Votre compte Google n'est pas encore lié. Entrez votre numéro de téléphone pour créer votre compte GazFacile.</p>
+            </div>
+
+            <mat-form-field appearance="outline" class="champ-pleine-largeur">
+              <mat-label>Numéro de téléphone</mat-label>
+              <input
+                matInput
+                [formControl]="telephoneControl"
+                placeholder="0197000000"
+                type="tel"
+                inputmode="numeric"
+                autocomplete="tel"
+              >
+              <div matPrefix class="prefixe-tel">+229</div>
+              @if (telephoneControl.invalid && telephoneControl.touched) {
+                <mat-error>Entrez un numéro valide. Exemple : 0197000000</mat-error>
+              }
+            </mat-form-field>
+
+            @if (erreur) {
+              <div class="erreur-globale">
+                <mat-icon>error_outline</mat-icon>
+                {{ erreur }}
+              </div>
+            }
+
+            <button mat-raised-button type="button" class="btn-principal"
+              [disabled]="telephoneControl.invalid || envoi"
+              (click)="finaliserCompteGoogle()">
+              @if (envoi) { <mat-spinner diameter="20"></mat-spinner> }
+              @else { <mat-icon>person_add</mat-icon> }
+              Créer mon compte
+            </button>
+
+            <button mat-button type="button" class="btn-secondaire" (click)="retourTelephone()">
+              <mat-icon>arrow_back</mat-icon>
+              Annuler
+            </button>
           </div>
         }
 
@@ -256,6 +308,32 @@ type EcranConnexion = 'telephone' | 'choix' | 'pin';
       }
     }
 
+    .info-google {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      background: color-mix(in srgb, var(--color-accent) 8%, white);
+      border-radius: 8px;
+      border-left: 3px solid var(--color-accent);
+
+      mat-icon {
+        color: var(--color-accent);
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.88rem;
+        color: var(--color-text);
+        line-height: 1.4;
+      }
+    }
+
     .btn-principal {
       width: 100%;
       height: 48px;
@@ -305,6 +383,27 @@ type EcranConnexion = 'telephone' | 'choix' | 'pin';
       gap: 6px;
     }
 
+    .separateur {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--color-text-muted);
+      font-size: 0.82rem;
+
+      &::before, &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--color-border);
+      }
+    }
+
+    .google-btn-container {
+      display: flex;
+      justify-content: center;
+      min-height: 44px;
+    }
+
     .erreur-globale {
       display: flex;
       align-items: center;
@@ -347,8 +446,11 @@ type EcranConnexion = 'telephone' | 'choix' | 'pin';
     }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements AfterViewInit {
+  @ViewChild('googleBtnContainer') googleBtnContainer?: ElementRef<HTMLElement>;
+
   private readonly authService = inject(AuthService);
+  private readonly googleAuthService = inject(GoogleAuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
@@ -356,6 +458,9 @@ export class LoginComponent {
   ecran: EcranConnexion = 'telephone';
   envoi = false;
   erreur: string | null = null;
+
+  /** ID token Google en attente (quand le téléphone est requis). */
+  private googleIdToken: string | null = null;
 
   readonly webAuthnSupporte = WebAuthnHelper.isSupported();
 
@@ -371,6 +476,21 @@ export class LoginComponent {
 
   get telephoneLocalAffiche(): string {
     return this.normaliserTelephoneLocal(this.telephoneControl.value || '');
+  }
+
+  // ── Cycle de vie ──────────────────────────────────────────────────────────
+
+  ngAfterViewInit(): void {
+    this.initialiserBoutonGoogle();
+  }
+
+  private initialiserBoutonGoogle(): void {
+    if (!this.googleBtnContainer) return;
+
+    this.googleAuthService.initialiser(
+      this.googleBtnContainer.nativeElement,
+      (idToken) => this.gererRetourGoogle(idToken)
+    ).subscribe();
   }
 
   // ── Navigation entre écrans ───────────────────────────────────────────────
@@ -392,7 +512,10 @@ export class LoginComponent {
 
   retourTelephone(): void {
     this.erreur = null;
+    this.googleIdToken = null;
     this.ecran = 'telephone';
+    // Réinitialiser le bouton Google après le changement d'écran
+    setTimeout(() => this.initialiserBoutonGoogle(), 0);
   }
 
   retourChoix(): void {
@@ -456,6 +579,57 @@ export class LoginComponent {
       error: err => {
         this.envoi = false;
         this.erreur = err.message || 'PIN incorrect';
+      }
+    });
+  }
+
+  // ── Connexion Google ──────────────────────────────────────────────────────
+
+  private gererRetourGoogle(idToken: string): void {
+    this.envoi = true;
+    this.erreur = null;
+
+    this.googleAuthService.loginAvecGoogle(idToken).subscribe({
+      next: (res) => {
+        this.envoi = false;
+        this.authService.sauvegarderSession(res);
+        this.naviguerRetour();
+      },
+      error: (err) => {
+        this.envoi = false;
+        if (err?.telephoneRequis) {
+          // Nouveau compte Google — on demande le numéro
+          this.googleIdToken = idToken;
+          this.telephoneControl.reset();
+          this.ecran = 'google-telephone';
+        } else {
+          this.erreur = err?.message || 'Connexion Google échouée';
+        }
+      }
+    });
+  }
+
+  finaliserCompteGoogle(): void {
+    if (this.telephoneControl.invalid || !this.googleIdToken) {
+      this.telephoneControl.markAsTouched();
+      return;
+    }
+
+    this.envoi = true;
+    this.erreur = null;
+
+    const telephone = this.normaliserTelephoneLocal(this.telephoneControl.value!);
+
+    this.googleAuthService.loginAvecGoogle(this.googleIdToken, telephone, Role.CLIENT).subscribe({
+      next: (res) => {
+        this.envoi = false;
+        this.googleIdToken = null;
+        this.authService.sauvegarderSession(res);
+        this.naviguerRetour();
+      },
+      error: err => {
+        this.envoi = false;
+        this.erreur = err?.message || 'Connexion Google échouée';
       }
     });
   }

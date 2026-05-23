@@ -167,10 +167,14 @@ type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
             </button>
 
             @if (!webAuthnSupporte()) {
-              <div class="info-securite">
-                <mat-icon>security</mat-icon>
-                <span>La biométrie n'est pas disponible sur cet appareil. Créez un PIN pour protéger votre compte.</span>
-              </div>
+              <button mat-stroked-button type="button" class="btn-pin"
+                [disabled]="envoi"
+                (click)="inscrireSansBiometrie()">
+                <span class="btn-content">
+                  <mat-icon>person_add</mat-icon>
+                  Continuer sans sécurité biométrique
+                </span>
+              </button>
             }
 
             <button mat-button type="button" class="btn-secondaire" (click)="retourNumero()">
@@ -433,26 +437,6 @@ type Etape = 'nom' | 'telephone' | 'authentification' | 'pin';
       font-weight: 600;
     }
 
-    .info-securite {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 12px 14px;
-      border-radius: 8px;
-      background: color-mix(in srgb, var(--color-primary) 8%, white);
-      color: var(--color-text);
-      font-size: 0.88rem;
-      line-height: 1.4;
-
-      mat-icon {
-        color: var(--color-primary);
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-      }
-    }
-
     .btn-secondaire {
       align-self: center;
       color: var(--color-primary) !important;
@@ -679,6 +663,28 @@ export class RegisterFormComponent implements OnInit, OnDestroy {
       // Configurer le PIN (l'utilisateur est maintenant authentifié via le JWT en mémoire)
       await firstValueFrom(
         this.authService.setupPin({ pin: this.pinControl.value! })
+      );
+
+      await this.lancerSouscription();
+    } catch (err: any) {
+      this.erreur = err?.message || 'Erreur lors de l\'inscription';
+      this.envoi = false;
+    }
+  }
+
+  // ── Inscription sans biométrie (fallback) ─────────────────────────────────
+
+  async inscrireSansBiometrie(): Promise<void> {
+    this.envoi = true;
+    this.erreur = null;
+
+    try {
+      await firstValueFrom(
+        this.authService.inscrireSimple({
+          telephone: this.telephone,
+          nom: this.nom,
+          role: this.role
+        })
       );
 
       await this.lancerSouscription();
