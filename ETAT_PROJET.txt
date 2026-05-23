@@ -1,0 +1,225 @@
+================================================================================
+  ÉTAT DU PROJET — GAZFACILE
+  Date : 2026-04-24
+  Auteur : Orace EDJO
+================================================================================
+
+================================================================================
+1. SÉCURITÉ — CORRECTIONS EFFECTUÉES
+================================================================================
+
+── Authentification & Secrets ──────────────────────────────────────────────────
+
+  [OK] JWT_SECRET sans valeur par défaut (fail-fast au démarrage)
+       → application.yml : ${JWT_SECRET} sans fallback
+       → docker-compose.yml : syntaxe :? (refuse de démarrer si absent)
+
+  [OK] FEDAPAY_WEBHOOK_SECRET sans valeur par défaut
+       → Empêche la forgerie de webhooks FedaPay avec la valeur connue
+
+  [OK] PIN admin hardcodé "@Juscard38183" supprimé du code source
+       → Téléphone et email admin proviennent des variables ADMIN_PHONE / ADMIN_EMAIL
+       → PIN de 12 caractères aléatoires généré au démarrage
+       → PIN affiché uniquement dans les logs serveur (WARN), jamais via HTTP
+
+  [OK] SetupController.java supprimé
+       → Plus aucun endpoint HTTP pour créer l'admin
+       → Création via DataSeeder au démarrage (une seule fois)
+
+  [OK] Secret CPass (cs_GtNCYLotL0gZYwZT1Sk…) rédacté dans ANALYSE_GAZFACILE.txt
+
+  [OK] 2FA TOTP implémenté (Google Authenticator / Authy)
+       → Backend : TotpService, TotpController, JwtService (pending token)
+       → Frontend : écran TOTP dans admin-login, onglet Sécurité dans dashboard
+       → QR code affiché via angularx-qrcode (jamais envoyé à un service externe)
+
+  [OK] Refresh token sécurisé
+       → 64 octets aléatoires, stocké hashé (SHA-256), cookie HttpOnly
+       → Rotation à chaque usage + révocation totale si réutilisation détectée
+
+  [OK] Brute-force PIN : blocage après 3 tentatives / 15 minutes
+
+  [OK] Niveau de log changé de DEBUG → INFO (téléphones plus exposés dans les logs)
+
+── IDOR & Contrôle d'accès ──────────────────────────────────────────────────────
+
+  [OK] Commandes revendeur : vérification de propriété dans getByRevendeur()
+  [OK] Statut commande : vérification de propriété + anti-fraude (LIVREE→PAYEE)
+  [OK] Stock revendeur : vérification de propriété dans updateStock()
+  [OK] Transaction paiement : authentification requise + vérification ownership
+  [OK] clientTelephone extrait du JWT (pas du corps de la requête)
+       → Impossible de créer une commande au nom d'un autre utilisateur
+  [OK] Inscription simple : rôle forcé CLIENT uniquement (plus de REVENDEUR gratuit)
+  [OK] @PreAuthorize explicite sur SubscriptionController
+
+── Exposition de données ─────────────────────────────────────────────────────────
+
+  [OK] UserAdminDTO : pinHash et googleId masqués dans l'API admin
+  [OK] Swagger UI : accessible uniquement avec le rôle ADMIN
+  [OK] Lien "/admin/login" supprimé de la page de connexion publique
+  [OK] SetupController : réponse identique si admin existe ou non (plus d'info disclosure)
+  [OK] Avis : authentification requise + téléphone extrait du JWT (pas du DTO)
+
+── WebSocket ──────────────────────────────────────────────────────────────────────
+
+  [OK] Notifications sur file privée /user/queue/notifications
+       → Avant : /topic/notifications/{id} — lisible par n'importe qui
+       → Après : convertAndSendToUser() — seul le propriétaire reçoit ses notifs
+  [OK] JWT validé au handshake STOMP (WebSocketAuthInterceptor)
+
+── Infrastructure ────────────────────────────────────────────────────────────────
+
+  [OK] MongoDB lié à 127.0.0.1:27017 (pas exposé sur le réseau)
+  [OK] WebAuthn : origine validée contre WEBAUTHN_RP_ORIGIN (pas le header HTTP)
+
+── Validation des entrées ────────────────────────────────────────────────────────
+
+  [OK] Fingerprint validé en UUID strict (format UUID v4 obligatoire)
+  [OK] IP extraite depuis la dernière entrée de X-Forwarded-For (anti-spoofing)
+  [OK] setAbonnement admin : validation stricte plan (enum) et jours (1–3650)
+  [OK] OTP endpoints ajoutés dans SecurityConfig comme publics (étaient manquants)
+
+
+================================================================================
+2. ACTIONS DE DÉPLOIEMENT EN ATTENTE (à faire par Orace)
+================================================================================
+
+  CRITIQUE — À faire AVANT le prochain déploiement :
+
+  [ ] 1. Ajouter sur la plateforme de déploiement (Render/Railway) :
+         ADMIN_PHONE        = ton numéro personnel
+         ADMIN_EMAIL        = ton@email.com
+         FEDAPAY_WEBHOOK_SECRET = <secret depuis dashboard FedaPay>
+         JWT_SECRET         = <openssl rand -base64 48>
+         WEBAUTHN_RP_ORIGIN = https://gazfacile.netlify.app
+         WEBAUTHN_RP_ID     = gazfacile.netlify.app
+
+  [ ] 2. Supprimer l'ancien admin dans MongoDB Atlas :
+         db.users.deleteOne({ telephone: "0147946910" })
+
+  [ ] 3. Redéployer → lire le PIN admin dans les logs serveur (niveau WARN)
+
+  [ ] 4. Activer le 2FA TOTP depuis le dashboard admin :
+         Onglet "Sécurité" → Activer le 2FA → Scanner le QR code
+         → Confirmer avec un code Google Authenticator
+
+  [ ] 5. Restreindre la clé Google Maps dans Google Cloud Console :
+         HTTP referrers : gazfacile.netlify.app/*
+
+
+================================================================================
+3. DETTE TECHNIQUE CONNUE
+================================================================================
+
+  ── Haute priorité ──────────────────────────────────────────────────────────────
+
+  [ ] Double système d'abonnement à unifier
+      - Ancien : Revendeur.abonnement (GRATUIT, STANDARD, PREMIUM…)
+      - Nouveau : Subscription + SubscriptionPlan (CLIENT_CONSULT, REVENDEUR…)
+      - Fallback dans PaiementService.appliquerEffetsMetierPaiementApprouve()
+      → Migrer les revendeurs vers le nouveau système, supprimer l'ancien
+
+  [ ] CommandeDTO.clientTelephone encore validé @NotBlank mais ignoré par le service
+      → Retirer le champ du DTO et du frontend
+
+  ── Moyenne priorité ──────────────────────────────────────────────────────────────
+
+  [ ] Pas de pagination sur les endpoints admin :
+      - GET /api/v1/admin/utilisateurs → findAll() sans limite
+      - GET /api/v1/admin/commandes    → findAll() sans limite
+      → Ajouter Pageable (page, size) avec Spring Data
+
+  [ ] ConsultationSession s'accumule sans nettoyage
+      → Ajouter un @Scheduled qui supprime les sessions > 30 jours
+
+  [ ] Auto-renouvellement non implémenté
+      - Champ autoRenouvelle présent sur Subscription mais jamais traité
+      → Implémenter dans AbonnementScheduler ou supprimer le champ
+
+  [ ] Services inutilisés présents dans le code (dead code) :
+      - GoogleAuthService (bouton Google retiré du login)
+      - FirebasePhoneAuthService (flow retiré)
+      → Supprimer si définitivement abandonnés
+
+  ── Basse priorité ──────────────────────────────────────────────────────────────
+
+  [ ] Pas de cache Redis
+      - Chaque requête /revendeurs/nearby interroge MongoDB directement
+      → Ajouter Redis pour les résultats géospatiaux (cache 5 min)
+
+  [ ] LoginAttemptService en mémoire
+      - Les compteurs brute-force se perdent au redémarrage
+      - Ne fonctionne pas en multi-instance
+      → Migrer vers Redis si passage à plusieurs instances
+
+  [ ] Broker WebSocket in-memory
+      - Ne scale pas en multi-instance
+      → Migrer vers RabbitMQ ou Redis Pub/Sub si multi-instance
+
+
+================================================================================
+4. TESTS — ÉTAT ACTUEL
+================================================================================
+
+  Couverture actuelle : très faible
+
+  Fichiers de test existants :
+    ✓ ConsultationServiceTest.java   (4 tests)
+    ✓ OtpFacadeTest.java             (3 tests)
+    ✓ PaiementServiceTest.java       (tests webhook idempotence)
+
+  Non testés (prioritaires) :
+    [ ] AuthService (WebAuthn, PIN, 2FA, Google)
+    [ ] CommandeService (création commande, statut, ownership)
+    [ ] RevendeurService (updateStock ownership)
+    [ ] PaiementService (initierPaiement, webhook complet)
+    [ ] AdminController (endpoints CRUD)
+    [ ] SubscriptionService (subscribe, activate, expire)
+    [ ] Tests d'intégration MongoDB
+    [ ] Tests Angular (Jasmine / Jest) — aucun
+
+
+================================================================================
+5. PERFORMANCES — POINTS À SURVEILLER
+================================================================================
+
+  [ ] Index MongoDB manquants à vérifier :
+      - consultationSessions sur ipAddress (findAllByIpAddress sans index = scan)
+      - commandes sur revendeurId + createdAt (tri fréquent)
+
+  [ ] Pas de rate limiting HTTP global (hors brute-force PIN)
+      → Envisager Spring Rate Limiter ou Nginx limit_req pour les endpoints publics
+
+  [ ] Polling des notifications côté frontend si WebSocket déconnecté
+      → Vérifier le comportement en cas de reconnexion
+
+
+================================================================================
+6. VARIABLES D'ENVIRONNEMENT REQUISES EN PRODUCTION
+================================================================================
+
+  Obligatoires (app refuse de démarrer si absent) :
+    JWT_SECRET                   — secret HMAC-SHA256 (min 48 chars random)
+    FEDAPAY_WEBHOOK_SECRET       — secret signature webhooks FedaPay
+
+  Obligatoires pour le bon fonctionnement :
+    ADMIN_PHONE                  — téléphone du compte admin
+    ADMIN_EMAIL                  — email du compte admin
+    MONGO_URI                    — URI MongoDB Atlas
+    FEDAPAY_API_KEY              — clé API FedaPay (live)
+    FEDAPAY_BASE_URL             — https://api.fedapay.com/v1
+    FEDAPAY_CHECKOUT_URL         — https://process.fedapay.com
+    FEDAPAY_CALLBACK_URL         — https://gazfacile.netlify.app/paiement/confirmation
+    WEBAUTHN_RP_ID               — gazfacile.netlify.app
+    WEBAUTHN_RP_ORIGIN           — https://gazfacile.netlify.app
+
+  Optionnels :
+    GOOGLE_CLIENT_ID             — pour la connexion Google OAuth2
+    CPASS_CLIENT_ID              — pour l'envoi OTP SMS
+    CPASS_CLIENT_SECRET          — pour l'envoi OTP SMS
+    ADMIN_NOM                    — nom d'affichage admin (défaut: "Admin GazFacile")
+
+
+================================================================================
+  FIN DU POINT — GAZFACILE — 2026-04-24
+================================================================================

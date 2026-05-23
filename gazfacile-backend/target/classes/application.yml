@@ -1,0 +1,54 @@
+server:
+  port: 8080
+
+spring:
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/gazfacile}
+  application:
+    name: gazfacile-backend
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 7200000          # 2 heures
+  refresh-expiration: 2592000000 # 30 jours
+
+cors:
+  allowed-origins: http://localhost:4200,https://gazfacile.netlify.app
+
+fedapay:
+  # Clé API FedaPay (sandbox ou live)
+  api-key: ${FEDAPAY_API_KEY:sk_sandbox_XXXXXXXXXXXXXXXXXXXXXXXX}
+  # URL de l'API FedaPay
+  base-url: ${FEDAPAY_BASE_URL:https://api.fedapay.com/v1}
+  # URL de la page de paiement FedaPay
+  checkout-url: ${FEDAPAY_CHECKOUT_URL:https://process.fedapay.com}
+  # Secret pour vérifier la signature des webhooks
+  webhook-secret: ${FEDAPAY_WEBHOOK_SECRET}
+  # URL de retour après paiement (votre frontend)
+  callback-url: ${FEDAPAY_CALLBACK_URL:https://gazfacile.netlify.app/paiement/confirmation}
+
+webauthn:
+  rp:
+    # Identifiant du Relying Party (doit correspondre au domaine de l'app)
+    id: ${WEBAUTHN_RP_ID:localhost}
+    # Nom affiché dans les dialogues d'authentification
+    name: ${WEBAUTHN_RP_NAME:GazFacile}
+    # Origine autorisée (protocole + domaine + port)
+    origin: ${WEBAUTHN_RP_ORIGIN:http://localhost:4200}
+
+google:
+  # Client ID OAuth2 de votre projet Google Cloud Console
+  client-id: ${GOOGLE_CLIENT_ID:}
+
+admin:
+  # Téléphone et email du compte administrateur initial
+  # Créé au premier démarrage si aucun admin n'existe — PIN affiché dans les logs serveur
+  telephone: ${ADMIN_PHONE:}
+  email: ${ADMIN_EMAIL:}
+  nom: ${ADMIN_NOM:Admin GazFacile}
+
+logging:
+  level:
+    bj.gazfacile: INFO
+    org.springframework.data.mongodb: WARN

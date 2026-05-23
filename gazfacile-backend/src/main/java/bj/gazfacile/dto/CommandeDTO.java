@@ -1,0 +1,39 @@
+package bj.gazfacile.dto;
+
+import bj.gazfacile.model.enums.ModePaiement;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+
+/**
+ * DTO pour la création d'une commande de gaz.
+ */
+public record CommandeDTO(
+
+        @NotBlank(message = "L'identifiant du revendeur est obligatoire")
+        String revendeurId,
+
+        @NotBlank(message = "Le numéro de téléphone du client est obligatoire")
+        @Pattern(regexp = "^(\\+229|00229)?\\s*[0-9]{10}$",
+                message = "Le numéro de téléphone doit être un numéro béninois valide")
+        String clientTelephone,
+
+        @NotBlank(message = "L'adresse de livraison est obligatoire")
+        String clientAdresseLivraison,
+
+        /** Coordonnées optionnelles du client [longitude, latitude]. */
+        double[] clientLocation,
+
+        @NotBlank(message = "La marque est obligatoire")
+        String marque,
+
+        @NotBlank(message = "Le format de bouteille est obligatoire")
+        String taille,
+
+        @Min(value = 1, message = "La quantité minimum est 1")
+        int quantite,
+
+        @NotNull(message = "Le mode de paiement est obligatoire")
+        ModePaiement modePaiement
+) {}

@@ -1,0 +1,91 @@
+package bj.gazfacile.service;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+
+import java.util.Map;
+
+/**
+ * Valide un ID token Google en appelant l'endpoint tokeninfo de Google.
+ * Pour la production, remplacer par la bibliothèque google-api-client pour une
+ * validation locale plus performante (pas de latence réseau).
+ */
+@Service
+@Slf4j
+public class GoogleTokenService {
+
+    @Value("${google.client-id:}")
+    private String clientId;
+
+    private final RestClient restClient = RestClient.builder()
+            .baseUrl("https://oauth2.googleapis.com")
+            .build();
+
+    public String getClientId() {
+        return clientId != null ? clientId.trim() : "";
+    }
+
+    public boolean isConfigured() {
+        return !getClientId().isBlank();
+    }
+
+    /**
+     * Valide l'ID token et retourne les informations de l'utilisateur Google.
+     *
+     * @param idToken token JWT fourni par Google Identity Services côté frontend
+     * @return informations utilisateur extraites du token
+     * @throws IllegalArgumentException si le token est invalide ou l'audience ne correspond pas
+     */
+    @SuppressWarnings("unchecked")
+    public GoogleUserInfo valider(String idToken) {
+        String tokenMasque = (idToken != null && idToken.length() > 20)
+                ? idToken.substring(0, 20) + "****"
+                : "****";
+        log.info("[Google] → GET https://oauth2.googleapis.com/tokeninfo | id_token: {}", tokenMasque);
+
+        try {
+            Map<String, Object> claims = restClient.get()
+                    .uri("/tokeninfo?id_token={token}", idToken)
+                    .retrieve()
+                    .body(Map.class);
+
+            log.info("[Google] ← tokeninfo | réponse: sub={}, email={}, name={}, aud={}, exp={}",
+                    claims != null ? claims.get("sub") : null,
+                    claims != null ? claims.get("email") : null,
+                    claims != null ? claims.get("name") : null,
+                    claims != null ? claims.get("aud") : null,
+                    claims != null ? claims.get("exp") : null);
+
+            if (claims == null) {
+                throw new IllegalArgumentException("Token Google invalide");
+            }
+
+            // Vérifier que le token est bien destiné à notre application
+            String audience = (String) claims.get("aud");
+            if (isConfigured() && !getClientId().equals(audience)) {
+                log.warn("[Google] Audience invalide : attendu={}, reçu={}", getClientId(), audience);
+                throw new IllegalArgumentException("Token Google invalide (audience incorrecte)");
+            }
+
+            String sub   = (String) claims.get("sub");
+            String email = (String) claims.get("email");
+            String name  = (String) claims.get("name");
+
+            if (sub == null || email == null) {
+                throw new IllegalArgumentException("Token Google invalide (champs manquants)");
+            }
+
+            return new GoogleUserInfo(sub, email, name != null ? name : email);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("[Google] Échec de validation du token : {}", e.getMessage());
+            throw new IllegalArgumentException("Impossible de valider le token Google");
+        }
+    }
+
+    public record GoogleUserInfo(String googleId, String email, String nom) {}
+}
