@@ -345,7 +345,7 @@ import {
               <div class="footer-col">
                 <h4>Contact</h4>
                 <p>Cotonou, Bénin</p>
-                <a href="tel:+2290163492848">+229 016 349 2848</a>
+                <a href="tel:+2290156324868">+229 015 632 4868</a>
                 <a href="mailto:facile.gaz&#64;gmail.com">facile.gaz&#64;gmail.com</a>
               </div>
             </div>
