@@ -312,6 +312,11 @@ a {
   mat-progress-spinner svg {
     display: block;
   }
+
+  mat-spinner circle,
+  mat-progress-spinner circle {
+    stroke: currentColor !important;
+  }
 }
 
 // === Boutons globaux ===

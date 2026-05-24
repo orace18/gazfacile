@@ -1,6 +1,6 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, effect, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, Subscription, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Notification } from '../models/notification.model';
 import { WebSocketService } from './websocket.service';
@@ -24,23 +24,32 @@ export class NotificationService {
   /** Nombre de notifications non lues (pour le badge). */
   readonly nbNonLues = signal<number>(0);
 
+  private abonnementTempsReel?: Subscription;
+
   constructor() {
-    // S'abonner aux notifications temps réel dès que l'utilisateur est connecté
-    const user = this.authService.currentUser();
-    if (user) {
-      // File privée STOMP — seul l'utilisateur authentifié reçoit ses notifications.
-      // Le broker résout /user/queue/notifications → /queue/notifications-user{sessionId}
-      this.wsService.subscribe<Notification>(
-        `/user/queue/notifications`
-      ).subscribe({
-        next: notif => {
-          this.notifications.update(liste => [notif, ...liste]);
-          this.nbNonLues.update(n => n + 1);
-        },
-        error: err => console.warn('Erreur WebSocket notifications:', err)
-      });
+    effect(() => {
+      const user = this.authService.currentUser();
+      this.abonnementTempsReel?.unsubscribe();
+      this.abonnementTempsReel = undefined;
+
+      if (!user) {
+        this.notifications.set([]);
+        this.nbNonLues.set(0);
+        return;
+      }
+
+      this.abonnementTempsReel = this.wsService
+        .subscribe<Notification>('/user/queue/notifications')
+        .subscribe({
+          next: notif => {
+            this.notifications.update(liste => [notif, ...liste]);
+            this.nbNonLues.update(n => n + 1);
+          },
+          error: err => console.warn('Erreur WebSocket notifications:', err)
+        });
+
       this.charger();
-    }
+    });
   }
 
   /** Charge les notifications depuis l'API. */
