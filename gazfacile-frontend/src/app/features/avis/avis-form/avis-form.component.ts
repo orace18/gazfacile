@@ -193,7 +193,6 @@ import { Avis, AvisDTO } from '../../../core/models/notification.model';
         color: var(--color-text-muted) !important;
       }
 
-      mat-spinner { margin-right: 6px; }
     }
   `]
 })

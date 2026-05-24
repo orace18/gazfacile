@@ -121,9 +121,6 @@ import { StockStatus } from '../../../core/models/revendeur.model';
         color: var(--color-text-muted) !important;
       }
 
-      mat-spinner {
-        margin-right: 6px;
-      }
     }
 
     .info-ws {

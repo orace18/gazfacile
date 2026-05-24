@@ -204,7 +204,6 @@ import { Role } from '../../../core/models/revendeur.model';
         color: #999 !important;
       }
 
-      mat-spinner { margin-right: 8px; }
     }
 
     .info-2fa {

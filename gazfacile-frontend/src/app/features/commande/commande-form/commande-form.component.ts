@@ -642,9 +642,6 @@ type EtapeCommande = 'choix-abonnement' | 'plans-abonnement' | 'formulaire';
       color: white !important;
       align-self: flex-start;
 
-      mat-spinner {
-        margin-right: 6px;
-      }
     }
 
     .formulaire {
@@ -901,9 +898,6 @@ type EtapeCommande = 'choix-abonnement' | 'plans-abonnement' | 'formulaire';
         color: var(--color-text-muted) !important;
       }
 
-      mat-spinner {
-        margin-right: 6px;
-      }
     }
 
     .icone-sm {

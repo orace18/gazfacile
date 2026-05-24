@@ -439,7 +439,6 @@ import { StockBadgeComponent } from '../../../shared/components/stock-badge/stoc
         color: var(--color-text-muted) !important;
       }
 
-      mat-spinner { margin-right: 6px; }
     }
 
     .btn-annuler {

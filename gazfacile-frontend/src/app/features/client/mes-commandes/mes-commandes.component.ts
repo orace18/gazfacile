@@ -348,9 +348,6 @@ import {
       color: white !important;
       font-weight: 700 !important;
 
-      mat-spinner {
-        margin-right: 6px;
-      }
     }
 
     @media (max-width: 720px) {

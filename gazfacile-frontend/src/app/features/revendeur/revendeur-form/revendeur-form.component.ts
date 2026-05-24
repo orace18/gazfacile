@@ -402,9 +402,6 @@ import { Revendeur, RevendeurDTO } from '../../../core/models/revendeur.model';
         background-color: var(--color-primary-light) !important;
       }
 
-      mat-spinner {
-        margin-right: 6px;
-      }
     }
 
     .position-succes {
@@ -445,9 +442,6 @@ import { Revendeur, RevendeurDTO } from '../../../core/models/revendeur.model';
         color: var(--color-text-muted) !important;
       }
 
-      mat-spinner {
-        margin-right: 6px;
-      }
     }
   `]
 })
