@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -47,6 +48,9 @@ public class DataSeeder {
     @Value("${admin.nom:Admin GazFacile}")
     private String adminNom;
 
+    @Value("${admin.reset-pin:false}")
+    private boolean adminResetPin;
+
     @PostConstruct
     public void seed() {
         seedAdmin();
@@ -60,6 +64,9 @@ public class DataSeeder {
      */
     private void seedAdmin() {
         if (userRepository.existsByRolesContaining(Role.ADMIN)) {
+            if (adminResetPin) {
+                resetAdminPin();
+            }
             return;
         }
 
@@ -87,6 +94,32 @@ public class DataSeeder {
         log.warn("║  Téléphone : {}                              ║", adminTelephone);
         log.warn("║  PIN       : {}                                 ║", pin);
         log.warn("║  Ce message n'apparaîtra plus jamais               ║");
+        log.warn("╚══════════════════════════════════════════════════════╝");
+    }
+
+    private void resetAdminPin() {
+        Optional<User> adminOptional = adminTelephone == null || adminTelephone.isBlank()
+                ? userRepository.findAll().stream()
+                    .filter(user -> user.getRoles().contains(Role.ADMIN))
+                    .findFirst()
+                : userRepository.findByTelephone(adminTelephone)
+                    .filter(user -> user.getRoles().contains(Role.ADMIN));
+
+        if (adminOptional.isEmpty()) {
+            log.error("[Admin] ADMIN_RESET_PIN=true mais aucun compte ADMIN correspondant n'a été trouvé");
+            return;
+        }
+
+        String pin = genererPin();
+        User admin = adminOptional.get();
+        admin.setPinHash(passwordEncoder.encode(pin));
+        userRepository.save(admin);
+
+        log.warn("╔══════════════════════════════════════════════════════╗");
+        log.warn("║  PIN ADMIN RÉINITIALISÉ — CONSERVEZ-LE EN LIEU SÛR ║");
+        log.warn("║  Téléphone : {}                              ║", admin.getTelephone());
+        log.warn("║  PIN       : {}                                 ║", pin);
+        log.warn("║  Retirez ADMIN_RESET_PIN après connexion         ║");
         log.warn("╚══════════════════════════════════════════════════════╝");
     }
 

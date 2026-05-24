@@ -44,9 +44,11 @@ google:
 admin:
   # Téléphone et email du compte administrateur initial
   # Créé au premier démarrage si aucun admin n'existe — PIN affiché dans les logs serveur
+  # ADMIN_RESET_PIN=true force la régénération du PIN admin existant au démarrage.
   telephone: ${ADMIN_PHONE:}
   email: ${ADMIN_EMAIL:}
   nom: ${ADMIN_NOM:Admin GazFacile}
+  reset-pin: ${ADMIN_RESET_PIN:false}
 
 logging:
   level:
