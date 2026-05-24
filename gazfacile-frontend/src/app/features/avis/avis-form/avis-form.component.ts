@@ -243,7 +243,6 @@ export class AvisFormComponent implements OnInit {
     const dto: AvisDTO = {
       revendeurId: this.revendeurId,
       auteurNom: this.formulaire.value.auteurNom!,
-      auteurTelephone: this.authService.currentUser()?.telephone ?? '',
       note: this.noteSelectionnee,
       commentaire: this.formulaire.value.commentaire || undefined
     };

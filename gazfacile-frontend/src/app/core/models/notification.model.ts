@@ -35,7 +35,7 @@ export interface Avis {
 export interface AvisDTO {
   revendeurId: string;
   auteurNom: string;
-  auteurTelephone: string;
+  auteurTelephone?: string;
   note: number;
   commentaire?: string;
 }

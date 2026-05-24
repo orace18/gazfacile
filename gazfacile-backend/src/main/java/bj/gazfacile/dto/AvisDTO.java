@@ -4,7 +4,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 
 /**
  * DTO pour soumettre un avis sur un revendeur.
@@ -17,8 +16,7 @@ public record AvisDTO(
         @NotBlank(message = "Votre nom est obligatoire")
         String auteurNom,
 
-        @NotBlank(message = "Votre numéro de téléphone est obligatoire")
-        @Pattern(regexp = "^(\\+229|00229)?[0-9]{8}$", message = "Numéro béninois invalide")
+        // Ignoré à la création : le téléphone fiable vient du JWT côté service.
         String auteurTelephone,
 
         @NotNull(message = "La note est obligatoire")
