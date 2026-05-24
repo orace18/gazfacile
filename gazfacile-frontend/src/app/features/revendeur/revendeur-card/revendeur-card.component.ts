@@ -117,6 +117,10 @@ import { ConsultationPaywallComponent } from '../../../shared/components/consult
           <mat-icon>map</mat-icon>
           Voir sur la carte
         </button>
+        <button mat-stroked-button class="btn-avis" (click)="avis.emit(revendeur)">
+          <mat-icon>star</mat-icon>
+          Avis
+        </button>
         <button
           mat-raised-button
           class="btn-commander"
@@ -124,13 +128,8 @@ import { ConsultationPaywallComponent } from '../../../shared/components/consult
           [matTooltip]="revendeur.stockStatus === StockStatus.EPUISE ? 'Stock épuisé' : ''"
           (click)="onCommander()"
         >
-          @if (estVerrouille()) {
-            <mat-icon>lock</mat-icon>
-            S'inscrire
-          } @else {
-            <mat-icon>shopping_cart</mat-icon>
-            Commander
-          }
+          <mat-icon>{{ estVerrouille() ? 'lock' : 'shopping_cart' }}</mat-icon>
+          {{ estVerrouille() ? "S'inscrire" : 'Commander' }}
         </button>
       </mat-card-actions>
     </mat-card>
@@ -315,6 +314,18 @@ import { ConsultationPaywallComponent } from '../../../shared/components/consult
       font-weight: 600 !important;
     }
 
+    .btn-avis {
+      flex: 0 0 auto;
+      border-color: var(--color-border) !important;
+      color: var(--color-text) !important;
+      font-size: 0.82rem !important;
+      font-weight: 600 !important;
+
+      mat-icon {
+        color: var(--color-accent);
+      }
+    }
+
     .btn-commander {
       flex: 1;
       background-color: var(--color-accent) !important;
@@ -340,6 +351,7 @@ export class RevendeurCardComponent {
   @Input({ required: true }) revendeur!: Revendeur;
   @Output() selectionne = new EventEmitter<string>();
   @Output() commander = new EventEmitter<Revendeur>();
+  @Output() avis = new EventEmitter<Revendeur>();
 
   readonly consultationService = inject(ConsultationService);
   readonly authService = inject(AuthService);

@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AvisService } from '../../../core/services/avis.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { Avis, AvisDTO } from '../../../core/models/notification.model';
 
 /**
@@ -56,23 +57,13 @@ import { Avis, AvisDTO } from '../../../core/models/notification.model';
 
       <form [formGroup]="formulaire" (ngSubmit)="soumettre()" class="formulaire">
 
-        <div class="deux-colonnes">
-          <mat-form-field appearance="outline">
-            <mat-label>Votre nom</mat-label>
-            <input matInput formControlName="auteurNom" placeholder="Ex: Koffi D.">
-            @if (formulaire.get('auteurNom')?.invalid && formulaire.get('auteurNom')?.touched) {
-              <mat-error>Le nom est obligatoire</mat-error>
-            }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Votre téléphone</mat-label>
-            <input matInput formControlName="auteurTelephone" placeholder="97000000">
-            @if (formulaire.get('auteurTelephone')?.hasError('pattern')) {
-              <mat-error>Numéro béninois invalide</mat-error>
-            }
-          </mat-form-field>
-        </div>
+        <mat-form-field appearance="outline" class="champ-pleine-largeur">
+          <mat-label>Votre nom</mat-label>
+          <input matInput formControlName="auteurNom" placeholder="Ex: Koffi D.">
+          @if (formulaire.get('auteurNom')?.invalid && formulaire.get('auteurNom')?.touched) {
+            <mat-error>Le nom est obligatoire</mat-error>
+          }
+        </mat-form-field>
 
         <mat-form-field appearance="outline" class="champ-pleine-largeur">
           <mat-label>Commentaire (optionnel)</mat-label>
@@ -177,16 +168,6 @@ import { Avis, AvisDTO } from '../../../core/models/notification.model';
       gap: 8px;
     }
 
-    .deux-colonnes {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-
-      @media (max-width: 480px) {
-        grid-template-columns: 1fr;
-      }
-    }
-
     .champ-pleine-largeur {
       width: 100%;
     }
@@ -221,6 +202,7 @@ export class AvisFormComponent implements OnInit {
   @Output() avisPublie = new EventEmitter<Avis>();
 
   private readonly avisService = inject(AvisService);
+  private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
 
@@ -231,11 +213,15 @@ export class AvisFormComponent implements OnInit {
 
   formulaire = this.fb.group({
     auteurNom: ['', Validators.required],
-    auteurTelephone: ['', [Validators.required, Validators.pattern(/^(\+229|00229)?[0-9]{8}$/)]],
     commentaire: ['', Validators.maxLength(500)]
   });
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    const nom = this.authService.currentUser()?.nom;
+    if (nom) {
+      this.formulaire.patchValue({ auteurNom: nom });
+    }
+  }
 
   selectionnerNote(note: number): void {
     this.noteSelectionnee = note;
@@ -258,7 +244,7 @@ export class AvisFormComponent implements OnInit {
     const dto: AvisDTO = {
       revendeurId: this.revendeurId,
       auteurNom: this.formulaire.value.auteurNom!,
-      auteurTelephone: this.formulaire.value.auteurTelephone!,
+      auteurTelephone: this.authService.currentUser()?.telephone ?? '',
       note: this.noteSelectionnee,
       commentaire: this.formulaire.value.commentaire || undefined
     };

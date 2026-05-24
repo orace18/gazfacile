@@ -131,6 +131,7 @@ import { RevendeurCardComponent } from '../revendeur-card/revendeur-card.compone
             [revendeur]="revendeur"
             (selectionne)="revendeurSelectionne.emit($event)"
             (commander)="commanderRevendeur.emit($event)"
+            (avis)="avisRevendeur.emit($event)"
           ></app-revendeur-card>
         } @empty {
           @if (!revendeurService.chargement()) {
@@ -329,6 +330,7 @@ export class RevendeurListComponent {
   @Output() toggleCarte = new EventEmitter<void>();
   @Output() revendeurSelectionne = new EventEmitter<string>();
   @Output() commanderRevendeur = new EventEmitter<Revendeur>();
+  @Output() avisRevendeur = new EventEmitter<Revendeur>();
 
   readonly revendeurService = inject(RevendeurService);
   private readonly geoService = inject(GeolocationService);

@@ -20,6 +20,10 @@ import {
   CommandeFormComponent,
   DialogCommandeData
 } from '../commande/commande-form/commande-form.component';
+import {
+  AvisDialogComponent,
+  AvisDialogData
+} from '../avis/avis-dialog/avis-dialog.component';
 import { Revendeur, Role } from '../../core/models/revendeur.model';
 import {
   FreeConsultationDialogComponent
@@ -97,6 +101,7 @@ import {
               (toggleCarte)="togglerCarte()"
               (revendeurSelectionne)="onRevendeurSelectionne($event)"
               (commanderRevendeur)="ouvrirDialogCommande($event)"
+              (avisRevendeur)="ouvrirDialogAvis($event)"
             ></app-revendeur-list>
           </div>
         </div>
@@ -130,7 +135,7 @@ import {
             <p class="hero-note">Inscription gratuite — pas de carte bancaire requise</p>
           </div>
 
-          <!-- Image/illustration floutée de la carte -->
+          <!-- Image/illustration de la carte -->
           <div class="hero-visual">
             <div class="visual-blur">
               <div class="fake-map">
@@ -643,7 +648,7 @@ import {
       margin-top: 16px;
     }
 
-    /* ── Visual carte floutée ── */
+    /* ── Visual carte ── */
     .hero-visual {
       width: 400px;
       max-width: 100%;
@@ -662,7 +667,6 @@ import {
       position: absolute;
       inset: 0;
       background: linear-gradient(135deg, #e8f4e8 0%, #d4e8d4 30%, #c8dcc8 60%, #b8d0b8 100%);
-      filter: blur(3px);
     }
 
     .fake-pin {
@@ -690,7 +694,6 @@ import {
       position: absolute;
       inset: 0;
       background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(4px);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -1211,6 +1214,24 @@ export class HomeComponent implements OnInit {
           'OK',
           { duration: 5000 }
         );
+      }
+    });
+  }
+
+  ouvrirDialogAvis(revendeur: Revendeur): void {
+    const dialogRef = this.dialog.open<AvisDialogComponent, AvisDialogData, boolean>(
+      AvisDialogComponent,
+      {
+        data: { revendeur },
+        width: '760px',
+        maxWidth: '95vw',
+        panelClass: 'dialog-gaz'
+      }
+    );
+
+    dialogRef.afterClosed().subscribe(avisPublie => {
+      if (avisPublie) {
+        this.revendeurService.loadAll();
       }
     });
   }
