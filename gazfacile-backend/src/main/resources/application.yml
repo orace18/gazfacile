@@ -10,6 +10,8 @@ spring:
   data:
     mongodb:
       uri: ${MONGO_URI:mongodb://localhost:27017/gazfacile}
+      # Nom de base explicite : les URI Atlas copiées depuis la console n'en contiennent pas
+      database: ${MONGO_DATABASE:gazfacile}
   application:
     name: gazfacile-backend
 
