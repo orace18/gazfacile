@@ -8,11 +8,17 @@ COPY .mvn/ .mvn/
 COPY mvnw .
 
 # Télécharger les dépendances (couche cachée si pom.xml ne change pas)
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
+# Réessaie jusqu'à 3 fois : Maven Central renvoie parfois des 502 passagers
+RUN chmod +x mvnw && \
+    for i in 1 2 3; do \
+      ./mvnw dependency:go-offline -B -Dmaven.wagon.http.retryHandler.count=5 && break; \
+      [ "$i" = 3 ] && exit 1; \
+      echo "Échec du téléchargement des dépendances, nouvelle tentative ($i/3)..."; sleep 15; \
+    done
 
 # Copier les sources et compiler
 COPY src/ src/
-RUN ./mvnw package -DskipTests -B
+RUN ./mvnw package -DskipTests -B -Dmaven.wagon.http.retryHandler.count=5
 
 # ── Étape 2 : Image runtime légère ───────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine AS runtime
