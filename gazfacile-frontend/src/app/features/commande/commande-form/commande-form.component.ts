@@ -14,6 +14,7 @@ import { CommandeService } from '../../../core/services/commande.service';
 import { PaiementService } from '../../../core/services/paiement.service';
 import { RevendeurService } from '../../../core/services/revendeur.service';
 import { GeolocationService } from '../../../core/services/geolocation.service';
+import { GoogleMapsLoaderService } from '../../../core/services/google-maps-loader.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import { InscriptionStateService } from '../../../core/services/inscription-state.service';
@@ -920,6 +921,7 @@ export class CommandeFormComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly ngZone = inject(NgZone);
+  private readonly mapsLoader = inject(GoogleMapsLoaderService);
 
   readonly ModePaiement = ModePaiement;
 
@@ -1228,7 +1230,10 @@ export class CommandeFormComponent implements OnInit {
     } as Record<string, number>)[format] ?? 999;
   }
 
-  private reverseGeocode(latitude: number, longitude: number): Promise<string> {
+  private async reverseGeocode(latitude: number, longitude: number): Promise<string> {
+    // Google Maps n'est plus chargé au démarrage : on le charge ici si besoin
+    await this.mapsLoader.load().catch(() => undefined);
+
     return new Promise(resolve => {
       if (typeof google === 'undefined' || !google.maps?.Geocoder) {
         resolve(this.formatAdresseGps(latitude, longitude));

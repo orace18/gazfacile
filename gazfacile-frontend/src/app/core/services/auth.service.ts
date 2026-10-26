@@ -44,6 +44,9 @@ export class AuthService {
   /** Observable partagé pendant un refresh en cours (évite les appels parallèles). */
   private _refreshObs: Observable<string> | null = null;
 
+  /** Restauration de session au démarrage (résolue immédiatement si aucune). */
+  private _sessionRestauree: Promise<void> = Promise.resolve();
+
   // ── État utilisateur ───────────────────────────────────────────────────────
   readonly currentUser = signal<AuthResponse | null>(this.chargerProfilLocal());
   readonly estConnecte = computed(() => this.currentUser() !== null);
@@ -218,20 +221,30 @@ export class AuthService {
     return this._refreshObs !== null;
   }
 
+  /**
+   * Restaure la session via le cookie HttpOnly. Passe par doRefresh() pour que
+   * l'intercepteur puisse attendre ce refresh au lieu de bloquer le démarrage.
+   */
   async tenterRestaurationSession(): Promise<void> {
     if (!localStorage.getItem(CLE_USER)) {
       return;
     }
 
     try {
-      const res = await firstValueFrom(
-        this.http.post<AuthResponse>(`${this.apiUrl}/refresh`, {}, { withCredentials: true })
-      );
-      this.sauvegarderSession(res);
+      await firstValueFrom(this.doRefresh());
     } catch {
-      localStorage.removeItem(CLE_USER);
-      this.currentUser.set(null);
+      // doRefresh() a déjà effacé la session
     }
+  }
+
+  /** Résout quand la restauration de session lancée au démarrage est terminée. */
+  attendreSession(): Promise<void> {
+    return this._sessionRestauree;
+  }
+
+  /** Lance la restauration sans bloquer l'affichage (appelé par APP_INITIALIZER). */
+  demarrerRestaurationSession(): void {
+    this._sessionRestauree = this.tenterRestaurationSession();
   }
 
   // ── Déconnexion ────────────────────────────────────────────────────────────

@@ -3,15 +3,15 @@ import { AuthService } from '../services/auth.service';
 /**
  * Factory pour APP_INITIALIZER.
  *
- * Au démarrage de l'application, tente de restaurer la session utilisateur
- * via un refresh silencieux (cookie HttpOnly).
+ * Au démarrage de l'application, lance la restauration de la session utilisateur
+ * via un refresh silencieux (cookie HttpOnly) SANS attendre la réponse :
+ * le backend (Render) peut mettre plusieurs dizaines de secondes à se réveiller,
+ * l'interface s'affiche donc immédiatement avec le profil localStorage.
  *
- * - Cookie valide → access token en mémoire, utilisateur connecté
+ * - Les requêtes HTTP émises pendant le refresh attendent le token (jwtInterceptor)
+ * - Les routes protégées attendent la fin du refresh (guards)
  * - Cookie expiré / absent → profil localStorage effacé, utilisateur déconnecté
- *
- * Cela permet à l'utilisateur de rester connecté 30 jours sans se reconnecter
- * manuellement, même après fermeture du navigateur.
  */
-export function sessionInitializer(authService: AuthService): () => Promise<void> {
-  return () => authService.tenterRestaurationSession();
+export function sessionInitializer(authService: AuthService): () => void {
+  return () => authService.demarrerRestaurationSession();
 }

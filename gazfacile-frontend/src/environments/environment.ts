@@ -3,6 +3,7 @@ export const environment = {
   apiUrl: 'http://localhost:8080/api/v1',
   wsUrl: 'http://localhost:8080/ws',
   googleClientId: '',
+  googleMapsApiKey: 'AIzaSyBbTebj7DVC2yJu0hDJPfqP63x9uz9GQ-8',
   firebase: {
     apiKey: '',
     authDomain: '',

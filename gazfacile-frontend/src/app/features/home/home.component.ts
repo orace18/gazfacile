@@ -14,6 +14,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { RevendeurService } from '../../core/services/revendeur.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ConsultationService } from '../../core/services/consultation.service';
+import { GoogleMapsLoaderService } from '../../core/services/google-maps-loader.service';
 import { MapComponent } from '../map/map.component';
 import { RevendeurListComponent } from '../revendeur/revendeur-list/revendeur-list.component';
 import {
@@ -1168,6 +1169,7 @@ export class HomeComponent implements OnInit {
   readonly revendeurService = inject(RevendeurService);
   readonly authService = inject(AuthService);
   readonly consultationService = inject(ConsultationService);
+  private readonly mapsLoader = inject(GoogleMapsLoaderService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
 
@@ -1184,16 +1186,30 @@ export class HomeComponent implements OnInit {
   }
 
   togglerCarte(): void {
-    this.carteVisible.set(!this.carteVisible());
+    if (this.carteVisible()) {
+      this.carteVisible.set(false);
+      return;
+    }
+    this.afficherCarte();
   }
 
   onRevendeurSelectionne(revendeurId: string): void {
     if (!this.carteVisible()) {
-      this.carteVisible.set(true);
-      setTimeout(() => this.carteRef?.focusRevendeur(revendeurId), 300);
+      this.afficherCarte(() => setTimeout(() => this.carteRef?.focusRevendeur(revendeurId), 300));
     } else {
       this.carteRef?.focusRevendeur(revendeurId);
     }
+  }
+
+  /** Charge le SDK Google Maps (une seule fois) puis affiche la carte. */
+  private afficherCarte(ensuite?: () => void): void {
+    this.mapsLoader.load().then(
+      () => {
+        this.carteVisible.set(true);
+        ensuite?.();
+      },
+      () => this.snackBar.open('Impossible de charger la carte. Réessayez.', 'OK', { duration: 4000 })
+    );
   }
 
   ouvrirDialogCommande(revendeur: Revendeur): void {

@@ -5,10 +5,13 @@ import { AuthService } from '../services/auth.service';
 /**
  * Guard de route qui redirige vers la page de connexion
  * si l'utilisateur n'est pas authentifié.
+ * Attend la restauration de session lancée au démarrage.
  */
-export const authGuard: CanActivateFn = (_route, state) => {
+export const authGuard: CanActivateFn = async (_route, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
+
+  await authService.attendreSession();
 
   if (authService.isLoggedIn()) {
     return true;

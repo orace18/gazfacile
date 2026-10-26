@@ -5,10 +5,13 @@ import { Role } from '../models/revendeur.model';
 
 /**
  * Guard qui autorise l'accès uniquement aux utilisateurs avec le rôle ADMIN.
+ * Attend la restauration de session lancée au démarrage.
  */
-export const adminGuard: CanActivateFn = (_route, _state) => {
+export const adminGuard: CanActivateFn = async (_route, _state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
+
+  await authService.attendreSession();
 
   if (authService.isLoggedIn() && authService.hasRole(Role.ADMIN)) {
     return true;

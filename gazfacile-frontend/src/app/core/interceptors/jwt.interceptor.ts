@@ -2,7 +2,7 @@ import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { catchError, switchMap, throwError } from 'rxjs';
+import { catchError, defer, of, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 /**
@@ -15,6 +15,8 @@ import { AuthService } from '../services/auth.service';
  *    - Refresh OK → relance la requête originale avec le nouveau token
  *    - Refresh KO → efface la session et redirige vers /auth/login
  * 3. Affiche un toast lors de la reconnexion silencieuse
+ * 4. Si un refresh est déjà en cours (restauration au démarrage), attend son
+ *    résultat avant d'envoyer la requête, pour qu'elle parte avec le token
  */
 export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
@@ -26,12 +28,21 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
-  const token = authService.getToken();
-  const reqAvecToken = token
-    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
-    : req;
+  const envoyer = defer(() => {
+    const token = authService.getToken();
+    return next(token
+      ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+      : req);
+  });
 
-  return next(reqAvecToken).pipe(
+  const requete = authService.isCurrentlyRefreshing()
+    ? authService.doRefresh().pipe(
+        catchError(() => of(null)),
+        switchMap(() => envoyer)
+      )
+    : envoyer;
+
+  return requete.pipe(
     catchError(err => {
       if (!(err instanceof HttpErrorResponse) || err.status !== 401) {
         return throwError(() => err);

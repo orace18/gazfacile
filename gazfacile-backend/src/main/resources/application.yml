@@ -1,5 +1,10 @@
 server:
   port: 8080
+  # Compression gzip des réponses JSON (liste des revendeurs, admin…)
+  compression:
+    enabled: true
+    mime-types: application/json,text/plain
+    min-response-size: 1024
 
 spring:
   data:
